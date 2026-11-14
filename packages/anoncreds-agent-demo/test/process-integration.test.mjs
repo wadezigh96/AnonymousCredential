@@ -91,14 +91,22 @@ test("issuer, holder and verifier run as separate processes; invalid proof does 
     const presentation = presentationResult.body.presentation;
     assert.equal(JSON.stringify(presentation).includes("agent-a-private-subject-7f3a"), false);
 
-    // Mutate a revealed claim: verification must fail but the challenge must remain usable.
-    const tampered = structuredClone(presentation);
-    const revealed = tampered.requested_proof?.revealed_attrs?.role_ref;
-    assert.ok(revealed?.raw, "Expected the requested role to be revealed");
-    revealed.raw = "administrator";
+    // A proof made for a different verifier nonce must fail against the first
+    // challenge's server-stored request, without consuming the first challenge.
+    const secondChallenge = await post(verifierUrl + "/challenge", {
+      audience: "agent-b.anonymesh.integration",
+      task: "read:weather",
+      capabilityDigest: "sha256:integration-capability",
+      ttlSeconds: 90,
+    });
+    assert.equal(secondChallenge.status, 200);
+    const wrongNoncePresentation = await post(holderUrl + "/present", {
+      presentationRequest: secondChallenge.body.presentationRequest,
+    });
+    assert.equal(wrongNoncePresentation.status, 200);
     const invalidAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,
-      presentation: tampered,
+      presentation: wrongNoncePresentation.body.presentation,
     });
     assert.equal(invalidAttempt.status, 401);
     assert.equal(invalidAttempt.body.valid, false);
