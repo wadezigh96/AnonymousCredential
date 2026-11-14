@@ -104,6 +104,139 @@ impl ReplayGuard {
     }
 }
 
+
+const CAPABILITY_DOMAIN: &[u8] = b"ANONYMESH_DELEGATED_CAPABILITY_V1";
+
+/// A signed, attenuable capability. Public keys are explicit so a verifier
+/// can validate each delegation edge without trusting the delegate.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Capability {
+    pub parent_digest: Option<[u8; 32]>,
+    pub issuer_key: [u8; 32],
+    pub delegate_key: [u8; 32],
+    pub audience: String,
+    pub action: String,
+    pub resource: String,
+    pub expires_at: u64,
+    pub quota: u64,
+    pub signature: [u8; 64],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CapabilityError {
+    EmptyAudience,
+    EmptyAction,
+    EmptyResource,
+    ZeroQuota,
+    Expired,
+    InvalidKey,
+    InvalidSignature,
+    InvalidRoot,
+    BrokenParentLink,
+    WrongDelegator,
+    AudienceEscalation,
+    ActionEscalation,
+    ResourceEscalation,
+    ExpiryEscalation,
+    QuotaEscalation,
+    EmptyChain,
+}
+
+impl Capability {
+    fn unsigned_bytes(&self) -> Result<Vec<u8>, CapabilityError> {
+        if self.audience.is_empty() { return Err(CapabilityError::EmptyAudience); }
+        if self.action.is_empty() { return Err(CapabilityError::EmptyAction); }
+        if self.resource.is_empty() { return Err(CapabilityError::EmptyResource); }
+        if self.quota == 0 { return Err(CapabilityError::ZeroQuota); }
+
+        let mut out = Vec::new();
+        out.extend_from_slice(CAPABILITY_DOMAIN);
+        match self.parent_digest {
+            Some(digest) => { out.push(1); out.extend_from_slice(&digest); }
+            None => out.push(0),
+        }
+        out.extend_from_slice(&self.issuer_key);
+        out.extend_from_slice(&self.delegate_key);
+        for value in [&self.audience, &self.action, &self.resource] {
+            let bytes = value.as_bytes();
+            let len = u32::try_from(bytes.len()).map_err(|_| CapabilityError::EmptyResource)?;
+            out.extend_from_slice(&len.to_be_bytes());
+            out.extend_from_slice(bytes);
+        }
+        out.extend_from_slice(&self.expires_at.to_be_bytes());
+        out.extend_from_slice(&self.quota.to_be_bytes());
+        Ok(out)
+    }
+
+    /// Sign only after all capability fields have been fixed.
+    pub fn sign(mut self, issuer: &ed25519_dalek::SigningKey) -> Result<Self, CapabilityError> {
+        if issuer.verifying_key().to_bytes() != self.issuer_key {
+            return Err(CapabilityError::WrongDelegator);
+        }
+        let bytes = self.unsigned_bytes()?;
+        self.signature = issuer.sign(&bytes).to_bytes();
+        Ok(self)
+    }
+
+    pub fn digest(&self) -> Result<[u8; 32], CapabilityError> {
+        use sha2::{Digest, Sha256};
+        let mut bytes = self.unsigned_bytes()?;
+        bytes.extend_from_slice(&self.signature);
+        Ok(Sha256::digest(&bytes).into())
+    }
+
+    fn verify_signature(&self, now: u64) -> Result<(), CapabilityError> {
+        if self.expires_at <= now { return Err(CapabilityError::Expired); }
+        let key = VerifyingKey::from_bytes(&self.issuer_key)
+            .map_err(|_| CapabilityError::InvalidKey)?;
+        let signature = Signature::from_bytes(&self.signature);
+        key.verify_strict(&self.unsigned_bytes()?, &signature)
+            .map_err(|_| CapabilityError::InvalidSignature)
+    }
+}
+
+/// Verify a root capability and every delegation link. Every child must be
+/// signed by its parent's delegate key and may only narrow scope, expiry and
+/// quota. This function validates authorization metadata; callers must still
+/// atomically account for quota consumption before performing the action.
+pub fn verify_capability_chain(
+    trusted_root_issuer: &[u8; 32],
+    chain: &[Capability],
+    now: u64,
+) -> Result<(), CapabilityError> {
+    let root = chain.first().ok_or(CapabilityError::EmptyChain)?;
+    if root.parent_digest.is_some() || &root.issuer_key != trusted_root_issuer {
+        return Err(CapabilityError::InvalidRoot);
+    }
+    for (index, capability) in chain.iter().enumerate() {
+        capability.verify_signature(now)?;
+        if index == 0 { continue; }
+        let parent = &chain[index - 1];
+        if capability.issuer_key != parent.delegate_key {
+            return Err(CapabilityError::WrongDelegator);
+        }
+        if capability.parent_digest != Some(parent.digest()?) {
+            return Err(CapabilityError::BrokenParentLink);
+        }
+        if capability.audience != parent.audience {
+            return Err(CapabilityError::AudienceEscalation);
+        }
+        if capability.action != parent.action {
+            return Err(CapabilityError::ActionEscalation);
+        }
+        if capability.resource != parent.resource {
+            return Err(CapabilityError::ResourceEscalation);
+        }
+        if capability.expires_at > parent.expires_at {
+            return Err(CapabilityError::ExpiryEscalation);
+        }
+        if capability.quota > parent.quota {
+            return Err(CapabilityError::QuotaEscalation);
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
