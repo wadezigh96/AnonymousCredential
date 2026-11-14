@@ -25,7 +25,7 @@ Actors:
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not implemented |
 | Authorization | Attenuable delegated capabilities with action/resource/amount/quota/expiry limits | Not implemented |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
-| Blockchain | NEAR issuer registry and versioned public status commitments | Not implemented |
+| Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 8 unit tests and WASM CI passed; not deployed |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
 | Security | Anti-replay, rate limits, key rotation, canonical encoding and deny-by-default policy engine | Not implemented |
 
