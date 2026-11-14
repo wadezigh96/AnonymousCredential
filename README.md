@@ -1,56 +1,45 @@
 # ANONYMESH — Private Agentic Identity
 
-ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**. A human can delegate bounded authority to an AI agent; agents can prove authorization to other agents and services without disclosing unnecessary identity data.
+ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**.
 
-**Current status: the official AnonCreds native release is integrated through its upstream Node.js wrapper in a Linux demo. Issuer → holder → verifier, CL-signature-backed presentations, selective disclosure, hidden expiry predicate, nonce binding and adversarial tests pass in CI (7/7). This is a demonstration slice, not production-ready; Android/Bionic execution, unlinkability analysis, privacy-preserving revocation and independent cryptographic review remain pending.**
+**Current status:** the official AnonCreds native release powers the issuer-holder-verifier demo. The roles now run as three separate local HTTP processes. The verifier verifies the AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Android/Bionic, revocation, unlinkability analysis and independent cryptographic review remain pending.
 
-## Required components
+## Separate-process demo
 
-| Component | Intended capability | Status |
-|---|---|---|
-| Anonymous credentials | Agent credential issuance, private holder, verification | Demo prototype; official AnonCreds native wrapper; 7/7 CI tests pass on Linux x64; Android not yet verified |
-| ZK proofs | Proof of credential possession and hidden-attribute predicates | AnonCreds CL-signature presentation and hidden expiry predicate work in demo; not a new standalone SNARK circuit |
-| Selective disclosure | Reveal only verifier-requested claims | Demo reveals `agent_role`, keeps subject and expiry hidden; presentation excludes private subject marker |
-| Challenge-response | Ed25519 signature over nonce, audience, task, capability digest and expiry; in-memory replay guard | Prototype implemented; 21/21 combined agent-auth CI tests passed; not anonymous/unlinkable |
-| Unlinkable presentations | Randomized presentations and scoped pseudonyms where needed | Not implemented |
-| Delegated capability | Signed parent-linked chain; exact audience/action/resource; expiry and quota attenuation | Prototype implemented; 21/21 CI tests passed; max delegation depth 8; no atomic quota accounting |
-| Privacy-preserving revocation | Revocation proofs without exposing a stable holder identifier | Not implemented |
-| NEAR | Issuer governance and privacy-reviewed status/root commitments | Preliminary registry scaffold; CI passed; not deployed |
-| Local-first private AI | Holder wallet and agent runtime keep secrets local by default | Not implemented |
-| Security controls | Anti-replay, rate limits, key rotation, deny-by-default policies | Not implemented |
+The demo package provides three processes:
 
-## Engineering approach
+- **Issuer** creates the schema, credential definition and offer, and retains the credential-definition private key in its own process memory.
+- **Holder (Agent A)** creates and retains its link secret, creates the blinded credential request, processes the issued credential and generates selective-disclosure presentations.
+- **Verifier (Agent B)** owns the challenge ledger, retains the original presentation request, verifies the proof against that request, and consumes the nonce only after successful verification.
 
-Use maintained, independently reviewable cryptographic protocols and implementations. Do not invent cryptographic primitives. Compare candidate anonymous-credential systems for selective disclosure, unlinkability, predicates, revocation, platform support, maintenance and audit evidence before selecting dependencies.
+All role servers bind to loopback by default. The HTTP endpoints are a local integration harness, not an authenticated production network protocol. The issuer and verifier share only public schema/credential-definition data. The holder's link secret and private subject are not returned by its endpoints.
 
-See [docs/HACKATHON_MVP.md](docs/HACKATHON_MVP.md) for the NEAR Builders paths (testnet smart contracts, NEAR AI Cloud and optional Agent Connect) and time-boxed hackathon demo plan, [docs/ANONYMESH_ARCHITECTURE.md](docs/ANONYMESH_ARCHITECTURE.md) for the full architecture, [docs/CRYPTO_SELECTION.md](docs/CRYPTO_SELECTION.md) for cryptographic candidate evaluation, [docs/AUDIT.md](docs/AUDIT.md) for repository findings, and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security boundaries.
+Start each role in its own terminal, using the same package directory:
 
+```sh
+npm run start:issuer --prefix packages/anoncreds-agent-demo
+ISSUER_URL=http://127.0.0.1:4311 npm run start:holder --prefix packages/anoncreds-agent-demo
+ISSUER_URL=http://127.0.0.1:4311 npm run start:verifier --prefix packages/anoncreds-agent-demo
+```
 
-## AnonCreds demonstration slice
+For a reproducible full flow, run `npm test --prefix packages/anoncreds-agent-demo`. The integration test launches the three roles as separate operating-system processes, enrolls Agent A, requests a challenge from Agent B, submits a tampered proof first, then submits the authentic proof and finally replays it. Expected results: tampered proof rejected without consuming the challenge; authentic proof accepted once; replay rejected.
 
-The new `packages/anoncreds-agent-demo` package uses the official `@hyperledger/anoncreds-nodejs` wrapper (Apache-2.0) and the official native `anoncreds-rs` v0.2.3 release. It does not substitute Ed25519 signatures for anonymous credentials.
+## Security behavior
 
-- Agent A creates and holds a credential; the link secret stays holder-side.
-- Agent B sends an AnonCreds presentation request with a fresh native nonce.
-- Agent A reveals only `agent_role`; the private subject and `valid_until` remain hidden, with validity enforced as a predicate.
-- The verifier checks the proof against its request, and a separate in-memory demo ledger binds the nonce to audience, task and capability digest and consumes it once.
-- Adversarial coverage: forged/tampered credential, replay, changed audience/task/capability context, expired challenge, expired credential and mismatched presentation nonce.
+Nonce handling is synchronous in the verifier process: check pending/context/expiry, run native AnonCreds verification against the verifier-stored request, then mark consumed. A failed verification or thrown native error does not consume the challenge. This in-memory ledger is single-process demo state; production requires durable, atomic storage (for example a transactional database with a compare-and-set/unique-consumption constraint), authentication, TLS and rate limits.
 
-GitHub Actions run [#43605244237](https://github.com/wadezigh96/AnonymousCredential/actions/runs/43605244237) passed **7/7** tests on Linux x64 / Node.js 22.14.0. The demo reported `valid: true`, `privateSubjectDisclosed: false`, and a proof JSON size of 18,137 bytes on that runner. These are CI demonstration measurements, not Android benchmarks.
+Agent A reveals only `agent_role`; the private subject and `valid_until` remain hidden, with validity enforced by an AnonCreds predicate. This is not a claim of absolute unlinkability or a full privacy-preserving revocation system.
 
-Reproduce with `npm test --prefix packages/anoncreds-agent-demo`, `npm run demo --prefix packages/anoncreds-agent-demo`, and `npm run benchmark --prefix packages/anoncreds-agent-demo`. See [docs/ANONYMESH_ANDROID_VALIDATION.md](docs/ANONYMESH_ANDROID_VALIDATION.md) for the separate Android ARM64 acceptance plan. The official Node wrapper's Linux ARM64 library is not assumed to work on Android/Bionic; the intended Android route is the official React Native wrapper.
+## Reproduction and benchmarks
 
-## Completion criteria
+- `npm test --prefix packages/anoncreds-agent-demo`
+- `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
+- `npm run benchmark --prefix packages/anoncreds-agent-demo`
 
-A feature is implemented only when code, reproducible positive and negative tests, adversarial tests, documentation, and performance/privacy measurements exist. Record proof generation time, verification time, memory use, proof size, NEAR gas where applicable, and known privacy leakage. A successful compile alone is not acceptance.
+The earlier 7/7 proof tests passed on Linux x64. A Linux ARM64 benchmark also completed 20 measured iterations (proof generation p50/p95 68.314/68.429 ms; verification p50/p95 66.877/66.973 ms; proof JSON p50/p95 18,114/18,158 bytes; process RSS high-water 61.67 MiB). Those measurements are Linux ARM64, not Android/Bionic and not a benchmark of the user's phone.
 
-## Repository safety policy
+See [docs/ANONYMESH_ANDROID_VALIDATION.md](docs/ANONYMESH_ANDROID_VALIDATION.md) for Android acceptance criteria. The official Node.js wrapper's Linux binary is not assumed to work on Android/Bionic; the intended Android route is the official React Native wrapper.
 
-Development is isolated on `feat/anonymesh-private-agent-identity`. `main` remains untouched. No deployment, chain transaction, merge, or external submission is authorized without explicit user approval.
+## Other components
 
-## Privacy and security boundaries
-
-Do not publish raw identity attributes, holder secrets, stable global identifiers, or per-presentation activity on-chain. Do not claim that a credential proves human uniqueness or agent safety. Do not promise absolute unlinkability: timing, network metadata, rare attribute combinations, issuer/verifier collusion and revocation mechanisms can create correlation risks. No post-quantum security is claimed.
-## Current implementation slice
-
-A preliminary NEAR issuer/status registry contract exists under `contracts/near/issuer-registry`. GitHub Actions run #13 (`c4f4f821`) passed all 14 unit tests and the `wasm32-unknown-unknown` release build using `cargo generate-lockfile`, `cargo test --locked`, and `cargo build --locked`. The generated lockfile exists only inside the ephemeral CI runner and is not committed; reproducible builds across runs still require committing a reviewed `Cargo.lock`. This verifies compilation and current unit-test cases only, not a security audit or protocol correctness. The contract does not verify credentials/ZK proofs or implement privacy-preserving revocation. No testnet deployment has occurred.
+Delegated capability verification and the preliminary NEAR issuer/status registry remain prototypes. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment, merge, or external submission is authorized by this work.
