@@ -1,10 +1,62 @@
-# ANONYMESH — Private Agentic Identity
+# ANONYMESH — Private Agentic Identity Infrastructure (PAII)
 
-ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**.
+**ANONYMESH** is a platform-independent protocol project exploring **Private Agentic Identity Infrastructure (PAII)**: privacy-preserving identity, trust and authorization for humans and autonomous AI agents.
 
-**Current status:** ANONYMESH is a platform-independent protocol and agent-identity architecture. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Revocation, unlinkability analysis and independent cryptographic review remain pending.
+**PAII is the innovation category proposed by this project**, not a claim that it is already an established industry standard or an official NEAR Hackathon track. ANONYMESH is the protocol and reference implementation being developed to explore this category.
 
-## Separate-process demo
+The central idea is simple: **an agent should be able to prove that it is authorized to perform an action without unnecessarily revealing its private identity or its entire credential.**
+
+## What is Private Agentic Identity Infrastructure?
+
+PAII describes the infrastructure layer that allows people and AI agents to establish and prove trust, present limited credentials, delegate bounded authority and obtain authorization while minimizing disclosure of private information.
+
+It is broader than a login mechanism or a standalone zero-knowledge proof. It brings together credential-based identity, privacy-preserving presentations, agent authentication, delegated capabilities, policy enforcement and trust coordination.
+
+### Five innovation pillars
+
+| Pillar | Purpose | ANONYMESH direction |
+|---|---|---|
+| **Private Identity** | Prove selected identity attributes without disclosing the full identity | Anonymous Credentials, selective disclosure and ZK proof systems |
+| **Private Trust** | Let another agent verify relevant trust claims with limited disclosure | Verifiable credentials and future privacy-preserving reputation research |
+| **Delegated Authority** | Allow an agent to delegate narrowly scoped permissions | Signed capability chains, attenuation and policy checks |
+| **Private Agent Governance** | Control validity, revocation, replay and permitted actions | Revocation research, challenge binding, anti-replay and policy enforcement |
+| **Agent Interoperability** | Let independently operated agents verify claims across system boundaries | Issuer–Holder–Verifier protocol and future NEAR registry integration |
+
+These pillars are the project's design taxonomy and roadmap. They are not all implemented today; implementation status and limitations are listed below.
+
+## Design principles
+
+1. **Privacy by minimization:** disclose only the attributes needed for a verification decision.
+2. **Verifiable authorization:** a valid identity proof alone must not be confused with permission to perform a requested action.
+3. **Bounded delegation:** delegated authority should be limited by audience, action, resource, expiry and other applicable policy constraints.
+4. **Separation of roles:** issuer, holder and verifier should have distinct responsibilities and, for stronger deployments, separate security domains.
+5. **Honest security claims:** distinguish demonstrated properties from prototypes, planned work and unresolved risks.
+6. **Platform independence:** the protocol is not tied to Android, a particular operating system or one agent framework.
+
+## Protocol architecture
+
+The core protocol uses three roles:
+
+- **Issuer** creates schemas, credential definitions and credentials under an issuer policy.
+- **Holder (Agent A)** protects its link secret and creates presentations that disclose only requested claims or prove predicates.
+- **Verifier (Agent B)** issues a context-bound challenge and verifies a presentation against the request it originally created.
+
+The intended authorization flow is:
+
+1. An agent receives a credential from an issuer.
+2. A relying agent requests proof of a specific claim or predicate, bound to its audience and a fresh challenge.
+3. The holder creates a selective-disclosure proof.
+4. The verifier validates the proof and the request context.
+5. A separate authorization policy evaluates whether the verified claims and delegated capabilities permit the requested action.
+6. The action is allowed only if all required checks pass.
+
+A credential proof is **not by itself proof that a particular action is authorized**. The authorization and policy-enforcement layer is a distinct part of the design and remains under development.
+
+## Current implementation status
+
+ANONYMESH is a platform-independent protocol and agent-identity architecture. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Revocation, unlinkability analysis and independent cryptographic review remain pending.
+
+### Separate-process demo
 
 The demo package provides three processes:
 
@@ -24,13 +76,13 @@ ISSUER_URL=http://127.0.0.1:4311 npm run start:verifier --prefix packages/anoncr
 
 For a reproducible full flow, run `npm test --prefix packages/anoncreds-agent-demo`. The integration test launches the three roles as separate operating-system processes, enrolls Agent A, requests a challenge from Agent B, submits a tampered proof first, then submits the authentic proof and finally replays it. Expected results: tampered proof rejected without consuming the challenge; authentic proof accepted once; replay rejected.
 
-## Security behavior
+### Security behavior and limitations
 
 Nonce handling is synchronous in the verifier process: check pending/context/expiry, run native AnonCreds verification against the verifier-stored request, then mark consumed. A failed verification or thrown native error is rejected and does not consume the challenge. This in-memory ledger is single-process demo state; production requires durable, atomic storage (for example a transactional database with a compare-and-set/unique-consumption constraint), authentication, TLS and rate limits.
 
 Agent A reveals only `agent_role`; the private subject and `valid_until` remain hidden, with validity enforced by an AnonCreds predicate. This is not a claim of absolute unlinkability or a full privacy-preserving revocation system.
 
-## Reproduction and benchmarks
+### Reproduction and benchmarks
 
 - `npm test --prefix packages/anoncreds-agent-demo`
 - `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
@@ -40,16 +92,39 @@ The current local verification completed 22/22 Node tests on Linux x64, includin
 
 Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo.
 
-## Other components
+## Roadmap
+
+The following roadmap defines the intended development direction. A roadmap item is not a claim of completion.
+
+1. **Private Agent Identity:** strengthen credential issuance, holder protection and selective-disclosure verification.
+2. **Private Agent Authorization:** bind proof requests to audience, task and fresh challenges; integrate capability verification with actual policy decisions.
+3. **Private Agent Trust:** research privacy-preserving reputation and cross-agent trust verification without introducing unnecessary correlation.
+4. **Private Agent Governance:** develop privacy-aware revocation, durable anti-replay, rate limits and enforceable policy controls.
+5. **Private Agent Economy:** enable interoperable verification and bounded delegation between independently operated agents, with NEAR used where on-chain coordination adds value.
+
+## NEAR integration
+
+NEAR is a planned coordination and public-registry layer for information such as issuer metadata and status commitments. Private identity attributes, holder secrets and private credential contents should not be placed on-chain. The current NEAR issuer/status registry is a preliminary contract scaffold; it is not deployed and does not yet provide end-to-end on-chain revocation verification.
+
+## Other components and status at a glance
 
 Delegated capability verification and the preliminary NEAR issuer/status registry remain prototypes. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment, merge, or external submission is authorized by this work.
 
+| Component | Current status |
+|---|---|
+| AnonCreds issuer-holder-verifier demo | Implemented as separate local Node processes; Linux CI tests pass |
+| Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
+| Ed25519 challenge-response | Prototype with CI tests; ordinary key-based authentication, not anonymous |
+| Delegated capability chain | Prototype verifier with CI tests; not yet enforced by a live agent runtime |
+| NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
+| Unlinkable presentations | Not demonstrated |
+| Privacy-preserving revocation | Not implemented |
+| Local-first agent runtime and durable wallet | Not implemented |
+| Production rate limits and distributed replay protection | Not implemented |
 
 ## Architecture overview
 
-ANONYMESH is organized as a protocol with separate issuer, holder, verifier,
-agent-authorization and registry boundaries. The current repository contains
-working implementation slices, not a complete production protocol.
+ANONYMESH is organized as a protocol with separate issuer, holder, verifier, agent-authorization and registry boundaries. The current repository contains working implementation slices, not a complete production protocol.
 
 ```text
 Human / Agent
@@ -96,18 +171,4 @@ anonymesh/
 └── .github/workflows/           # CI for protocol components and platform-specific validation
 ```
 
-### Component status at a glance
-
-| Component | Current status |
-|---|---|
-| AnonCreds issuer-holder-verifier demo | Implemented as separate local Node processes; Linux CI tests pass |
-| Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
-| Ed25519 challenge-response | Prototype with CI tests; ordinary key-based authentication, not anonymous |
-| Delegated capability chain | Prototype verifier with CI tests; not yet enforced by a live agent runtime |
-| NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
-| Unlinkable presentations | Not demonstrated |
-| Privacy-preserving revocation | Not implemented |
-| Local-first agent runtime and durable wallet | Not implemented |
-| Production rate limits and distributed replay protection | Not implemented |
-
-For the implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).
+For implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).
