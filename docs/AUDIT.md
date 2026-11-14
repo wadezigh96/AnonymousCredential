@@ -19,7 +19,7 @@ The current feature branch contains the documentation, one Rust NEAR issuer/stat
 | Unlinkable presentations | Not present |
 | Delegated capabilities | Not present |
 | Privacy-preserving revocation | Not present |
-| NEAR contracts and tests | Not present |
+| NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
 | Automated tests / CI / dependency lockfile | Not found in inspected feature-branch tree |
