@@ -128,3 +128,6 @@ Test at minimum on Android ARM64 and a desktop/server baseline. Evaluate privacy
 No custom cryptographic primitive, no public identity registry, no default remote proving, no public presentation log and no post-quantum claim. A feature is complete only with reproducible positive, negative and adversarial tests plus measured performance and documented privacy limits.
 
 No changes to `main`, merge, deployment, chain transaction or hackathon submission are authorized without explicit user approval.
+## 8. Hackathon deployment profile
+
+For the time-boxed NEAR Hackathon prototype, target **NEAR testnet only**. The detailed scope, Gateway role and privacy boundaries are in [`HACKATHON_MVP.md`](HACKATHON_MVP.md). Testnet is for demonstration and integration testing only; it does not imply production security or authorize mainnet activity.
