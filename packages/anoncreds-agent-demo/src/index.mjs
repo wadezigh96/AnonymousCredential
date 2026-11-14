@@ -1,5 +1,5 @@
 import { randomBytes, generateKeyPairSync, createPublicKey } from "node:crypto";
-import { validateAgentPublicKey } from "./agent-key-binding.mjs";
+import { validateAgentPublicKey, extractCredentialAgentPublicKey } from "./agent-key-binding.mjs";
 import {
   Credential,
   CredentialDefinition,
@@ -229,12 +229,18 @@ export function verifyAgentPresentation({
   return challengeLedger.verifyAndConsume({
     ...challengeContext,
     now,
-    verify: (trustedRequestJson) => Presentation.fromJson(serializedPresentation).verify({
+    verify: (trustedRequestJson) => {
       // The request comes from the verifier's ledger, never from the presenter.
-      presentationRequest: PresentationRequest.fromJson(trustedRequestJson),
-      schemas: { [SCHEMA_ID]: verifierSchema },
-      credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
-    }),
+      const valid = Presentation.fromJson(serializedPresentation).verify({
+        presentationRequest: PresentationRequest.fromJson(trustedRequestJson),
+        schemas: { [SCHEMA_ID]: verifierSchema },
+        credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
+      });
+      if (!valid) return false;
+      // AnonCreds proves encoded values; verifier must check raw-to-encoded too.
+      extractCredentialAgentPublicKey(serializedPresentation);
+      return true;
+    },
   });
 }
 
