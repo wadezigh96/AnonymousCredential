@@ -121,15 +121,7 @@ test("rejects challenge scope and capability digest substitution", () => {
 test("rejects a proof signed by a key other than the capability delegate", () => {
   const f = fixture();
   const attacker = keyPair();
-  const forged = createAgentRequestProof({
-    challenge: f.challenge,
-    capabilityChain: [{
-      ...f.chain[0],
-      delegateKey: attacker.publicKey,
-      signature: f.chain[0].signature,
-    }],
-    privateKey: attacker.privateKey,
-  });
+  const forged = { ...f.proof, delegateKey: attacker.publicKey };
   const runtime = new AgentAuthorizationRuntime();
   assert.throws(() => runtime.authorizeAndConsume({
     chain: f.chain,
