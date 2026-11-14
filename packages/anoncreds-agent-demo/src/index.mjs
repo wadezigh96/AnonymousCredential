@@ -43,6 +43,9 @@ export class ChallengeLedger {
     if (!record || record.consumed || record.presentationRequest) {
       throw new Error("Challenge missing, consumed, or already initialized");
     }
+    if (presentationRequest?.nonce !== nonce) {
+      throw new Error("Presentation request nonce mismatch");
+    }
     record.presentationRequest = structuredClone(presentationRequest);
   }
 
@@ -86,8 +89,8 @@ export class ChallengeLedger {
     const { verify } = context;
     if (typeof verify !== "function") throw new Error("A proof verification callback is required");
     const now = context.now ?? Math.floor(Date.now() / 1000);
-    this.#assertPending({ ...context, now });
-    const valid = verify();
+    const pending = this.#assertPending({ ...context, now });
+    const valid = verify(structuredClone(pending.presentationRequest));
     if (valid !== true) return false;
     const record = this.#assertPending({ ...context, now });
     record.consumed = true;
@@ -206,15 +209,15 @@ export function verifyAgentPresentation({
   now = Math.floor(Date.now() / 1000),
 }) {
   const serializedPresentation = presentationJson ?? presentation?.toJson?.() ?? presentation;
-  const serializedRequest = presentationRequestJson ?? presentationRequest?.toJson?.() ?? presentationRequest;
-  if (!serializedPresentation || !serializedRequest) {
-    throw new Error("Presentation and verifier-stored presentation request are required");
+  if (!serializedPresentation) {
+    throw new Error("Presentation is required");
   }
   return challengeLedger.verifyAndConsume({
     ...challengeContext,
     now,
-    verify: () => Presentation.fromJson(serializedPresentation).verify({
-      presentationRequest: PresentationRequest.fromJson(serializedRequest),
+    verify: (trustedRequestJson) => Presentation.fromJson(serializedPresentation).verify({
+      // The request comes from the verifier's ledger, never from the presenter.
+      presentationRequest: PresentationRequest.fromJson(trustedRequestJson),
       schemas: { [SCHEMA_ID]: verifierSchema },
       credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
     }),
