@@ -23,7 +23,7 @@ Actors:
 | Presentation | Selective disclosure and hidden-attribute predicates | Not implemented |
 | Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not implemented |
-| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Prototype implemented; 18/18 CI tests passed; no quota accounting or delegation-depth policy |
+| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Prototype implemented; 21/21 CI tests passed; max depth 8; no quota accounting |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
 | Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 14 unit tests and locked-mode WASM CI passed using an ephemeral generated lockfile; not deployed |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
