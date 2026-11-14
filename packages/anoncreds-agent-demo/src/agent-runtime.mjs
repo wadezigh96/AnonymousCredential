@@ -95,24 +95,19 @@ export function createAgentRequestProof({ challenge, capabilityChain, privateKey
  * it is not durable or safe across multiple verifier processes.
  */
 export class AgentAuthorizationRuntime {
-  #usedNonces = new Set();
-  #quotaUsed = new Map();
+  #store;
+  constructor({ store } = {}) {
+    this.#store = store ?? new MemoryAuthorizationStore();
+  }
 
   authorizeAndConsume({ chain, trustedRootIssuer, challenge, proof, expected, now = Math.floor(Date.now() / 1000) }) {
     if (!challenge || typeof challenge.nonce !== "string") fail("INVALID_CHALLENGE");
-    if (this.#usedNonces.has(challenge.nonce)) fail("CHALLENGE_REPLAY");
-
     const result = verifyCapabilityChain({
       chain,
       trustedRootIssuer,
-      expected: {
-        ...expected,
-        audience: challenge.audience,
-        action: challenge.task,
-      },
+      expected: { ...expected, audience: challenge.audience, action: challenge.task },
       now,
     });
-
     const leaf = chain[chain.length - 1];
     const digest = capabilityDigest(leaf);
     if (challenge.capabilityDigest !== digest) fail("CHALLENGE_CAPABILITY_MISMATCH");
@@ -122,28 +117,28 @@ export class AgentAuthorizationRuntime {
     if (proof.action !== challenge.task || proof.action !== result.action) fail("REQUEST_ACTION_MISMATCH");
     if (proof.resource !== result.resource) fail("REQUEST_RESOURCE_MISMATCH");
     if (proof.delegateKey !== result.delegateKey) fail("REQUEST_DELEGATE_MISMATCH");
-
     const signature = decode(proof.signature, SIGNATURE_BYTES, "INVALID_REQUEST_SIGNATURE");
-    const valid = ed25519Verify(
-      null,
-      transcript(proof),
-      publicKeyFromRaw(result.delegateKey),
-      signature,
-    );
+    const valid = ed25519Verify(null, transcript(proof), publicKeyFromRaw(result.delegateKey), signature);
     if (!valid) fail("INVALID_REQUEST_SIGNATURE");
 
-    const used = this.#quotaUsed.get(digest) ?? 0;
-    if (used >= result.remainingQuota) fail("CAPABILITY_QUOTA_EXHAUSTED");
-
-    // Mutations occur only after every validation has succeeded.
-    this.#usedNonces.add(challenge.nonce);
-    this.#quotaUsed.set(digest, used + 1);
+    const consumed = this.#store.consume({ nonce: challenge.nonce, digest, quota: result.remainingQuota });
     return Object.freeze({
       authorized: true,
       capabilityDigest: digest,
       action: result.action,
       resource: result.resource,
-      remainingQuota: result.remainingQuota - used - 1,
+      remainingQuota: consumed.remainingQuota,
     });
+  }
+
+  async authorizeAndExecute(args, execute) {
+    if (typeof execute !== "function") throw new TypeError("An authorized action callback is required");
+    const authorization = this.authorizeAndConsume(args);
+    const result = await execute(Object.freeze({
+      action: authorization.action,
+      resource: authorization.resource,
+      capabilityDigest: authorization.capabilityDigest,
+    }));
+    return Object.freeze({ authorization, result });
   }
 }
