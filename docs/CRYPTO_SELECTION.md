@@ -5,7 +5,7 @@ Status: **provisional engineering decision for a local prototype; not a producti
 
 ## Decision summary
 
-Use the AnonCreds v1 implementation family as the first integration candidate for the initial local human/agent credential vertical slice, with a hard minimum of `anoncreds-rs` v0.2.3. Keep the application behind a protocol adapter so a later migration or second backend remains possible.
+Use the AnonCreds v1 implementation family as the first integration candidate for the initial local human/agent credential vertical slice, evaluating the currently published `anoncreds-rs` v0.2.3 release. Keep the application behind a protocol adapter so a later migration or second backend remains possible.
 
 Do not yet integrate AnonCreds v2 or W3C BBS into the production protocol. Keep AnonCreds v2 as the leading next-generation research candidate and BBS as an interoperability candidate. This decision is based on current implementation maturity and Android build evidence, not a claim that v1 has the strongest cryptography or is the best long-term scheme.
 
@@ -25,18 +25,19 @@ Do not yet integrate AnonCreds v2 or W3C BBS into the production protocol. Keep 
 
 | Candidate | Useful capabilities | Evidence and limitations | ANONYMESH decision |
 |---|---|---|---|
-| AnonCreds v1 / `anoncreds-rs` | Blind issuance, link-secret holder binding, selective disclosure, integer predicates, unlinkable presentations and ZK non-revocation proofs | Spec v1.0 is still labelled Draft. Rust reference implementation has issuer/prover/verifier APIs and Android CI targets including `aarch64-linux-android`. v0.2.3 fixes CVE-2025-67498; v0.2.2 was affected. Revocation requires status data, tails/witness management and careful metadata analysis. | **Provisional first integration candidate**, minimum v0.2.3. |
+| AnonCreds v1 / `anoncreds-rs` | Blind issuance, link-secret holder binding, selective disclosure, integer predicates, unlinkable presentations and ZK non-revocation proofs | Spec v1.0 is still labelled Draft. Rust reference implementation has issuer/prover/verifier APIs and Android CI targets including `aarch64-linux-android`. v0.2.3 is the current release identified in the source review. A specific security-advisory fix claim has not been independently verified in this review. Revocation requires status data, tails/witness management and careful metadata analysis. | **Provisional first integration candidate**, minimum v0.2.3. |
 | AnonCreds v2 / `anoncreds-v2-rs` | Pluggable BBS and PS signature suites; selective disclosure; unlinkable signatures; positive integer predicates, signed expressions, range/domain/set proofs, verified encryption, cross-credential equality; ALLOSAUR revocation | Its own README describes the current code as a toolkit and says a comprehensive opinionated interoperable specification and reference implementation is still a future goal. Active repository evidence exists, but Android ARM64 support and an independent security audit were not established in this review. | **Leading next-generation research candidate**, not initial dependency. Reassess after stable APIs, test vectors, platform builds and security review. |
 | W3C Data Integrity BBS Cryptosuite | Selective disclosure and unlinkable derived proofs from BBS signatures; optional holder-binding/pseudonym feature options in the draft | W3C document is a Candidate Recommendation Draft dated 2026-09-10. The interoperability report describes the technology as experimental; its published test results include skipped/pending and failed cases. The suite itself does not provide AnonCreds-style native integer predicate proofs or a complete revocation design. | **Interoperability candidate**, not sole ANONYMESH credential engine today. |
 | SD-JWT VC | Compact selectively disclosable signed claims and broad JOSE ecosystem compatibility | Ordinary SD-JWT selective disclosure is not by itself a zero-knowledge unlinkable derived-proof system; it does not satisfy ANONYMESH's privacy goals alone. | **Not sufficient as the primary cryptographic engine**. Could be an explicitly lower-privacy compatibility format if ever required. |
 
-## Security finding that changes the version floor
+## Security advisory verification gate
 
-GitHub advisory [GHSA-89r4-4c4j-7wx9 / CVE-2025-67498](https://github.com/anoncreds/anoncreds-rs/security/advisories/GHSA-89r4-4c4j-7wx9) documents that verifier versions 0.2.2 could accept a presentation combining credentials issued to different link secrets as if they shared one holder secret. The advisory lists 0.2.3 as patched.
+A prior research note referenced GHSA-89r4-4c4j-7wx9 / CVE-2025-67498 and described a verifier/link-secret issue. The public advisory could not be retrieved or corroborated in this review. Treat that claim as **unverified and do not rely on it** until the advisory is independently located and its affected/fixed version range is confirmed.
 
 Therefore:
-- Reject `anoncreds-rs` 0.2.2 and earlier for this project.
-- Require at least 0.2.3 and add a regression test proving that a presentation combining credentials from different link secrets is rejected.
+- Use v0.2.3 as the reviewed release baseline for initial evaluation, not as a security guarantee.
+- Before dependency adoption, independently verify all published advisories for `anoncreds-rs` and `anoncreds-clsignatures`, including affected and fixed ranges.
+- Add regression tests for cross-link-secret credential mixing and other holder-binding invariants, regardless of whether an advisory is confirmed.
 - Pin the exact dependency version and commit/checksum in the eventual lockfile; do not float to an unreviewed version.
 - Re-review advisories and release notes before every dependency upgrade.
 
