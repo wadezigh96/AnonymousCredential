@@ -7,17 +7,17 @@ Status: scope and acceptance plan; not an implementation report.
 
 ## 1. Time-boxed objective
 
-Prioritize one demonstrable end-to-end privacy and agent-authorization flow over broad protocol completeness. The hackathon deadline published by the official event page is 2026-11-14 23:59 UTC. For Singapore time (UTC+8), that is 2026-11-15 07:59. Confirm the live submission form before relying on this conversion or deadline.
+Prioritize one demonstrable end-to-end privacy and agent-authorization flow over broad protocol completeness. The official event page states the development/submission cutoff is 2026-11-14 23:59 UTC. That is 2026-11-15 06:59 WIB (UTC+7) and 07:59 Singapore time (UTC+8). The official site says one submission per project and requires a public repository plus a public X demo post with video or screenshots. Confirm the live form before sending anything.
 
-Primary track fit: **AI Security & Defense** (agent security, policy engines and sandboxed authorization). Secondary fit may include **Agent Economy** or **Open Innovation** if the actual demo supports those claims. The event permits a project to select multiple fitting tracks; do not claim a track without checking the current submission form.
+Recommended tracks: **Privacy & Private AI** (privacy-preserving credentials and private AI) and **AI Security & Defense** (agent authentication, delegated capabilities, spending/action limits and policy enforcement). Select both only if the working demo genuinely demonstrates both. Do not claim Agent Economy unless the prototype actually performs agent commerce/payments.
 
 ## 2. NEAR AI Gateway — correct role
 
-`https://gateway.near.ai/` currently describes a macOS desktop application for routing supported coding-agent tools (Claude Code, Codex and OpenCode) through NEAR AI private models and for reviewing/redacting coding traces before optional sharing.
+`https://gateway.near.ai/` currently describes a macOS desktop application for routing supported coding-agent tools (Claude Code, Codex and OpenCode) through NEAR AI private models and for reviewing/redacting coding traces before optional sharing. It is a developer productivity/private-inference tool, not the NEAR testnet RPC, wallet, contract deployment service or a documented public API for ANONYMESH.
 
 It is **not documented here as a public application API or an on-chain testnet service**. Do not make ANONYMESH runtime depend on the desktop app, and do not send holder secrets, credential witnesses, private attributes or user credentials to it.
 
-The official Gateway download page lists macOS 14 or later and Apple silicon/Intel. It does not list Android or Termux support. Therefore it cannot be installed natively in the user's Android/Termux environment based on the published requirements. If a separate compatible Mac is available, it can be used as an optional developer-tooling route; otherwise continue using the existing local coding workflow.
+The official Gateway download page lists macOS 14 or later and Apple silicon/Intel (universal app). It does not list Android or Termux support. Therefore it cannot be installed natively in the user's Android/Termux environment based on the published requirements. If a separate compatible Mac is available, it can be used as an optional developer-tooling route. The user is currently working from Android/Termux, so do not make Gateway a blocker: continue coding/testing with the existing local workflow and integrate Gateway only if a supported Mac becomes available.
 
 Gateway trace sharing is a separate opt-in data flow. Keep trace contribution disabled unless the user explicitly reviews and approves the specific redacted traces and data uses. Never treat installation or sign-in as permission to share source code or session traces.
 
