@@ -13,7 +13,7 @@ npm run demo --prefix packages/anoncreds-agent-demo
 npm run benchmark --prefix packages/anoncreds-agent-demo
 ```
 
-The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The expected local test result is 22 passing Node tests. The demo must show `valid: true` and `privateSubjectDisclosed: false`.
+The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The current test source contains 30 Node tests across the four demo test files. This is a source count, not a claim that all 30 currently pass; record a fresh test run and commit before reporting a pass. The AnonCreds demo should show `valid: true` and `privateSubjectDisclosed: false`. The separate authorization-runtime tests exercise capability binding and quota/replay controls, but they are not joined to the AnonCreds role-service flow.
 
 ## Rust and contract checks
 
