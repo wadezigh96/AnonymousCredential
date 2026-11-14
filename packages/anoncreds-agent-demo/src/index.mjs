@@ -90,8 +90,15 @@ export class ChallengeLedger {
     if (typeof verify !== "function") throw new Error("A proof verification callback is required");
     const now = context.now ?? Math.floor(Date.now() / 1000);
     const pending = this.#assertPending({ ...context, now });
-    const valid = verify(structuredClone(pending.presentationRequest));
-    if (valid !== true) return false;
+    let valid = false;
+    try {
+      valid = verify(structuredClone(pending.presentationRequest)) === true;
+    } catch {
+      // Malformed or cryptographically invalid presentations fail closed.
+      // No challenge state is changed on this path.
+      return false;
+    }
+    if (!valid) return false;
     const record = this.#assertPending({ ...context, now });
     record.consumed = true;
     return true;
