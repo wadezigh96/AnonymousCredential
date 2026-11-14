@@ -32,3 +32,16 @@ jobs:
         run: npm test --prefix packages/anoncreds-agent-demo
       - name: Run demo and report non-sensitive metrics
         run: npm run demo --prefix packages/anoncreds-agent-demo
+
+  anoncreds-linux-arm64-benchmark:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+      - name: Install official AnonCreds ARM64 native release
+        run: npm install --prefix packages/anoncreds-agent-demo --no-audit --no-fund
+      - name: Benchmark native proof generation and verification on Linux ARM64
+        run: npm run benchmark --prefix packages/anoncreds-agent-demo
