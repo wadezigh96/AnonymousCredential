@@ -45,7 +45,7 @@ The branch README incorrectly claimed a membership circuit and root registry pro
 
 ## 5. Audit limits
 
-This is a repository-tree and historical-source review. It is not yet a complete dependency vulnerability audit or independent cryptographic review. No active package manifests, lockfiles, tests, CI workflows or implementation source were found in the inspected feature-branch tree, so there is currently no active dependency graph or runnable project test suite to assess.
+This is a preliminary source/tree review plus inspection of the latest GitHub Actions run. It is not a complete dependency vulnerability audit, formal verification or independent cryptographic review. The registry crate has an active Cargo.toml but no committed Cargo.lock. The rest of the ANONYMESH credential, proof, agent runtime and privacy layers remain unimplemented.
 
 ## 6. Next audit gate
 
