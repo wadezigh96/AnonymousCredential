@@ -2,7 +2,7 @@
 
 ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**. A human can delegate bounded authority to an AI agent; agents can prove authorization to other agents and services without disclosing unnecessary identity data.
 
-**Current status: preliminary NEAR issuer/status registry scaffold and a narrow Ed25519 agent challenge-response prototype are implemented. Anonymous credentials, ZK presentations, selective disclosure, unlinkability, delegated-capability enforcement and privacy-preserving revocation remain unimplemented.**
+**Current status: preliminary NEAR issuer/status registry, Ed25519 challenge-response and a signed delegated-capability chain verifier are implemented as prototypes. Anonymous credentials, ZK presentations, selective disclosure, unlinkability, privacy-preserving revocation and atomic quota enforcement remain unimplemented.**
 
 ## Required components
 
@@ -13,7 +13,7 @@ ANONYMESH is a privacy-preserving identity and authorization protocol for **peop
 | Selective disclosure | Reveal only verifier-requested claims | Not implemented |
 | Challenge-response | Ed25519 signature over nonce, audience, task, capability digest and expiry; in-memory replay guard | Prototype implemented; 9/9 CI tests passed; not anonymous/unlinkable |
 | Unlinkable presentations | Randomized presentations and scoped pseudonyms where needed | Not implemented |
-| Delegated capability | Attenuable agent permissions and local policy enforcement | Not implemented |
+| Delegated capability | Signed parent-linked chain; exact audience/action/resource; expiry and quota attenuation | Prototype implemented; 18/18 CI tests passed; no atomic quota accounting |
 | Privacy-preserving revocation | Revocation proofs without exposing a stable holder identifier | Not implemented |
 | NEAR | Issuer governance and privacy-reviewed status/root commitments | Preliminary registry scaffold; CI passed; not deployed |
 | Local-first private AI | Holder wallet and agent runtime keep secrets local by default | Not implemented |
