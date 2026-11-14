@@ -15,7 +15,7 @@ ANONYMESH is a privacy-preserving identity and authorization protocol for **peop
 | Unlinkable presentations | Randomized presentations and scoped pseudonyms where needed | Not implemented |
 | Delegated capability | Attenuable agent permissions and local policy enforcement | Not implemented |
 | Privacy-preserving revocation | Revocation proofs without exposing a stable holder identifier | Not implemented |
-| NEAR | Issuer governance and privacy-reviewed status/root commitments | Not implemented |
+| NEAR | Issuer governance and privacy-reviewed status/root commitments | Preliminary registry scaffold; CI passed; not deployed |
 | Local-first private AI | Holder wallet and agent runtime keep secrets local by default | Not implemented |
 | Security controls | Anti-replay, rate limits, key rotation, deny-by-default policies | Not implemented |
 
