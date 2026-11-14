@@ -2,7 +2,7 @@
 
 ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**.
 
-**Current status:** ANONYMESH is a platform-independent protocol and agent-identity architecture; Android is not its primary runtime or required deployment platform. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. The Android app under `apps/android` is an optional native-library smoke-test/validation target only. It demonstrates that native AnonCreds proof generation and verification can run on an Android device; it does not define the protocol architecture or limit ANONYMESH to Android. Revocation, unlinkability analysis and independent cryptographic review remain pending.
+**Current status:** ANONYMESH is a platform-independent protocol and agent-identity architecture. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Revocation, unlinkability analysis and independent cryptographic review remain pending.
 
 ## Separate-process demo
 
@@ -38,7 +38,7 @@ Agent A reveals only `agent_role`; the private subject and `valid_until` remain 
 
 The earlier 7/7 proof tests passed on Linux x64. A Linux ARM64 benchmark also completed 20 measured iterations (proof generation p50/p95 68.314/68.429 ms; verification p50/p95 66.877/66.973 ms; proof JSON p50/p95 18,114/18,158 bytes; process RSS high-water 61.67 MiB). Those measurements are Linux ARM64, not Android/Bionic and not a benchmark of the user's phone.
 
-Android is an optional portability and native-integration test target, not the main execution path. Its standalone APK is useful for checking the official React Native AnonCreds binding on a physical Android device. The protocol, credential lifecycle and agent-to-agent architecture are not Android-specific. See [docs/ANONYMESH_ANDROID_VALIDATION.md](docs/ANONYMESH_ANDROID_VALIDATION.md) for Android-only test scope and acceptance criteria.
+Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo.
 
 ## Other components
 
@@ -65,8 +65,8 @@ Issuer process                              Replay / policy checks
                                       NEAR issuer/status registry
                                       (public issuer metadata only)
 
-Protocol is platform-independent; Node.js role processes are the current runnable integration demo.
-Android app: optional native AnonCreds portability/smoke test only.
+Platform-independent protocol flow: issuer, holder and verifier.
+Current runnable integration demo: separate Node.js role processes.
 Production agent runtime: not yet implemented.
 ```
 
@@ -74,8 +74,6 @@ Production agent runtime: not yet implemented.
 
 ```text
 anonymesh/
-├── apps/
-│   └── android/                 # OPTIONAL Android native-library smoke test; not the main runtime
 ├── packages/
 │   └── anoncreds-agent-demo/    # Node issuer, holder and verifier processes
 │       ├── src/roles/            # issuer.mjs, holder.mjs, verifier.mjs, HTTP helpers
@@ -92,7 +90,7 @@ anonymesh/
 │   ├── AUDIT.md
 │   ├── HACKATHON_MVP.md
 │   └── ANONYMESH_ANDROID_VALIDATION.md
-└── .github/workflows/           # CI for Android, AnonCreds, agent-auth and NEAR contract
+└── .github/workflows/           # CI for protocol components and platform-specific validation
 ```
 
 ### Component status at a glance
@@ -100,8 +98,7 @@ anonymesh/
 | Component | Current status |
 |---|---|
 | AnonCreds issuer-holder-verifier demo | Implemented as separate local Node processes; Linux CI tests pass |
-| Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo; Android native smoke test also verified on a physical device |
-| Android native integration | Optional smoke-test target; standalone Release APK built and native proof verified on a physical device; not the protocol's primary runtime |
+| Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
 | Ed25519 challenge-response | Prototype with CI tests; ordinary key-based authentication, not anonymous |
 | Delegated capability chain | Prototype verifier with CI tests; not yet enforced by a live agent runtime |
 | NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
