@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   Credential,
   CredentialDefinition,
@@ -82,6 +83,7 @@ export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJ
   // The link secret is created and retained by Agent A; it is never sent to Agent B.
   const linkSecret = LinkSecret.create();
   const { credentialRequest, credentialRequestMetadata } = CredentialRequest.create({
+    entropy: randomBytes(32).toString("hex"),
     credentialDefinition,
     linkSecret,
     linkSecretId: "agent-a-local-link-secret",
