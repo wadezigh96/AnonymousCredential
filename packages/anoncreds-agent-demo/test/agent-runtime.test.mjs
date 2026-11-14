@@ -193,7 +193,14 @@ test("Agent B executes the guarded tool only after successful authorization", as
   const f2 = fixture();
   const invalid = { ...f2.proof, signature: Buffer.alloc(64).toString("base64url") };
   await assert.rejects(
-    runtime.authorizeAndExecute({ ...args, challenge: f2.challenge, chain: f2.chain, proof: invalid }, async () => {
+    runtime.authorizeAndExecute({
+      ...args,
+      chain: f2.chain,
+      trustedRootIssuer: f2.issuer.publicKey,
+      challenge: f2.challenge,
+      proof: invalid,
+      expected: { audience, action, resource, delegateKey: f2.agentA.publicKey },
+    }, async () => {
       executions += 1;
     }),
     error => error.code === "INVALID_REQUEST_SIGNATURE",
