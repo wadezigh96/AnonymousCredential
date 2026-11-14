@@ -1,4 +1,6 @@
 import test from "node:test";
+import { generateKeyPairSync } from "node:crypto";
+import { encodeAnonCredsAttribute, extractCredentialAgentPublicKey } from "../src/agent-key-binding.mjs";
 import assert from "node:assert/strict";
 import {
   ChallengeLedger,
@@ -6,6 +8,7 @@ import {
   createAgentPresentation,
   createTamperedCredentialJson,
   issueAgentCredential,
+  issueCredentialForRequest,
   makePresentationRequest,
   verifyAgentPresentation,
 } from "../src/index.mjs";
@@ -205,4 +208,32 @@ test("proof for another nonce does not verify against the verifier request", () 
     schemas: { [f.holder.schemaId]: f.holder.schema },
     credentialDefinitions: { [f.holder.credentialDefinitionId]: f.holder.credentialDefinition },
   }), false);
+});
+
+
+test("credential presentation reveals issuer-bound Ed25519 key with valid AnonCreds encoding", () => {
+  const f = fixture();
+  const presentation = createAgentPresentation(f.holder, f.request).toJson();
+  const revealed = presentation.requested_proof.revealed_attrs.agent_key_ref;
+  assert.equal(revealed.raw, f.holder.agentPublicKey);
+  assert.equal(revealed.encoded, encodeAnonCredsAttribute(f.holder.agentPublicKey));
+  assert.equal(extractCredentialAgentPublicKey(presentation), f.holder.agentPublicKey);
+});
+
+test("rejects raw agent key substitution when encoded proof value remains unchanged", () => {
+  const f = fixture();
+  const presentation = createAgentPresentation(f.holder, f.request).toJson();
+  presentation.requested_proof.revealed_attrs.agent_key_ref.raw =
+    generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
+  assert.throws(
+    () => extractCredentialAgentPublicKey(presentation),
+    error => error.code === "AGENT_KEY_ENCODING_MISMATCH",
+  );
+});
+
+test("rejects malformed agent public keys at issuer boundary", () => {
+  assert.throws(
+    () => issueCredentialForRequest({ issuerConfig: {}, credentialRequest: {}, validUntil: fixedNow + 600, agentPublicKey: "not-a-key" }),
+    error => error.code === "INVALID_AGENT_PUBLIC_KEY",
+  );
 });

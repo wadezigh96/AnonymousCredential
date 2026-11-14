@@ -22,6 +22,7 @@ const server = createServer(async (request, response) => {
       const credential = issueCredentialForRequest({
         issuerConfig: config,
         credentialRequest: body.credentialRequest,
+        agentPublicKey: body.agentPublicKey,
         validUntil: Math.floor(Date.now() / 1000) + 3600,
       });
       return sendJson(response, 200, { credential });

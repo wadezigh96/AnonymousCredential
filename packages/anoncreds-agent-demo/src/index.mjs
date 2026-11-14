@@ -1,4 +1,5 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, generateKeyPairSync, createPublicKey } from "node:crypto";
+import { validateAgentPublicKey } from "./agent-key-binding.mjs";
 import {
   Credential,
   CredentialDefinition,
@@ -110,7 +111,7 @@ export function createIssuerSetup() {
     name: "anonymesh-agent-authorization",
     version: "1.0",
     issuerId: ISSUER_ID,
-    attributeNames: ["agent_role", "agent_subject", "valid_until", "capability_scope"],
+    attributeNames: ["agent_role", "agent_subject", "valid_until", "capability_scope", "agent_public_key"],
   });
   const { credentialDefinition, credentialDefinitionPrivate, keyCorrectnessProof } =
     CredentialDefinition.create({
@@ -146,7 +147,8 @@ export function createHolderCredentialRequest({ publicConfig, offer }) {
   };
 }
 
-export function issueCredentialForRequest({ issuerConfig, credentialRequest, validUntil }) {
+export function issueCredentialForRequest({ issuerConfig, credentialRequest, validUntil, agentPublicKey }) {
+  validateAgentPublicKey(agentPublicKey);
   if (credentialRequest.cred_def_id !== CRED_DEF_ID) {
     throw new Error("Credential request targets an unexpected credential definition");
   }
@@ -160,6 +162,7 @@ export function issueCredentialForRequest({ issuerConfig, credentialRequest, val
       agent_subject: PRIVATE_SUBJECT_MARKER,
       valid_until: String(validUntil),
       capability_scope: "weather:read",
+      agent_public_key: agentPublicKey,
     },
   });
   return credential.toJson();
@@ -180,7 +183,10 @@ export function makePresentationRequest(challenge, now = Math.floor(Date.now() /
     name: "anonymesh-agent-authorization",
     version: "1.0",
     nonce: challenge.nonce,
-    requested_attributes: { role_ref: { name: "agent_role" } },
+    requested_attributes: {
+      role_ref: { name: "agent_role" },
+      agent_key_ref: { name: "agent_public_key" },
+    },
     requested_predicates: {
       expiry_ref: { name: "valid_until", p_type: ">=", p_value: now },
     },
@@ -194,6 +200,7 @@ export function createPresentationFromWallet({ credentialJson, linkSecret, publi
     credentials: [{ credential: Credential.fromJson(credentialJson) }],
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},
@@ -233,6 +240,8 @@ export function verifyAgentPresentation({
 
 // Compatibility helper for the earlier in-process demo and its benchmark.
 export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJECT_MARKER }) {
+  const agentKeyPair = generateKeyPairSync("ed25519");
+  const agentPublicKey = createPublicKey(agentKeyPair.publicKey).export({ format: "jwk" }).x;
   const issuerConfig = createIssuerSetup();
   const linkSecret = LinkSecret.create();
   const offer = CredentialOffer.fromJson(issuerConfig.offer);
@@ -247,6 +256,7 @@ export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJ
     issuerConfig,
     credentialRequest: request.credentialRequest.toJson(),
     validUntil,
+    agentPublicKey,
   });
   const credential = Credential.fromJson(credentialJson);
   credential.process({
@@ -261,6 +271,8 @@ export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJ
     linkSecret,
     schemaId: SCHEMA_ID,
     credentialDefinitionId: CRED_DEF_ID,
+    agentPublicKey,
+    agentPrivateKey: agentKeyPair.privateKey,
   };
 }
 
@@ -270,6 +282,7 @@ export function createAgentPresentation(holder, presentationRequest) {
     credentials: [{ credential: holder.credential }],
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},

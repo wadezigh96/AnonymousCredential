@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { generateKeyPairSync, createPublicKey } from "node:crypto";
 import {
   createHolderCredentialRequest,
   createPresentationFromWallet,
@@ -18,10 +18,12 @@ async function enroll() {
   const publicConfig = await publicResponse.json();
   const { linkSecret, credentialRequest, credentialRequestMetadata } =
     createHolderCredentialRequest({ publicConfig, offer: publicConfig.offer });
+  const agentKeyPair = generateKeyPairSync("ed25519");
+  const agentPublicKey = createPublicKey(agentKeyPair.publicKey).export({ format: "jwk" }).x;
   const issuedResponse = await fetch(issuerUrl + "/issue", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ credentialRequest }),
+    body: JSON.stringify({ credentialRequest, agentPublicKey }),
   });
   if (!issuedResponse.ok) throw new Error("Issuer rejected holder credential request");
   const { credential } = await issuedResponse.json();
@@ -31,7 +33,7 @@ async function enroll() {
     linkSecret,
     publicConfig,
   });
-  wallet = { linkSecret, credentialJson, publicConfig };
+  wallet = { linkSecret, credentialJson, publicConfig, agentKeyPair, agentPublicKey };
 }
 
 const server = createServer(async (request, response) => {
