@@ -1,0 +1,52 @@
+name: ANONYMESH Android native proof smoke test
+
+on:
+  push:
+    branches: [feat/anonymesh-private-agent-identity]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/anonymesh-android.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/anonymesh-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: apps/android/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android dependencies
+        working-directory: apps/android
+        run: npm install --no-audit --no-fund
+      - name: Check Expo dependency compatibility
+        working-directory: apps/android
+        run: npx expo install --check
+      - name: Generate native Android project
+        working-directory: apps/android
+        run: npx expo prebuild --platform android --no-install
+      - name: Build debug APK
+        working-directory: apps/android/android
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymesh-android-debug
+          path: apps/android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
