@@ -1,7 +1,11 @@
 import test from "node:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import { capabilityDigest, signCapability } from "../src/capability.mjs";
+import { SqliteAuthorizationStore } from "../src/authorization-store.mjs";
 import {
   AgentAuthorizationRuntime,
   createAgentRequestProof,
@@ -159,4 +163,64 @@ test("enforces capability quota across distinct challenges", () => {
     expected,
     now,
   }), error => error.code === "CAPABILITY_QUOTA_EXHAUSTED");
+});
+
+
+test("Agent B executes the guarded tool only after successful authorization", async () => {
+  const f = fixture();
+  const runtime = new AgentAuthorizationRuntime();
+  let executions = 0;
+  const args = {
+    chain: f.chain,
+    trustedRootIssuer: f.issuer.publicKey,
+    challenge: f.challenge,
+    proof: f.proof,
+    expected: { audience, action, resource, delegateKey: f.agentA.publicKey },
+    now,
+  };
+  const result = await runtime.authorizeAndExecute(args, async scope => {
+    executions += 1;
+    assert.deepEqual(scope, {
+      action,
+      resource,
+      capabilityDigest: f.challenge.capabilityDigest,
+    });
+    return { fixture: "sunny" };
+  });
+  assert.equal(result.result.fixture, "sunny");
+  assert.equal(executions, 1);
+
+  const f2 = fixture();
+  const invalid = { ...f2.proof, signature: Buffer.alloc(64).toString("base64url") };
+  await assert.rejects(
+    runtime.authorizeAndExecute({ ...args, challenge: f2.challenge, chain: f2.chain, proof: invalid }, async () => {
+      executions += 1;
+    }),
+    error => error.code === "INVALID_REQUEST_SIGNATURE",
+  );
+  assert.equal(executions, 1);
+});
+
+test("SQLite replay and quota state survives store restart", () => {
+  const directory = mkdtempSync(join(tmpdir(), "anonymesh-auth-"));
+  const filename = join(directory, "authorization.sqlite");
+  try {
+    let store = new SqliteAuthorizationStore({ filename });
+    assert.deepEqual(store.consume({ nonce: "nonce-1", digest: "digest-1", quota: 2 }), { remainingQuota: 1 });
+    store.close();
+
+    store = new SqliteAuthorizationStore({ filename });
+    assert.throws(
+      () => store.consume({ nonce: "nonce-1", digest: "digest-1", quota: 2 }),
+      error => error.code === "CHALLENGE_REPLAY",
+    );
+    assert.deepEqual(store.consume({ nonce: "nonce-2", digest: "digest-1", quota: 2 }), { remainingQuota: 0 });
+    assert.throws(
+      () => store.consume({ nonce: "nonce-3", digest: "digest-1", quota: 2 }),
+      error => error.code === "CAPABILITY_QUOTA_EXHAUSTED",
+    );
+    store.close();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -9,6 +9,7 @@ import {
   capabilityDigest,
   verifyCapabilityChain,
 } from "./capability.mjs";
+import { MemoryAuthorizationStore } from "./authorization-store.mjs";
 
 const REQUEST_DOMAIN = Buffer.from("ANONYMESH_AGENT_REQUEST_V1\0", "utf8");
 const KEY_BYTES = 32;
