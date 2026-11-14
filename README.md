@@ -36,7 +36,7 @@ Agent A reveals only `agent_role`; the private subject and `valid_until` remain 
 - `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
 - `npm run benchmark --prefix packages/anoncreds-agent-demo`
 
-The earlier 7/7 proof tests passed on Linux x64. A Linux ARM64 benchmark also completed 20 measured iterations (proof generation p50/p95 68.314/68.429 ms; verification p50/p95 66.877/66.973 ms; proof JSON p50/p95 18,114/18,158 bytes; process RSS high-water 61.67 MiB). Those measurements are Linux ARM64, not Android/Bionic and not a benchmark of the user's phone.
+The current local verification completed 22/22 Node tests on Linux x64, including the separate-process integration test. A 20-iteration Linux x64 benchmark reported proof-generation p50/p95 79.888/88.619 ms, verification p50/p95 77.318/119.527 ms, proof JSON p50/p95 18,119/18,142 bytes, and process RSS high-water 66.89 MiB. These measurements are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
 
 Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo.
 
@@ -84,11 +84,14 @@ anonymesh/
 ├── contracts/
 │   └── near/issuer-registry/    # NEAR issuer/status registry scaffold and unit tests
 ├── docs/
+│   ├── ARCHITECTURE.md
 │   ├── ANONYMESH_ARCHITECTURE.md
 │   ├── CRYPTO_SELECTION.md
 │   ├── THREAT_MODEL.md
 │   ├── AUDIT.md
 │   ├── HACKATHON_MVP.md
+│   ├── TESTNET_DEMO.md
+│   ├── SECURITY_LIMITATIONS.md
 │   └── ANONYMESH_ANDROID_VALIDATION.md
 └── .github/workflows/           # CI for protocol components and platform-specific validation
 ```
@@ -107,6 +110,4 @@ anonymesh/
 | Local-first agent runtime and durable wallet | Not implemented |
 | Production rate limits and distributed replay protection | Not implemented |
 
-For the full protocol design, actors, credential lifecycle, trust boundaries,
-security controls, acceptance criteria and release gates, read
-[ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md).
+For the implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).

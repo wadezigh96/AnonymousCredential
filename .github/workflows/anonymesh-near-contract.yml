@@ -27,9 +27,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: contracts/near/issuer-registry -> target
-      - name: Resolve and generate dependency lockfile
-        working-directory: contracts/near/issuer-registry
-        run: cargo generate-lockfile
       - name: Run issuer registry unit tests with locked dependencies
         working-directory: contracts/near/issuer-registry
         run: cargo test --locked

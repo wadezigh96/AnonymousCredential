@@ -26,9 +26,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: crates/agent-auth -> target
-      - name: Generate lockfile
-        working-directory: crates/agent-auth
-        run: cargo generate-lockfile
       - name: Run agent authentication tests
         working-directory: crates/agent-auth
         run: cargo test --locked

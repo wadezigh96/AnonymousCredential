@@ -1,6 +1,6 @@
 # Repository audit — AnonymousCredential / ANONYMESH
 
-Date: 2026-11-14
+Date: 2026-11-15
 Branch inspected: `feat/anonymesh-private-agent-identity`
 Default branch inspected: `main`
 
@@ -12,9 +12,9 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 
 | Component | Current finding |
 |---|---|
-| Anonymous credential issuer / holder / verifier | Not present |
+| Anonymous credential issuer / holder / verifier | Implemented as separate Node processes using the official AnonCreds Node wrapper; 22/22 local tests pass |
 | ZK proof circuit and verifier artifacts | Not present |
-| Selective disclosure / attribute predicates | Not present |
+| Selective disclosure / attribute predicates | Implemented in the Node demo; hidden expiry predicate and private-subject non-disclosure are tested |
 | Challenge-response authentication | Ed25519 prototype in `crates/agent-auth`; 9 unit tests passed in GitHub Actions run #1 |
 | Unlinkable presentations | Not present |
 | Delegated capabilities | Signed parent-linked Ed25519 chain verifier in `crates/agent-auth`; 21 tests passed in run #7 |
@@ -24,7 +24,7 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 | Anti-replay, rate limits and policy enforcement | Not present |
 | Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 21 tests passed (run #7) | 
 | Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
-| Benchmarks / privacy evaluation | Not present |
+| Benchmarks / privacy evaluation | 20-iteration Linux x64 benchmark recorded; Android and unlinkability evaluation remain pending |
 
 ## 3. Historical implementation findings
 
@@ -45,7 +45,7 @@ A previous README revision incorrectly claimed a membership circuit and root reg
 
 ## 5. Audit limits
 
-This is a preliminary source/tree review plus inspection of the latest GitHub Actions run. It is not a complete dependency vulnerability audit, formal verification or independent cryptographic review. The registry crate has an active Cargo.toml but no committed Cargo.lock. The rest of the ANONYMESH credential, proof, agent runtime and privacy layers remain unimplemented.
+This is a preliminary source/tree review plus local and CI evidence. It is not a complete dependency vulnerability audit, formal verification or independent cryptographic review. The Node AnonCreds demo is implemented, while the production agent runtime, privacy-preserving revocation and unlinkability evaluation remain unimplemented.
 
 ## 6. Next audit gate
 
@@ -55,14 +55,14 @@ No custom cryptographic primitive is permitted. No implementation, production-se
 
 ## 7. Cryptographic candidate review (2026-11-14)
 
-A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). AnonCreds v1 remains the preferred protocol candidate, but crate integration is blocked by upstream issue #372: `anoncreds-clsignatures 0.3.2` depends on a `glass_pumpkin` release requiring yanked `core2 0.4.0`. The official advisory GHSA-89r4-4c4j-7wx9 lists v0.2.2 as affected and v0.2.3 as patched; it describes mixed link-secret credentials being accepted by the verifier. The advisory page does not list a CVE ID; do not label it CVE-2025-67498. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no credential implementation is claimed.
+A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The Node demo uses the official `@hyperledger/anoncreds-nodejs` 0.5.0 wrapper and its published native release. Direct Rust crate integration remains blocked by upstream issue #372: `anoncreds-clsignatures 0.3.2` depends on a `glass_pumpkin` release requiring yanked `core2 0.4.0`. The official advisory GHSA-89r4-4c4j-7wx9 lists v0.2.2 as affected and v0.2.3 as patched; it describes mixed link-secret credentials being accepted by the verifier. The advisory page does not list a CVE ID; do not label it CVE-2025-67498. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate.
 
 ## 8. AnonCreds dependency and security findings
 
 - [GHSA-89r4-4c4j-7wx9](https://github.com/anoncreds/anoncreds-rs/security/advisories/GHSA-89r4-4c4j-7wx9) is verified: affected `anoncreds-rs` 0.2.2; patched 0.2.3. The advisory describes a verifier accepting multiple credentials bound to different link secrets as if they belonged to one holder. It lists no CVE ID.
 - Upstream [issue #372](https://github.com/anoncreds/anoncreds-rs/issues/372) remains open and documents dependency resolution failure: `glass_pumpkin 1.6.x` requires yanked `core2 0.4.0` through `anoncreds-clsignatures 0.3.2`.
 - [docs.rs build record](https://docs.rs/crate/anoncreds-clsignatures/latest/builds/3495948) independently shows the same yanked dependency failure.
-- Therefore the patched release is not yet approved for crate integration. Do not bypass Cargo resolution with an unreviewed fork/patch. No AnonCreds crate or binary was added to this repository.
+- Therefore the patched release is not yet approved for direct Rust crate integration. Do not bypass Cargo resolution with an unreviewed fork/patch. The Node wrapper is a separate supported integration path and is covered by the Node suite; it does not remove the Rust source-build blocker.
 
 ## 9. Delegated capability implementation slice
 
@@ -70,10 +70,10 @@ A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTI
 
 ## 9. Agent challenge-response implementation slice
 
-A small Rust crate at `crates/agent-auth` verifies Ed25519 signatures over a domain-separated transcript binding nonce, audience, task, capability digest and expiry. Its in-memory replay guard rejects reused nonces and fails closed when full. GitHub Actions run #1 (`43602842365`) passed 9/9 tests. This is ordinary proof-of-possession authentication: it reveals/uses a stable public key and is **not** an anonymous credential, ZK proof, unlinkable presentation, durable distributed replay defense, or capability-policy engine. The lockfile is generated ephemerally in CI and is not committed.
+A small Rust crate at `crates/agent-auth` verifies Ed25519 signatures over a domain-separated transcript binding nonce, audience, task, capability digest and expiry. Its in-memory replay guard rejects reused nonces and fails closed when full. Local verification passed 21/21 tests. This is ordinary proof-of-possession authentication: it reveals/uses a stable public key and is **not** an anonymous credential, ZK proof, unlinkable presentation, durable distributed replay defense, or capability-policy engine. Its Cargo.lock is committed for reproducible locked resolution.
 
 ## 9. First NEAR registry implementation slice
 
 A Rust contract scaffold now exists at `contracts/near/issuer-registry` using `near-sdk = 5.30.1`. It stores issuer public-key metadata, key version, schema hash, active flag, status epoch and status root. Owner-only mutations and monotonic key/status version checks are implemented in source. Key rotation preserves suspension and status history. The contract does not verify ZK proofs or non-revocation witnesses and its status root is an opaque commitment only.
 
-Fourteen unit tests are present in source, covering owner authorization, malformed schema/status hashes, issuer suspension, key-version rollback, status epoch monotonicity, unknown issuer handling, empty key and state preservation during key rotation. GitHub Actions run #13 at commit `c4f4f821` completed successfully: 14/14 unit tests passed and the `wasm32-unknown-unknown --release` build passed. The workflow generates a lockfile inside the runner, then runs `cargo test --locked` and `cargo build --locked`; the lockfile is not committed, so dependency resolution is not pinned across independent runs. This is a code-level preliminary audit, not an independent security review.
+Fourteen unit tests are present in source, covering owner authorization, malformed schema/status hashes, issuer suspension, key-version rollback, status epoch monotonicity, unknown issuer handling, empty key and state preservation during key rotation. Local verification passed 14/14 tests and the `wasm32-unknown-unknown --release` build. `Cargo.lock` is committed and the CI workflow uses locked resolution. This is a code-level preliminary audit, not an independent security review.
