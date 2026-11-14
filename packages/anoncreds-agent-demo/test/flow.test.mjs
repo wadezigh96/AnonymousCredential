@@ -95,6 +95,28 @@ test("challenge nonce cannot be replayed", () => {
   }), /Unknown or already consumed challenge|Challenge replay/);
 });
 
+
+test("thrown native verification errors do not consume a challenge", () => {
+  const ledger = new ChallengeLedger();
+  const challenge = ledger.issue({ ...context, now: fixedNow, ttlSeconds: 90 });
+  const request = makePresentationRequest(challenge, fixedNow);
+  ledger.attachPresentationRequest(challenge.nonce, request.toJson());
+
+  assert.equal(ledger.verifyAndConsume({
+    nonce: challenge.nonce,
+    ...context,
+    now: fixedNow,
+    verify: () => { throw new Error("malformed proof"); },
+  }), false);
+
+  assert.equal(ledger.verifyAndConsume({
+    nonce: challenge.nonce,
+    ...context,
+    now: fixedNow,
+    verify: storedRequest => storedRequest.nonce === challenge.nonce,
+  }), true);
+});
+
 test("audience, task and capability context mismatches are rejected", () => {
   const f = fixture();
   assert.throws(() => f.ledger.consume({
