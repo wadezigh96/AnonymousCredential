@@ -37,8 +37,13 @@ npm install --no-audit --no-fund
 npx expo install --check
 npx expo prebuild --platform android --no-install
 cd android
-./gradlew assembleDebug
+./gradlew :app:assembleRelease
 ```
+
+The standalone release APK is written to
+`android/app/build/outputs/apk/release/app-release.apk`. The CI workflow also
+checks that a non-empty `index.android.bundle` was generated before uploading
+the APK artifact. This avoids requiring a Metro server on the phone.
 
 Install `android/app/build/outputs/apk/debug/app-debug.apk` on an ARM64
 Android device and tap **Run native proof test**. A successful CI APK build is
