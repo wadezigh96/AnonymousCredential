@@ -52,6 +52,55 @@ The intended authorization flow is:
 
 A credential proof is **not by itself proof that a particular action is authorized**. The authorization and policy-enforcement layer is a distinct part of the design and remains under development.
 
+## Target secure authorization flow (integration in progress)
+
+The intended end-to-end flow connects anonymous credentials to agent-key possession and delegated authorization. This is the security design being implemented; **it is not yet an integrated or production-ready flow**.
+
+```text
+Issuer
+  |  issues a credential bound to the agent's public key
+  v
+Agent A — Holder
+  |  AnonCreds presentation
+  |  + Ed25519 proof of possession
+  |  + delegated capability chain
+  v
+Agent B — Verifier
+  |  checks credential proof, agent public-key binding,
+  |  capability chain and fresh challenge
+  v
+Authorization Runtime
+  |  checks audience, task, resource, expiry, replay,
+  |  delegation limits and quota
+  v
+VALID -> permit the requested action
+REJECTED -> deny the action
+```
+
+### What each step must prove
+
+1. **Issuer:** issues a credential whose agent-key binding is covered by the credential signature. The credential must not merely contain an unverified display name or free-form subject marker.
+2. **Agent A — Holder:** creates an AnonCreds proof for the minimum required claims, proves possession of the private key corresponding to the credential-bound public key, and presents the delegated capability chain. The holder's link secret and private identity attributes remain local.
+3. **Agent B — Verifier:** verifies the AnonCreds presentation against its own request, checks that the public key disclosed/proven by the credential is the same key used for Ed25519 proof-of-possession and the capability delegate, and validates the challenge's audience, task and freshness.
+4. **Authorization Runtime:** independently enforces capability scope, resource, expiry, delegation attenuation, replay protection and quota immediately before the action. A valid credential alone must never authorize an action.
+5. **Decision:** return only the minimum decision information needed by the relying agent. Deny by default if any required proof, trust state or policy check fails.
+
+### Pairwise keys and correlation limits
+
+The design uses a **different agent key for each verifier audience** where the deployment supports it. This reduces the ability to correlate an agent across different verifier domains because the public key shown to one audience is not reused with another.
+
+This does **not** guarantee complete unlinkability:
+
+- The same pairwise public key can link multiple sessions within the same audience.
+- Disclosed attributes, timestamps, network metadata, issuer records and verifier logs may still enable correlation.
+- Colluding verifiers may combine information they independently observe.
+
+ANONYMESH therefore does not claim full unlinkability or resistance to all verifier collusion. Pairwise keys are a correlation-reduction measure, not a substitute for randomized presentations, disclosure minimization, metadata protections and empirical cross-verifier privacy testing.
+
+### Implementation status of this flow
+
+The AnonCreds issuer-holder-verifier demo and the Ed25519 capability/authorization-runtime prototypes currently exist as separate implementation slices. The credential-to-agent-key binding and the complete proof-to-capability-to-action integration described above remain **in progress / not yet demonstrated end-to-end**. The diagram describes the target protocol behavior, not a completed testnet feature.
+
 ## Current implementation status
 
 ANONYMESH is a platform-independent protocol and agent-identity architecture. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Revocation, unlinkability analysis and independent cryptographic review remain pending.
