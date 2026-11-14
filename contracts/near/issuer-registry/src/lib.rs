@@ -232,4 +232,63 @@ mod tests {
             "c".repeat(64),
         );
     }
+
+
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_STATUS_ROOT")]
+    fn rejects_malformed_status_root() {
+        let mut contract = registry();
+        register(&mut contract);
+        contract.update_status_root(account("issuer.testnet"), U64(1), "not-a-hash".to_string());
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_NOT_OWNER")]
+    fn non_owner_cannot_update_status_root() {
+        let mut contract = registry();
+        register(&mut contract);
+        set_predecessor("attacker.testnet");
+        contract.update_status_root(account("issuer.testnet"), U64(1), "b".repeat(64));
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_NOT_OWNER")]
+    fn non_owner_cannot_change_issuer_activation() {
+        let mut contract = registry();
+        register(&mut contract);
+        set_predecessor("attacker.testnet");
+        contract.set_issuer_active(account("issuer.testnet"), false);
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_EMPTY_PUBLIC_KEY")]
+    fn rejects_empty_public_key() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            String::new(),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_KEY_VERSION")]
+    fn rejects_zero_key_version() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            "ed25519:example-public-key".to_string(),
+            0,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_ISSUER_NOT_FOUND")]
+    fn cannot_update_status_for_unknown_issuer() {
+        let mut contract = registry();
+        contract.update_status_root(account("missing.testnet"), U64(1), "b".repeat(64));
+    }
+
 }
