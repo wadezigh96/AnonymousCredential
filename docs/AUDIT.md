@@ -56,3 +56,7 @@ This is a repository-tree and historical-source review. It is not yet a complete
 Before choosing dependencies, compare maintained anonymous-credential implementations and revocation designs for cryptographic assumptions, selective disclosure, predicates, unlinkability, revocation privacy, language/runtime support (including Android ARM64), maintenance, independent audits, interoperability, proof size, proof-generation latency, verification latency and memory.
 
 No custom cryptographic primitive is permitted. No implementation, production-security, privacy, or performance claim is accepted without reproducible tests and evidence.
+
+## 7. Cryptographic candidate review (2026-11-14)
+
+A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The provisional first local integration candidate is AnonCreds v1 / `anoncreds-rs` v0.2.3 or later, subject to upstream regression, Android ARM64 and dependency audit gates. Version 0.2.2 and earlier are prohibited because GHSA-89r4-4c4j-7wx9 / CVE-2025-67498 lists 0.2.3 as patched. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no implementation is claimed.
