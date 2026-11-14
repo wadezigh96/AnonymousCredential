@@ -130,7 +130,7 @@ export function makePresentationRequest(challenge, now = Math.floor(Date.now() /
     requested_predicates: {
       expiry_ref: {
         name: "valid_until",
-        p_type: "GE",
+        p_type: ">=",
         p_value: now,
       },
     },
