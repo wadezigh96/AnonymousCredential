@@ -25,6 +25,8 @@ jobs:
         with:
           toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/near/issuer-registry -> target
       - name: Run issuer registry unit tests
         working-directory: contracts/near/issuer-registry
         run: cargo test
