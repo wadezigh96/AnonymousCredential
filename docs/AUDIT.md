@@ -55,9 +55,16 @@ No custom cryptographic primitive is permitted. No implementation, production-se
 
 ## 7. Cryptographic candidate review (2026-11-14)
 
-A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The provisional first local integration candidate is AnonCreds v1 / `anoncreds-rs` v0.2.3 or later, subject to upstream regression, Android ARM64 and dependency audit gates. A previous note cited GHSA-89r4-4c4j-7wx9 / CVE-2025-67498, but the advisory could not be independently retrieved or corroborated during follow-up. Its affected/fixed range is unverified and must not be treated as fact. Confirm advisories before selecting a dependency version. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no implementation is claimed.
+A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). AnonCreds v1 remains the preferred protocol candidate, but crate integration is blocked by upstream issue #372: `anoncreds-clsignatures 0.3.2` depends on a `glass_pumpkin` release requiring yanked `core2 0.4.0`. The official advisory GHSA-89r4-4c4j-7wx9 lists v0.2.2 as affected and v0.2.3 as patched; it describes mixed link-secret credentials being accepted by the verifier. The advisory page does not list a CVE ID; do not label it CVE-2025-67498. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no credential implementation is claimed.
 
-## 8. Delegated capability implementation slice
+## 8. AnonCreds dependency and security findings
+
+- [GHSA-89r4-4c4j-7wx9](https://github.com/anoncreds/anoncreds-rs/security/advisories/GHSA-89r4-4c4j-7wx9) is verified: affected `anoncreds-rs` 0.2.2; patched 0.2.3. The advisory describes a verifier accepting multiple credentials bound to different link secrets as if they belonged to one holder. It lists no CVE ID.
+- Upstream [issue #372](https://github.com/anoncreds/anoncreds-rs/issues/372) remains open and documents dependency resolution failure: `glass_pumpkin 1.6.x` requires yanked `core2 0.4.0` through `anoncreds-clsignatures 0.3.2`.
+- [docs.rs build record](https://docs.rs/crate/anoncreds-clsignatures/latest/builds/3495948) independently shows the same yanked dependency failure.
+- Therefore the patched release is not yet approved for crate integration. Do not bypass Cargo resolution with an unreviewed fork/patch. No AnonCreds crate or binary was added to this repository.
+
+## 9. Delegated capability implementation slice
 
 `crates/agent-auth` now includes signed capabilities with parent digests, issuer/delegate Ed25519 keys, audience, exact action/resource, expiry and quota. `verify_capability_chain` checks the trusted root issuer, every signature and parent link, delegator continuity, exact scope equality, and non-increasing expiry/quota, with a maximum delegation depth of 8. GitHub Actions run #7 (`43603320311`) passed 21/21 tests, including action/expiry/quota escalation, wrong delegator, broken parent link and expired-root rejection. Limitations: action/resource are currently exact-match rather than expressive subset policies; quota is metadata only and is not atomically consumed; revocation is not enforced. This is a prototype policy-chain verifier, not a complete runtime authorization engine.
 
