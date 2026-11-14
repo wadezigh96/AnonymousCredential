@@ -1,4 +1,4 @@
-import { randomBytes, generateKeyPairSync, createPublicKey } from "node:crypto";
+import { randomBytes, generateKeyPairSync } from "node:crypto";
 import { validateAgentPublicKey, extractCredentialAgentPublicKey } from "./agent-key-binding.mjs";
 import {
   Credential,
@@ -247,7 +247,7 @@ export function verifyAgentPresentation({
 // Compatibility helper for the earlier in-process demo and its benchmark.
 export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJECT_MARKER }) {
   const agentKeyPair = generateKeyPairSync("ed25519");
-  const agentPublicKey = createPublicKey(agentKeyPair.publicKey).export({ format: "jwk" }).x;
+  const agentPublicKey = agentKeyPair.publicKey.export({ format: "jwk" }).x;
   const issuerConfig = createIssuerSetup();
   const linkSecret = LinkSecret.create();
   const offer = CredentialOffer.fromJson(issuerConfig.offer);

@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { generateKeyPairSync, createPublicKey } from "node:crypto";
+import { generateKeyPairSync } from "node:crypto";
 import {
   createHolderCredentialRequest,
   createPresentationFromWallet,
@@ -19,7 +19,7 @@ async function enroll() {
   const { linkSecret, credentialRequest, credentialRequestMetadata } =
     createHolderCredentialRequest({ publicConfig, offer: publicConfig.offer });
   const agentKeyPair = generateKeyPairSync("ed25519");
-  const agentPublicKey = createPublicKey(agentKeyPair.publicKey).export({ format: "jwk" }).x;
+  const agentPublicKey = agentKeyPair.publicKey.export({ format: "jwk" }).x;
   const issuedResponse = await fetch(issuerUrl + "/issue", {
     method: "POST",
     headers: { "content-type": "application/json" },
