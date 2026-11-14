@@ -1,6 +1,6 @@
 # ANONYMESH — Protocol Architecture
 
-Status: **protocol design specification; the separate NEAR issuer/status registry scaffold is implemented and CI-verified, but none of the credential, ZK presentation, challenge-response, delegated-capability or privacy-preserving revocation flows are implemented.**
+Status: **protocol design specification; NEAR issuer/status registry scaffold and a separate Ed25519 challenge-response prototype are CI-verified. Anonymous credentials, ZK presentations, selective disclosure, delegated-capability enforcement and privacy-preserving revocation remain unimplemented.**
 
 ## 1. Goal and actors
 
@@ -21,13 +21,13 @@ Actors:
 | Identity | Anonymous credentials for human and agent subjects; issuer, schema, expiry and holder binding | Not implemented |
 | Cryptography | Reuse maintained ZK/credential libraries; no custom primitives | Not selected or implemented |
 | Presentation | Selective disclosure and hidden-attribute predicates | Not implemented |
-| Authentication | Challenge-response bound to fresh nonce, audience, verifier, task and expiry | Not implemented |
+| Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not implemented |
 | Authorization | Attenuable delegated capabilities with action/resource/amount/quota/expiry limits | Not implemented |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
 | Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 14 unit tests and locked-mode WASM CI passed using an ephemeral generated lockfile; not deployed |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
-| Security | Anti-replay, rate limits, key rotation, canonical encoding and deny-by-default policy engine | Not implemented |
+| Security | Anti-replay prototype in one process; rate limits, distributed replay protection and deny-by-default policy engine | Partial prototype; production controls not implemented |
 
 ## 3. Credential lifecycle
 
