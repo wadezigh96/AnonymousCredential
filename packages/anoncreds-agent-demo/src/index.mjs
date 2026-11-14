@@ -195,7 +195,9 @@ export function createPresentationFromWallet({ credentialJson, linkSecret, publi
 }
 
 export function verifyAgentPresentation({
+  presentation,
   presentationJson,
+  presentationRequest,
   presentationRequestJson,
   verifierSchema,
   verifierCredentialDefinition,
@@ -203,11 +205,16 @@ export function verifyAgentPresentation({
   challengeContext,
   now = Math.floor(Date.now() / 1000),
 }) {
+  const serializedPresentation = presentationJson ?? presentation?.toJson?.() ?? presentation;
+  const serializedRequest = presentationRequestJson ?? presentationRequest?.toJson?.() ?? presentationRequest;
+  if (!serializedPresentation || !serializedRequest) {
+    throw new Error("Presentation and verifier-stored presentation request are required");
+  }
   return challengeLedger.verifyAndConsume({
     ...challengeContext,
     now,
-    verify: () => Presentation.fromJson(presentationJson).verify({
-      presentationRequest: PresentationRequest.fromJson(presentationRequestJson),
+    verify: () => Presentation.fromJson(serializedPresentation).verify({
+      presentationRequest: PresentationRequest.fromJson(serializedRequest),
       schemas: { [SCHEMA_ID]: verifierSchema },
       credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
     }),
