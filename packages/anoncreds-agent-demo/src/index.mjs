@@ -2,8 +2,10 @@ import { randomBytes } from "node:crypto";
 import {
   Credential,
   CredentialDefinition,
+  CredentialDefinitionPrivate,
   CredentialOffer,
   CredentialRequest,
+  CredentialRequestMetadata,
   LinkSecret,
   Nonce,
   Presentation,
@@ -12,111 +14,155 @@ import {
 } from "@hyperledger/anoncreds-nodejs";
 
 const ISSUER_ID = "did:example:anonymesh:issuer";
-const SCHEMA_ID = "anonymesh:agent-authorization:1";
-const CRED_DEF_ID = "anonymesh:agent-authorization:1:CL";
+export const SCHEMA_ID = "anonymesh:agent-authorization:1";
+export const CRED_DEF_ID = "anonymesh:agent-authorization:1:CL";
 export const PRIVATE_SUBJECT_MARKER = "agent-a-private-subject-7f3a";
 
 export class ChallengeLedger {
   #pending = new Map();
 
   issue({ audience, task, capabilityDigest, now = Math.floor(Date.now() / 1000), ttlSeconds = 60 }) {
-    if (!audience || !task || !capabilityDigest || ttlSeconds < 1) {
+    if (!audience || !task || !capabilityDigest || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
       throw new Error("Invalid challenge parameters");
     }
     const nonce = Nonce.generate();
     const challenge = {
-      nonce,
-      audience,
-      task,
-      capabilityDigest,
-      issuedAt: now,
-      expiresAt: now + ttlSeconds,
+      nonce, audience, task, capabilityDigest,
+      issuedAt: now, expiresAt: now + ttlSeconds,
+      consumed: false, presentationRequest: null,
     };
-    this.#pending.set(nonce, { ...challenge, consumed: false });
-    return Object.freeze(challenge);
+    this.#pending.set(nonce, challenge);
+    return Object.freeze({
+      nonce, audience, task, capabilityDigest,
+      issuedAt: challenge.issuedAt, expiresAt: challenge.expiresAt,
+    });
   }
 
-  consume({ nonce, audience, task, capabilityDigest, now = Math.floor(Date.now() / 1000) }) {
+  attachPresentationRequest(nonce, presentationRequest) {
     const record = this.#pending.get(nonce);
-    if (!record) throw new Error("Unknown or already consumed challenge");
+    if (!record || record.consumed || record.presentationRequest) {
+      throw new Error("Challenge missing, consumed, or already initialized");
+    }
+    record.presentationRequest = structuredClone(presentationRequest);
+  }
+
+  get(nonce) {
+    const record = this.#pending.get(nonce);
+    if (!record) return null;
+    return {
+      nonce: record.nonce, audience: record.audience, task: record.task,
+      capabilityDigest: record.capabilityDigest, issuedAt: record.issuedAt,
+      expiresAt: record.expiresAt, consumed: record.consumed,
+      presentationRequest: record.presentationRequest && structuredClone(record.presentationRequest),
+    };
+  }
+
+  #assertPending({ nonce, audience, task, capabilityDigest, now }) {
+    const record = this.#pending.get(nonce);
+    if (!record || record.consumed) throw new Error("Unknown or already consumed challenge");
     if (record.expiresAt <= now) throw new Error("Challenge expired");
     if (
       record.audience !== audience ||
       record.task !== task ||
       record.capabilityDigest !== capabilityDigest
-    ) {
-      throw new Error("Challenge context mismatch");
-    }
-    if (record.consumed) throw new Error("Challenge replay");
+    ) throw new Error("Challenge context mismatch");
+    if (!record.presentationRequest) throw new Error("Challenge request is not initialized");
+    return record;
+  }
+
+  consume(context) {
+    const record = this.#assertPending({
+      ...context,
+      now: context.now ?? Math.floor(Date.now() / 1000),
+    });
+    record.consumed = true;
+    return true;
+  }
+
+  // This method is deliberately synchronous: on a single Node.js event loop,
+  // proof verification and nonce consumption form one non-interleaved critical section.
+  // Invalid proofs and thrown verification errors leave the challenge pending.
+  verifyAndConsume({ ...context }) {
+    const { verify } = context;
+    if (typeof verify !== "function") throw new Error("A proof verification callback is required");
+    const now = context.now ?? Math.floor(Date.now() / 1000);
+    this.#assertPending({ ...context, now });
+    const valid = verify();
+    if (valid !== true) return false;
+    const record = this.#assertPending({ ...context, now });
     record.consumed = true;
     return true;
   }
 }
 
-export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJECT_MARKER }) {
+export function createIssuerSetup() {
   const schema = Schema.create({
     name: "anonymesh-agent-authorization",
     version: "1.0",
     issuerId: ISSUER_ID,
     attributeNames: ["agent_role", "agent_subject", "valid_until", "capability_scope"],
   });
-
-  const {
-    credentialDefinition,
-    credentialDefinitionPrivate,
-    keyCorrectnessProof,
-  } = CredentialDefinition.create({
-    schemaId: SCHEMA_ID,
-    schema,
-    signatureType: "CL",
-    tag: "v1",
-    issuerId: ISSUER_ID,
-    supportRevocation: false,
-  });
-
-  const credentialOffer = CredentialOffer.create({
+  const { credentialDefinition, credentialDefinitionPrivate, keyCorrectnessProof } =
+    CredentialDefinition.create({
+      schemaId: SCHEMA_ID, schema, signatureType: "CL", tag: "v1",
+      issuerId: ISSUER_ID, supportRevocation: false,
+    });
+  const offer = CredentialOffer.create({
     schemaId: SCHEMA_ID,
     credentialDefinitionId: CRED_DEF_ID,
     keyCorrectnessProof,
   });
+  return {
+    schema: schema.toJson(),
+    credentialDefinition: credentialDefinition.toJson(),
+    credentialDefinitionPrivate: credentialDefinitionPrivate.toJson(),
+    offer: offer.toJson(),
+  };
+}
 
-  // The link secret is created and retained by Agent A; it is never sent to Agent B.
+export function createHolderCredentialRequest({ publicConfig, offer }) {
   const linkSecret = LinkSecret.create();
-  const { credentialRequest, credentialRequestMetadata } = CredentialRequest.create({
+  const request = CredentialRequest.create({
     entropy: randomBytes(32).toString("hex"),
-    credentialDefinition,
+    credentialDefinition: CredentialDefinition.fromJson(publicConfig.credentialDefinition),
     linkSecret,
-    linkSecretId: "agent-a-local-link-secret",
-    credentialOffer,
+    linkSecretId: "anonymesh-agent-a-local-link-secret",
+    credentialOffer: CredentialOffer.fromJson(offer),
   });
+  return {
+    linkSecret,
+    credentialRequest: request.credentialRequest.toJson(),
+    credentialRequestMetadata: request.credentialRequestMetadata.toJson(),
+  };
+}
 
-  const issuedCredential = Credential.create({
-    credentialDefinition,
-    credentialDefinitionPrivate,
-    credentialOffer,
-    credentialRequest,
+export function issueCredentialForRequest({ issuerConfig, credentialRequest, validUntil }) {
+  if (credentialRequest.cred_def_id !== CRED_DEF_ID) {
+    throw new Error("Credential request targets an unexpected credential definition");
+  }
+  const credential = Credential.create({
+    credentialDefinition: CredentialDefinition.fromJson(issuerConfig.credentialDefinition),
+    credentialDefinitionPrivate: CredentialDefinitionPrivate.fromJson(issuerConfig.credentialDefinitionPrivate),
+    credentialOffer: CredentialOffer.fromJson(issuerConfig.offer),
+    credentialRequest: CredentialRequest.fromJson(credentialRequest),
     attributeRawValues: {
       agent_role: "weather_reader",
-      agent_subject: privateSubject,
+      agent_subject: PRIVATE_SUBJECT_MARKER,
       valid_until: String(validUntil),
       capability_scope: "weather:read",
     },
   });
+  return credential.toJson();
+}
 
-  const credential = issuedCredential.process({
-    credentialRequestMetadata,
+export function processHolderCredential({ credentialJson, credentialRequestMetadata, linkSecret, publicConfig }) {
+  const credential = Credential.fromJson(credentialJson);
+  credential.process({
+    credentialRequestMetadata: CredentialRequestMetadata.fromJson(credentialRequestMetadata),
     linkSecret,
-    credentialDefinition,
+    credentialDefinition: CredentialDefinition.fromJson(publicConfig.credentialDefinition),
   });
-
-  return {
-    schema,
-    credentialDefinition,
-    credential,
-    linkSecret,
-    schemaId: SCHEMA_ID,
-    credentialDefinitionId: CRED_DEF_ID,
-  };
+  return credential.toJson();
 }
 
 export function makePresentationRequest(challenge, now = Math.floor(Date.now() / 1000)) {
@@ -124,17 +170,81 @@ export function makePresentationRequest(challenge, now = Math.floor(Date.now() /
     name: "anonymesh-agent-authorization",
     version: "1.0",
     nonce: challenge.nonce,
-    requested_attributes: {
-      role_ref: { name: "agent_role" },
-    },
+    requested_attributes: { role_ref: { name: "agent_role" } },
     requested_predicates: {
-      expiry_ref: {
-        name: "valid_until",
-        p_type: ">=",
-        p_value: now,
-      },
+      expiry_ref: { name: "valid_until", p_type: ">=", p_value: now },
     },
   });
+}
+
+export function createPresentationFromWallet({ credentialJson, linkSecret, publicConfig, presentationRequestJson }) {
+  const presentationRequest = PresentationRequest.fromJson(presentationRequestJson);
+  const presentation = Presentation.create({
+    presentationRequest,
+    credentials: [{ credential: Credential.fromJson(credentialJson) }],
+    credentialsProve: [
+      { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
+    ],
+    selfAttest: {},
+    linkSecret,
+    schemas: { [SCHEMA_ID]: publicConfig.schema },
+    credentialDefinitions: { [CRED_DEF_ID]: publicConfig.credentialDefinition },
+  });
+  return presentation.toJson();
+}
+
+export function verifyAgentPresentation({
+  presentationJson,
+  presentationRequestJson,
+  verifierSchema,
+  verifierCredentialDefinition,
+  challengeLedger,
+  challengeContext,
+  now = Math.floor(Date.now() / 1000),
+}) {
+  return challengeLedger.verifyAndConsume({
+    ...challengeContext,
+    now,
+    verify: () => Presentation.fromJson(presentationJson).verify({
+      presentationRequest: PresentationRequest.fromJson(presentationRequestJson),
+      schemas: { [SCHEMA_ID]: verifierSchema },
+      credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
+    }),
+  });
+}
+
+// Compatibility helper for the earlier in-process demo and its benchmark.
+export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJECT_MARKER }) {
+  const issuerConfig = createIssuerSetup();
+  const linkSecret = LinkSecret.create();
+  const offer = CredentialOffer.fromJson(issuerConfig.offer);
+  const request = CredentialRequest.create({
+    entropy: randomBytes(32).toString("hex"),
+    credentialDefinition: CredentialDefinition.fromJson(issuerConfig.credentialDefinition),
+    linkSecret,
+    linkSecretId: "agent-a-local-link-secret",
+    credentialOffer: offer,
+  });
+  const credentialJson = issueCredentialForRequest({
+    issuerConfig,
+    credentialRequest: request.credentialRequest.toJson(),
+    validUntil,
+  });
+  const credential = Credential.fromJson(credentialJson);
+  credential.process({
+    credentialRequestMetadata: request.credentialRequestMetadata,
+    linkSecret,
+    credentialDefinition: CredentialDefinition.fromJson(issuerConfig.credentialDefinition),
+  });
+  return {
+    schema: Schema.fromJson(issuerConfig.schema),
+    credentialDefinition: CredentialDefinition.fromJson(issuerConfig.credentialDefinition),
+    credential,
+    linkSecret,
+    schemaId: SCHEMA_ID,
+    credentialDefinitionId: CRED_DEF_ID,
+  };
 }
 
 export function createAgentPresentation(holder, presentationRequest) {
@@ -149,25 +259,6 @@ export function createAgentPresentation(holder, presentationRequest) {
     linkSecret: holder.linkSecret,
     schemas: { [holder.schemaId]: holder.schema },
     credentialDefinitions: { [holder.credentialDefinitionId]: holder.credentialDefinition },
-  });
-}
-
-export function verifyAgentPresentation({
-  presentation,
-  presentationRequest,
-  verifierSchema,
-  verifierCredentialDefinition,
-  challengeLedger,
-  challengeContext,
-  now = Math.floor(Date.now() / 1000),
-}) {
-  // Bind the AnonCreds nonce to the verifier's audience, task and capability digest.
-  // This ledger is demo-only and in-memory; production needs atomic shared storage.
-  challengeLedger.consume({ ...challengeContext, now });
-  return presentation.verify({
-    presentationRequest,
-    schemas: { [SCHEMA_ID]: verifierSchema },
-    credentialDefinitions: { [CRED_DEF_ID]: verifierCredentialDefinition },
   });
 }
 
@@ -190,17 +281,19 @@ export function runDemo() {
   };
   const challenge = ledger.issue({ ...context, now, ttlSeconds: 60 });
   const request = makePresentationRequest(challenge, now);
+  ledger.attachPresentationRequest(challenge.nonce, request.toJson());
   const presentation = createAgentPresentation(holder, request);
+  const presentationJson = presentation.toJson();
   const valid = verifyAgentPresentation({
-    presentation,
-    presentationRequest: request,
-    verifierSchema: holder.schema,
-    verifierCredentialDefinition: holder.credentialDefinition,
+    presentationJson,
+    presentationRequestJson: request.toJson(),
+    verifierSchema: holder.schema.toJson(),
+    verifierCredentialDefinition: holder.credentialDefinition.toJson(),
     challengeLedger: ledger,
     challengeContext: { nonce: challenge.nonce, ...context },
     now,
   });
-  const proofJson = JSON.stringify(presentation.toJson());
+  const proofJson = JSON.stringify(presentationJson);
   return {
     valid,
     revealedRole: "weather_reader",
