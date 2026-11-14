@@ -1,6 +1,22 @@
-# ANONYMESH — Protocol Architecture
+# ANONYMESH — Private Agentic Identity Infrastructure (PAII): Protocol Architecture
 
-Status: **hybrid design specification plus tested implementation slices. The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; Linux CI covers the proof flow. The Android app integrates the official React Native AnonCreds wrapper, but physical-device runtime is not yet verified. Ed25519 challenge-response, delegated-capability verification and the NEAR issuer/status registry are separate prototypes. Unlinkability and privacy-preserving revocation are not implemented.**
+Status: **hybrid design specification plus tested implementation slices. The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; Linux CI covers the proof flow. The Android native smoke test has been reported as successful on a physical device, but it is a single-process proof check, not the separate-role protocol demo. Ed25519 challenge-response, delegated-capability verification and the NEAR issuer/status registry are separate prototypes. Unlinkability and privacy-preserving revocation are not implemented.**
+
+## PAII innovation category
+
+**Private Agentic Identity Infrastructure (PAII)** is the innovation category proposed by ANONYMESH. It describes an infrastructure layer for privacy-preserving identity, trust and authorization across humans and autonomous AI agents. PAII is a project-defined category and positioning, not a claim that it is already an established industry standard or an official NEAR Hackathon track.
+
+ANONYMESH is the protocol and reference implementation exploring this category. Its core proposition is that an agent should be able to prove a relevant authorization claim without unnecessarily revealing its private identity or its full credential.
+
+PAII is organized around five design pillars:
+
+1. **Private Identity:** anonymous credentials, selective disclosure and zero-knowledge proofs.
+2. **Private Trust:** verifiable trust claims with minimized disclosure; privacy-preserving reputation remains research work.
+3. **Delegated Authority:** bounded, attenuating capabilities between controllers and agents.
+4. **Private Agent Governance:** challenge binding, anti-replay, revocation and policy enforcement.
+5. **Agent Interoperability:** verification across independently operated agents and systems.
+
+These pillars define the design taxonomy and roadmap. They do not imply that every capability is implemented. The status table and release gates below distinguish working slices from prototypes and planned work.
 
 ## 1. Goal and actors
 
@@ -19,8 +35,8 @@ Actors:
 | Layer | Required design | Status |
 |---|---|---|
 | Identity | Anonymous credentials for human and agent subjects; issuer, schema, expiry and holder binding | Agent demo credential implemented; human issuance and production identity binding not implemented |
-| Cryptography | Reuse maintained ZK/credential libraries; no custom primitives | AnonCreds CL library used in Node demo and official React Native wrapper in Android smoke app; Android runtime pending |
-| Presentation | Selective disclosure and hidden-attribute predicates | Implemented in Node demo and Android smoke-test code; Linux CI proof tests pass, physical Android runtime pending |
+| Cryptography | Reuse maintained ZK/credential libraries; no custom primitives | AnonCreds CL library used in Node demo and React Native wrapper used by Android smoke app; physical-device proof smoke test reported successful, but it is not a multi-process protocol test |
+| Presentation | Selective disclosure and hidden-attribute predicates | Implemented in Node demo and Android smoke-test code; Linux CI proof tests pass and a physical-device smoke test was reported successful |
 | Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not demonstrated; repeated-presentation correlation analysis absent |
 | Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Prototype implemented; 21/21 CI tests passed; max depth 8; no quota accounting |
@@ -94,7 +110,7 @@ Holder secrets and proof witnesses remain on the user's device by default. Remot
 
 ## 11. Performance and privacy measurement
 
-No benchmark results are claimed. Record device/OS, CPU architecture, library and compiler versions, credential schema and proof-system parameters. Measure credential issuance latency and size; proof generation p50/p95, peak memory and proof size; verification p50/p95 and CPU; witness refresh bandwidth and latency; NEAR gas/finality for registry updates; and runtime policy-check overhead.
+A 20-iteration Linux x64 demo benchmark is reported in the repository README; those host-specific figures are not Android/Bionic measurements and must not be generalized to the user's phone or production workloads. Record device/OS, CPU architecture, library and compiler versions, credential schema and proof-system parameters. Measure credential issuance latency and size; proof generation p50/p95, peak memory and proof size; verification p50/p95 and CPU; witness refresh bandwidth and latency; NEAR gas/finality for registry updates; and runtime policy-check overhead.
 
 Test at minimum on Android ARM64 and a desktop/server baseline. Evaluate privacy leakage across repeated presentations, different verifiers, issuer/verifier collusion, timing/network metadata, disclosed-claim combinations and revocation witness refresh.
 
@@ -128,6 +144,6 @@ Test at minimum on Android ARM64 and a desktop/server baseline. Evaluate privacy
 No custom cryptographic primitive, no public identity registry, no default remote proving, no public presentation log and no post-quantum claim. A feature is complete only with reproducible positive, negative and adversarial tests plus measured performance and documented privacy limits.
 
 No changes to `main`, merge, deployment, chain transaction or hackathon submission are authorized without explicit user approval.
-## 8. Hackathon deployment profile
+## 15. Hackathon deployment profile
 
 For the time-boxed NEAR Hackathon prototype, target **NEAR testnet only**. The detailed scope, Gateway role and privacy boundaries are in [`HACKATHON_MVP.md`](HACKATHON_MVP.md). Testnet is for demonstration and integration testing only; it does not imply production security or authorize mainnet activity.
