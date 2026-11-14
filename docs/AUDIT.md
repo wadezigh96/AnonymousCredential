@@ -22,7 +22,8 @@ The current feature branch contains the documentation, one Rust NEAR issuer/stat
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI / dependency lockfile | Not found in inspected feature-branch tree |
+| Automated tests / CI | 8 unit tests present; latest GitHub Actions run #10 passed tests and WASM build | 
+| Cargo.lock | Not committed; dependency resolution is not reproducible yet |
 | Benchmarks / privacy evaluation | Not present |
 
 ## 3. Historical implementation findings
