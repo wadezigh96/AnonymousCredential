@@ -200,6 +200,7 @@ mod tests {
         assert_eq!(issuer.status_root, "b".repeat(64));
         assert!(!issuer.active);
     }
+
     #[test]
     fn status_epoch_must_increase() {
         let mut contract = registry();
