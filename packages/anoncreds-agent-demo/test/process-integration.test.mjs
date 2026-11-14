@@ -19,15 +19,32 @@ async function freePort() {
 }
 
 async function waitHealthy(url, child) {
-  for (let i = 0; i < 80; i += 1) {
+  const startupDeadline = Date.now() + 20_000;
+  const requestTimeoutMs = 500;
+  while (Date.now() < startupDeadline) {
     if (child.exitCode !== null) throw new Error("Service exited before becoming healthy");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Math.min(
+      requestTimeoutMs,
+      Math.max(1, startupDeadline - Date.now()),
+    ));
     try {
-      const response = await fetch(url + "/health");
-      if (response.ok) return;
+      const response = await fetch(url + "/health", { signal: controller.signal });
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload?.ready === true && child.exitCode === null) return;
+      }
     } catch {}
-    await new Promise(done => setTimeout(done, 100));
+    finally {
+      clearTimeout(timeout);
+    }
+    const delay = Math.min(100, Math.max(0, startupDeadline - Date.now()));
+    if (delay > 0) await new Promise(done => setTimeout(done, delay));
   }
-  throw new Error("Service did not become healthy: " + url);
+  throw new Error(
+    "Service did not become healthy: " + url + "\nService logs:\n" +
+    (child.diagnosticOutput?.() ?? "(no diagnostics)"),
+  );
 }
 
 function start(name, port, extra = {}) {

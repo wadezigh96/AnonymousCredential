@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
+import { AnoncredsError } from "@hyperledger/anoncreds-nodejs";
 import { ChallengeLedger, createAgentPresentation, issueAgentCredential, makePresentationRequest } from "../src/index.mjs";
 import { signCapability, capabilityDigest } from "../src/capability.mjs";
 import { AgentAuthorizationRuntime, createAgentRequestProof } from "../src/agent-runtime.mjs";
-import { verifyAndAuthorizeAgentRequest } from "../src/paai-verifier.mjs";
+import { classifyVerificationError, verifyAndAuthorizeAgentRequest } from "../src/paai-verifier.mjs";
 
 const now = 1_800_000_000;
 const audience = "agent-b.anonymesh.test";
@@ -79,6 +80,43 @@ test("bad AnonCreds proof is rejected without consuming challenge or quota", () 
   assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
   const accepted = verifyAndAuthorizeAgentRequest({ ...f.args, runtime: f.runtime });
   assert.equal(accepted.authorized, true);
+});
+
+test("verifier configuration errors are not reported as proof failures", () => {
+  const f = fixture();
+  const missingSchema = verifyAndAuthorizeAgentRequest({
+    ...f.args, verifierSchema: null, runtime: f.runtime,
+  });
+  assert.deepEqual(missingSchema, {
+    authorized: false, code: "INVALID_VERIFIER_CONFIGURATION",
+  });
+  const missingCredentialDefinition = verifyAndAuthorizeAgentRequest({
+    ...f.args, verifierCredentialDefinition: null, runtime: f.runtime,
+  });
+  assert.deepEqual(missingCredentialDefinition, {
+    authorized: false, code: "INVALID_VERIFIER_CONFIGURATION",
+  });
+  assert.equal(JSON.stringify(missingSchema).includes("agent-a-private-subject-7f3a"), false);
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
+});
+
+test("unexpected authorization errors are not reported as invalid proofs", () => {
+  const f = fixture();
+  const rejected = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    runtime: { authorizeAndConsume() { throw new Error("internal test failure"); } },
+  });
+  assert.deepEqual(rejected, { authorized: false, code: "CAPABILITY_AUTHORIZATION_FAILED" });
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
+});
+
+test("native initialization and internal errors remain diagnosable", () => {
+  const nativeInitializationError = new AnoncredsError({
+    code: 100,
+    message: "Native anoncreds has not been registered yet",
+  });
+  assert.equal(classifyVerificationError(nativeInitializationError), "ANONCREDS_NATIVE_ERROR");
+  assert.equal(classifyVerificationError(new Error("unexpected internal failure")), "ANONCREDS_INTERNAL_ERROR");
 });
 
 test("capability delegate must equal issuer-attested credential key", () => {
