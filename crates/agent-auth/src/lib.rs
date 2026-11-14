@@ -4,7 +4,7 @@
 //! It proves possession of a signing key and binds the signature to one
 //! verifier, task, capability digest, nonce, and expiry.
 
-use ed25519_dalek::{Signature, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, VerifyingKey};
 use std::collections::HashSet;
 
 const DOMAIN: &[u8] = b"ANONYMESH_AGENT_AUTH_V1";
