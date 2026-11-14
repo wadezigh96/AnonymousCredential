@@ -99,3 +99,6 @@ Official event information: [NEAR Hackathon](https://nearhackathon.com/). Gatewa
 ## 7. Explicit safety boundary
 
 Testnet is not a security guarantee. Use only disposable test credentials and testnet funds. No mainnet transaction, mainnet deployment, wallet import, private-key upload, trace sharing, hackathon submission or X post is authorized by this plan. Obtain explicit user approval for each external action.
+## 8. Current repository implementation status
+
+The first Rust issuer/status registry contract source and unit tests are now present under `contracts/near/issuer-registry`, with a GitHub Actions workflow for unit tests and wasm compilation. The workflow result has not yet been verified. No contract is deployed to testnet. Credential issuance, AnonCreds integration, ZK proof verification, privacy-preserving revocation proofs, NEAR AI Cloud API integration and Agent Connect integration remain unimplemented.
