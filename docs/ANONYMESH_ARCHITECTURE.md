@@ -45,7 +45,7 @@ Credential schemas must distinguish `human` and `agent` subjects. Agent credenti
 
 See [docs/CRYPTO_SELECTION.md](CRYPTO_SELECTION.md) for the source-backed candidate comparison and version-security gate.
 
-Provisional first integration candidate: AnonCreds v1 / `anoncreds-rs` **v0.2.3 or later**, behind an adapter. This is a local prototype decision based on the issuer-holder-verifier lifecycle, selective disclosure, predicates, non-revocation proofs, active maintenance and Android ARM64 build workflow. It is not a production approval. Version 0.2.2 and earlier are prohibited because of CVE-2025-67498.
+Provisional first integration candidate: AnonCreds v1 / `anoncreds-rs` **v0.2.3 or later**, behind an adapter. This is a local prototype decision based on the issuer-holder-verifier lifecycle, selective disclosure, predicates, non-revocation proofs, active maintenance and Android ARM64 build workflow. It is not a production approval. The referenced CVE/advisory claim remains unverified; independently inspect the advisory database before choosing a safe version.
 
 AnonCreds v2 remains the leading next-generation research candidate because it supports BBS and PS suites, additional ZK presentation capabilities and ALLOSAUR revocation. Its own repository says a comprehensive interoperable specification is still future work, so it is not the first integration dependency.
 
