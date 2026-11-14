@@ -106,6 +106,7 @@ impl ReplayGuard {
 
 
 const CAPABILITY_DOMAIN: &[u8] = b"ANONYMESH_DELEGATED_CAPABILITY_V1";
+const MAX_DELEGATION_DEPTH: usize = 8;
 
 /// A signed, attenuable capability. Public keys are explicit so a verifier
 /// can validate each delegation edge without trusting the delegate.
@@ -140,6 +141,7 @@ pub enum CapabilityError {
     ExpiryEscalation,
     QuotaEscalation,
     EmptyChain,
+    DelegationDepthExceeded,
 }
 
 impl Capability {
@@ -205,6 +207,9 @@ pub fn verify_capability_chain(
     now: u64,
 ) -> Result<(), CapabilityError> {
     let root = chain.first().ok_or(CapabilityError::EmptyChain)?;
+    if chain.len() > MAX_DELEGATION_DEPTH + 1 {
+        return Err(CapabilityError::DelegationDepthExceeded);
+    }
     if root.parent_digest.is_some() || &root.issuer_key != trusted_root_issuer {
         return Err(CapabilityError::InvalidRoot);
     }
@@ -479,6 +484,46 @@ mod tests {
     fn rejects_empty_capability_chain() {
         let owner = agent_key(11);
         assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[], 100), Err(CapabilityError::EmptyChain));
+    }
+
+
+    #[test]
+    fn rejects_child_audience_escalation() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let mut child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        child.audience = "other-service.example".into();
+        child = child.sign(&agent_a).unwrap();
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::AudienceEscalation));
+    }
+
+    #[test]
+    fn rejects_child_resource_escalation() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let mut child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        child.resource = "all-resources".into();
+        child = child.sign(&agent_a).unwrap();
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::ResourceEscalation));
+    }
+
+    #[test]
+    fn rejects_delegation_chain_over_maximum_depth() {
+        let owner = agent_key(11);
+        let mut issuer = owner.clone();
+        let mut chain = Vec::new();
+        for i in 0..=MAX_DELEGATION_DEPTH {
+            let delegate = agent_key(20 + i as u8);
+            let parent_digest = chain.last().map(|p: &Capability| p.digest().unwrap());
+            let cap = capability(&issuer, &delegate, parent_digest, "read", 900, 100);
+            chain.push(cap);
+            issuer = delegate;
+        }
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &chain, 100), Err(CapabilityError::DelegationDepthExceeded));
     }
 
 }
