@@ -173,51 +173,75 @@ Delegated capability verification and the preliminary NEAR issuer/status registr
 
 ## Architecture overview
 
-ANONYMESH is organized as a protocol with separate issuer, holder, verifier, agent-authorization and registry boundaries. The current repository contains working implementation slices, not a complete production protocol.
+ANONYMESH separates credential issuance, private presentation, verification, authorization policy and public registry coordination. The diagram distinguishes the runnable Issuer–Holder–Verifier demo from authorization and NEAR components that remain prototypes or planned integration.
 
-```text
-Human / Agent
-     |
-     v
-Holder (Agent A) ---- presentation + proof ----> Verifier (Agent B)
-     |                                           |
-     | credential request                       | challenge + verification
-     v                                           v
-Issuer process                              Replay / policy checks
-                                                 |
-                                                 v
-                                      NEAR issuer/status registry
-                                      (public issuer metadata only)
+```mermaid
+flowchart TB
+    subgraph IDENTITY["PRIVATE IDENTITY — ANONCREDS"]
+        ISSUER["Issuer<br/>Schema · Credential Definition<br/>Credential Issuance"]
+        HOLDER["Agent A — Holder<br/>Link Secret · Selective Disclosure"]
+        VERIFIER["Agent B — Verifier<br/>Challenge · Proof Verification"]
+        ISSUER -->|"Credential Offer / Issuance"| HOLDER
+        HOLDER -->|"Presentation + Proof"| VERIFIER
+    end
 
-Platform-independent protocol flow: issuer, holder and verifier.
-Current runnable integration demo: separate Node.js role processes.
-Production agent runtime: not yet implemented.
+    subgraph AUTH["AGENT AUTHORIZATION — PROTOTYPE / INTEGRATION IN PROGRESS"]
+        POP["Ed25519<br/>Proof of Possession"]
+        CAP["Delegated Capability<br/>Chain Verification"]
+        POLICY["Authorization Runtime<br/>Audience · Action · Resource · Expiry"]
+        REPLAY["Nonce / Replay Checks"]
+        POP --> POLICY
+        CAP --> POLICY
+        REPLAY --> POLICY
+    end
+
+    VERIFIER -->|"Verified proof + context"| POLICY
+    POLICY --> DECISION{"Policy decision"}
+    DECISION -->|"Allow"| ALLOW["Permit requested action"]
+    DECISION -->|"Deny"| DENY["Reject request"]
+
+    subgraph COORD["NEAR COORDINATION — PRELIMINARY SCAFFOLD"]
+        REG["Issuer / Status Registry<br/>Public metadata only"]
+    end
+    ISSUER -.->|"Planned public metadata"| REG
+    REG -.->|"Future status lookup"| VERIFIER
 ```
+
+**Current boundaries**
+
+- **Runnable demo:** separate local Node.js Issuer, Holder and Verifier processes in `packages/anoncreds-agent-demo`; Linux CI exercises proof verification and nonce replay behavior.
+- **Authorization:** Ed25519 and delegated-capability components are prototype slices. The complete credential-to-key-to-capability-to-action path is not yet demonstrated end-to-end.
+- **NEAR:** issuer/status registry is a preliminary contract scaffold and is not deployed. Only public issuer metadata/status commitments are intended for this layer.
+- **Not claimed:** complete unlinkability, production authorization runtime, privacy-preserving revocation or production readiness.
 
 ### Repository structure
 
-```text
-anonymesh/
-├── packages/
-│   └── anoncreds-agent-demo/    # Node issuer, holder and verifier processes
-│       ├── src/roles/            # issuer.mjs, holder.mjs, verifier.mjs, HTTP helpers
-│       ├── src/                  # demo entrypoint and benchmark
-│       └── test/                 # proof flow and separate-process integration tests
-├── crates/
-│   └── agent-auth/              # Ed25519 challenge-response and delegated-capability prototypes
-├── contracts/
-│   └── near/issuer-registry/    # NEAR issuer/status registry scaffold and unit tests
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── ANONYMESH_ARCHITECTURE.md
-│   ├── CRYPTO_SELECTION.md
-│   ├── THREAT_MODEL.md
-│   ├── AUDIT.md
-│   ├── HACKATHON_MVP.md
-│   ├── TESTNET_DEMO.md
-│   ├── SECURITY_LIMITATIONS.md
-│   └── ANONYMESH_ANDROID_VALIDATION.md
-└── .github/workflows/           # CI for protocol components and platform-specific validation
+The repository is organized by implementation boundary: the Node.js AnonCreds demo, Rust agent-auth prototypes, NEAR registry scaffold, documentation and CI workflows.
+
+```mermaid
+flowchart TB
+    ROOT["anonymesh/"]
+
+    ROOT --> PACKAGES["packages/"]
+    PACKAGES --> DEMO["anoncreds-agent-demo/"]
+    DEMO --> ROLES["src/roles/<br/>issuer.mjs · holder.mjs · verifier.mjs"]
+    DEMO --> DEMOSRC["src/<br/>Demo entrypoint · benchmark · helpers"]
+    DEMO --> TESTS["test/<br/>Proof flow · separate-process integration"]
+
+    ROOT --> CRATES["crates/"]
+    CRATES --> AGENTAUTH["agent-auth/<br/>Ed25519 challenge-response<br/>Delegated-capability prototypes"]
+
+    ROOT --> CONTRACTS["contracts/"]
+    CONTRACTS --> NEAR["near/issuer-registry/<br/>NEAR issuer/status registry scaffold<br/>Unit tests"]
+
+    ROOT --> DOCS["docs/"]
+    DOCS --> ARCHDOC["ARCHITECTURE.md<br/>ANONYMESH_ARCHITECTURE.md"]
+    DOCS --> SECDOC["CRYPTO_SELECTION.md<br/>THREAT_MODEL.md · AUDIT.md<br/>SECURITY_LIMITATIONS.md"]
+    DOCS --> HACKDOC["HACKATHON_MVP.md<br/>TESTNET_DEMO.md<br/>ANONYMESH_ANDROID_VALIDATION.md"]
+
+    ROOT --> WORKFLOWS[".github/workflows/<br/>Protocol CI · platform validation"]
 ```
+
+`packages/anoncreds-agent-demo` is the current runnable multi-process demonstration. `crates/agent-auth` and `contracts/near/issuer-registry` contain prototype components; their presence in the tree does not imply a production deployment.
 
 For implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).
