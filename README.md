@@ -11,7 +11,7 @@ ANONYMESH is a privacy-preserving identity and authorization protocol for **peop
 | Anonymous credentials | Human and agent credential issuance, private holder, verification | Not implemented |
 | ZK proofs | Proof of credential possession and hidden-attribute predicates | Not implemented |
 | Selective disclosure | Reveal only verifier-requested claims | Not implemented |
-| Challenge-response | Fresh nonce, audience, task and expiry binding | Not implemented |
+| Challenge-response | Ed25519 signature over nonce, audience, task, capability digest and expiry; in-memory replay guard | Prototype implemented; 9/9 CI tests passed; not anonymous/unlinkable |
 | Unlinkable presentations | Randomized presentations and scoped pseudonyms where needed | Not implemented |
 | Delegated capability | Attenuable agent permissions and local policy enforcement | Not implemented |
 | Privacy-preserving revocation | Revocation proofs without exposing a stable holder identifier | Not implemented |
