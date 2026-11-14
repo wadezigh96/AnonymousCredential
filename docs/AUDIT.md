@@ -41,7 +41,7 @@ These findings describe deleted historical code, not active source files.
 
 ## 4. Documentation defects found
 
-The branch README incorrectly claimed a membership circuit and root registry prototype were implemented, and the remediation section of this audit repeated that claim. The two source files were already absent. These stale claims must be corrected before implementation proceeds.
+A previous README revision incorrectly claimed a membership circuit and root registry prototype were implemented, and this audit repeated that claim. Those historical documentation errors have since been corrected: the deleted prototype files remain absent, and the current Rust registry scaffold is described separately with its actual CI evidence.
 
 ## 5. Audit limits
 
