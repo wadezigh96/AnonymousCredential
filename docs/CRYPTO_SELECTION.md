@@ -60,7 +60,7 @@ Before adopting the candidate in code:
 1. Fetch and pin exact source release/tag and verify its signed release/commit provenance.
 2. Review `Cargo.toml`, `Cargo.lock`, transitive cryptographic dependencies, feature flags, unsafe blocks/FFI, zeroization and secret lifetime handling.
 3. Run upstream tests and the AnonCreds interoperability/test vectors in a reproducible Linux environment.
-4. Add regression tests for CVE-2025-67498, issuer mismatch, credential substitution, altered claims, expired credential, revoked credential, malformed presentation, nonce replay and audience/task mismatch.
+4. Add regression tests for cross-link-secret credential mixing, issuer mismatch, credential substitution, altered claims, expired credential, revoked credential, malformed presentation, nonce replay and audience/task mismatch.
 5. Build the exact version for Android ARM64; measure proof generation/verification p50/p95, peak memory, proof size and CPU.
 6. Test witness/status refresh and quantify privacy leakage from status-list fetches, timing, network metadata and rare disclosed claims.
 7. Obtain independent cryptographic review before production claims.
