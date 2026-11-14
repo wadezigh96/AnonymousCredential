@@ -6,7 +6,7 @@ Default branch inspected: `main`
 
 ## 1. Current feature-branch tree
 
-The current feature branch contains the documentation, one Rust NEAR issuer/status registry crate, and one GitHub Actions workflow. The paths `circuits/anonymesh_membership.circom` and `contracts/AnonMeshRootRegistry.sol` are absent. They were deliberately removed after being identified as premature, unvalidated prototypes. No historical prototype was restored.
+The current feature branch contains documentation, a Rust NEAR issuer/status registry crate, a Rust agent-authentication crate, and separate GitHub Actions workflows for each. The paths `circuits/anonymesh_membership.circom` and `contracts/AnonMeshRootRegistry.sol` are absent. They were deliberately removed after being identified as premature, unvalidated prototypes. No historical prototype was restored.
 
 ## 2. Requested-component inventory
 
@@ -15,14 +15,14 @@ The current feature branch contains the documentation, one Rust NEAR issuer/stat
 | Anonymous credential issuer / holder / verifier | Not present |
 | ZK proof circuit and verifier artifacts | Not present |
 | Selective disclosure / attribute predicates | Not present |
-| Challenge-response authentication | Not present |
+| Challenge-response authentication | Ed25519 prototype in `crates/agent-auth`; 9 unit tests passed in GitHub Actions run #1 |
 | Unlinkable presentations | Not present |
 | Delegated capabilities | Not present |
 | Privacy-preserving revocation | Not present |
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI | 14 unit tests; GitHub Actions run #13 passed tests and WASM build with `--locked` | 
+| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth: 9 tests passed (run #1) | 
 | Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
 | Benchmarks / privacy evaluation | Not present |
 
@@ -57,7 +57,11 @@ No custom cryptographic primitive is permitted. No implementation, production-se
 
 A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The provisional first local integration candidate is AnonCreds v1 / `anoncreds-rs` v0.2.3 or later, subject to upstream regression, Android ARM64 and dependency audit gates. A previous note cited GHSA-89r4-4c4j-7wx9 / CVE-2025-67498, but the advisory could not be independently retrieved or corroborated during follow-up. Its affected/fixed range is unverified and must not be treated as fact. Confirm advisories before selecting a dependency version. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no implementation is claimed.
 
-## 8. First NEAR registry implementation slice
+## 8. Agent challenge-response implementation slice
+
+A small Rust crate at `crates/agent-auth` verifies Ed25519 signatures over a domain-separated transcript binding nonce, audience, task, capability digest and expiry. Its in-memory replay guard rejects reused nonces and fails closed when full. GitHub Actions run #1 (`43602842365`) passed 9/9 tests. This is ordinary proof-of-possession authentication: it reveals/uses a stable public key and is **not** an anonymous credential, ZK proof, unlinkable presentation, durable distributed replay defense, or capability-policy engine. The lockfile is generated ephemerally in CI and is not committed.
+
+## 9. First NEAR registry implementation slice
 
 A Rust contract scaffold now exists at `contracts/near/issuer-registry` using `near-sdk = 5.30.1`. It stores issuer public-key metadata, key version, schema hash, active flag, status epoch and status root. Owner-only mutations and monotonic key/status version checks are implemented in source. Key rotation preserves suspension and status history. The contract does not verify ZK proofs or non-revocation witnesses and its status root is an opaque commitment only.
 
