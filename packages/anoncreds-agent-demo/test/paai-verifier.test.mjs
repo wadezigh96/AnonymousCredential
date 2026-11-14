@@ -11,10 +11,10 @@ const audience = "agent-b.anonymesh.test";
 const action = "read:weather";
 const resource = "weather:global";
 
-function fixture({ quota = 2, capabilityDelegateKey, capabilitySignerPrivateKey } = {}) {
+function fixture({ quota = 2, capabilityDelegateKeyPair, capabilitySignerPrivateKey } = {}) {
   const root = generateKeyPairSync("ed25519");
   const holder = issueAgentCredential({ validUntil: now + 600 });
-  const delegateKey = capabilityDelegateKey ?? holder.agentPublicKey;
+  const delegateKey = capabilityDelegateKeyPair?.publicKey.export({ format: "jwk" }).x ?? holder.agentPublicKey;
   const signer = capabilitySignerPrivateKey ?? root.privateKey;
   const capability = signCapability({
     parentDigest: null,
@@ -33,9 +33,7 @@ function fixture({ quota = 2, capabilityDelegateKey, capabilitySignerPrivateKey 
   const request = makePresentationRequest(challenge, now);
   ledger.attachPresentationRequest(challenge.nonce, request.toJson());
   const presentation = createAgentPresentation(holder, request).toJson();
-  const signerPrivateKey = delegateKey === holder.agentPublicKey
-    ? holder.agentPrivateKey
-    : generateKeyPairSync("ed25519").privateKey;
+  const signerPrivateKey = capabilityDelegateKeyPair?.privateKey ?? holder.agentPrivateKey;
   const proof = createAgentRequestProof({ challenge, capabilityChain: chain, privateKey: signerPrivateKey });
   return {
     root,
@@ -73,7 +71,7 @@ test("unified verifier requires valid AnonCreds, credential-bound Ed25519 PoP an
 test("bad AnonCreds proof is rejected without consuming challenge or quota", () => {
   const f = fixture();
   const invalid = structuredClone(f.presentation);
-  invalid.requested_proof.revealed_attrs.agent_key_ref.raw = "attacker";
+  invalid.requested_proof.revealed_attrs.agent_key_ref.encoded = "123";
   const rejected = verifyAndAuthorizeAgentRequest({
     ...f.args, presentationJson: invalid, runtime: f.runtime,
   });
@@ -86,7 +84,7 @@ test("bad AnonCreds proof is rejected without consuming challenge or quota", () 
 test("capability delegate must equal issuer-attested credential key", () => {
   const attacker = generateKeyPairSync("ed25519");
   const attackerKey = attacker.publicKey.export({ format: "jwk" }).x;
-  const f = fixture({ capabilityDelegateKey: attackerKey });
+  const f = fixture({ capabilityDelegateKeyPair: attacker });
   const rejected = verifyAndAuthorizeAgentRequest({ ...f.args, runtime: f.runtime });
   assert.deepEqual(rejected, { authorized: false, code: "DELEGATE_KEY_MISMATCH" });
   assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
