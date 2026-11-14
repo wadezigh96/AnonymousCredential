@@ -371,4 +371,114 @@ mod tests {
             Err(VerifyError::EmptyAudience)
         );
     }
+
+    fn agent_key(seed: u8) -> SigningKey {
+        SigningKey::from_bytes(&[seed; 32])
+    }
+
+    fn capability(
+        issuer: &SigningKey,
+        delegate: &SigningKey,
+        parent: Option<[u8; 32]>,
+        action: &str,
+        expires_at: u64,
+        quota: u64,
+    ) -> Capability {
+        Capability {
+            parent_digest: parent,
+            issuer_key: issuer.verifying_key().to_bytes(),
+            delegate_key: delegate.verifying_key().to_bytes(),
+            audience: "service.example".into(),
+            action: action.into(),
+            resource: "weather:singapore".into(),
+            expires_at,
+            quota,
+            signature: [0u8; 64],
+        }.sign(issuer).unwrap()
+    }
+
+    #[test]
+    fn accepts_valid_root_and_attenuated_child() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Ok(()));
+    }
+
+    #[test]
+    fn rejects_child_action_escalation() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "transfer", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::ActionEscalation));
+    }
+
+    #[test]
+    fn rejects_child_expiry_escalation() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 700, 100);
+        let child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::ExpiryEscalation));
+    }
+
+    #[test]
+    fn rejects_child_quota_escalation() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 10);
+        let child = capability(&agent_a, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::QuotaEscalation));
+    }
+
+    #[test]
+    fn rejects_wrong_delegator_signature_key() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let impostor = agent_key(14);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let child = capability(&impostor, &agent_b, Some(root.digest().unwrap()), "read", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::WrongDelegator));
+    }
+
+    #[test]
+    fn rejects_broken_parent_digest() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let agent_b = agent_key(13);
+        let root = capability(&owner, &agent_a, None, "read", 900, 100);
+        let child = capability(&agent_a, &agent_b, Some([99u8; 32]), "read", 800, 20);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root, child], 100), Err(CapabilityError::BrokenParentLink));
+    }
+
+    #[test]
+    fn rejects_expired_root_capability() {
+        let owner = agent_key(11);
+        let agent_a = agent_key(12);
+        let root = capability(&owner, &agent_a, None, "read", 100, 10);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[root], 100), Err(CapabilityError::Expired));
+    }
+
+    #[test]
+    fn rejects_wrong_trusted_root_issuer() {
+        let owner = agent_key(11);
+        let other = agent_key(15);
+        let agent_a = agent_key(12);
+        let root = capability(&owner, &agent_a, None, "read", 900, 10);
+        assert_eq!(verify_capability_chain(&other.verifying_key().to_bytes(), &[root], 100), Err(CapabilityError::InvalidRoot));
+    }
+
+    #[test]
+    fn rejects_empty_capability_chain() {
+        let owner = agent_key(11);
+        assert_eq!(verify_capability_chain(&owner.verifying_key().to_bytes(), &[], 100), Err(CapabilityError::EmptyChain));
+    }
+
 }
