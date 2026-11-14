@@ -3,7 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.12" },
-  "scripts": { "test": "node --test", "demo": "node ./src/demo.mjs" },
-  "dependencies": { "@hyperledger/anoncreds-nodejs": "0.5.0" }
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node ./src/demo.mjs",
+    "benchmark": "node ./src/benchmark.mjs"
+  },
+  "dependencies": {
+    "@hyperledger/anoncreds-nodejs": "0.5.0"
+  }
 }
