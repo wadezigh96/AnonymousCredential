@@ -22,8 +22,8 @@ The current feature branch contains the documentation, one Rust NEAR issuer/stat
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI | 8 unit tests present; latest GitHub Actions run #10 passed tests and WASM build | 
-| Cargo.lock | Not committed; dependency resolution is not reproducible yet |
+| Automated tests / CI | 14 unit tests; GitHub Actions run #13 passed tests and WASM build with `--locked` | 
+| Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
 | Benchmarks / privacy evaluation | Not present |
 
 ## 3. Historical implementation findings
@@ -49,7 +49,7 @@ This is a preliminary source/tree review plus inspection of the latest GitHub Ac
 
 ## 6. Next audit gate
 
-Before choosing dependencies, compare maintained anonymous-credential implementations and revocation designs for cryptographic assumptions, selective disclosure, predicates, unlinkability, revocation privacy, language/runtime support (including Android ARM64), maintenance, independent audits, interoperability, proof size, proof-generation latency, verification latency and memory.
+Before adding dependencies, complete the comparison of maintained anonymous-credential implementations and revocation designs for cryptographic assumptions, selective disclosure, predicates, unlinkability, revocation privacy, language/runtime support (including Android ARM64), maintenance, independent audits, interoperability, proof size, proof-generation latency, verification latency and memory.
 
 No custom cryptographic primitive is permitted. No implementation, production-security, privacy, or performance claim is accepted without reproducible tests and evidence.
 
