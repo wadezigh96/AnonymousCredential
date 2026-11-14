@@ -144,7 +144,7 @@ test("proof for another nonce does not verify against the verifier request", () 
     nonce: "123456789012345678901",
     requested_attributes: { role_ref: { name: "agent_role" } },
     requested_predicates: {
-      expiry_ref: { name: "valid_until", p_type: "GE", p_value: fixedNow },
+      expiry_ref: { name: "valid_until", p_type: ">=", p_value: fixedNow },
     },
   });
   assert.equal(presentation.verify({
