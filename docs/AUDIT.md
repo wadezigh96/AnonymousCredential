@@ -12,7 +12,7 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 
 | Component | Current finding |
 |---|---|
-| Anonymous credential issuer / holder / verifier | Implemented as separate Node processes using the official AnonCreds Node wrapper; 22/22 local tests pass |
+| Anonymous credential issuer / holder / verifier | Implemented as separate Node processes using the official AnonCreds Node wrapper; 42/42 local tests pass and the [AnonCreds CI run](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722) passed |
 | ZK proof circuit and verifier artifacts | Not present |
 | Selective disclosure / attribute predicates | Implemented in the Node demo; hidden expiry predicate and private-subject non-disclosure are tested |
 | Challenge-response authentication | Ed25519 prototype in `crates/agent-auth`; 9 unit tests passed in GitHub Actions run #1 |

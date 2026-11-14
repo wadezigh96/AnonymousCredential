@@ -137,7 +137,7 @@ Agent A reveals only `agent_role`; the private subject and `valid_until` remain 
 - `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
 - `npm run benchmark --prefix packages/anoncreds-agent-demo`
 
-The current local verification completed 22/22 Node tests on Linux x64, including the separate-process integration test. A 20-iteration Linux x64 benchmark reported proof-generation p50/p95 79.888/88.619 ms, verification p50/p95 77.318/119.527 ms, proof JSON p50/p95 18,119/18,142 bytes, and process RSS high-water 66.89 MiB. These measurements are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
+The verified feature branch completed 42/42 Node tests on Linux x64, including the separate-process integration test. The standalone smoke demo reported `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. A 20-iteration Linux x64 benchmark reported proof-generation p50/p95 79.888/88.619 ms, verification p50/p95 77.318/119.527 ms, proof JSON p50/p95 18,119/18,142 bytes, and process RSS high-water 66.89 MiB. These measurements are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
 
 Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo.
 

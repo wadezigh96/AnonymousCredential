@@ -13,7 +13,7 @@ npm run demo --prefix packages/anoncreds-agent-demo
 npm run benchmark --prefix packages/anoncreds-agent-demo
 ```
 
-The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The current test source contains 30 Node tests across the four demo test files. This is a source count, not a claim that all 30 currently pass; record a fresh test run and commit before reporting a pass. The AnonCreds demo should show `valid: true` and `privateSubjectDisclosed: false`. The separate authorization-runtime tests exercise capability binding and quota/replay controls, but they are not joined to the AnonCreds role-service flow.
+The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The verified feature branch currently passes 42 Node tests, including the separate-process integration test; always record a fresh run before reporting a pass. The standalone AnonCreds demo should show `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. The separate authorization-runtime tests exercise capability binding and quota/replay controls, but they are not joined to the AnonCreds role-service flow. The latest verified CI runs are the [AnonCreds integration](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722), [agent-auth Rust](https://github.com/wadezigh96/anonymesh/actions/runs/43632313304), and [NEAR contract](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085) workflows.
 
 ## Rust and contract checks
 
