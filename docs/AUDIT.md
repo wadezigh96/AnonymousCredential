@@ -1,64 +1,58 @@
-# Initial audit — legacy AnonymousCredential
+# Repository audit — AnonymousCredential / ANONYMESH
 
-Date: 2026-11-14  
-Scope: publicly visible Git history for `wadezigh96/AnonymousCredential`, default branch `main`, and the historical source added in commit `0184d49b1580525429ef8a85fc922c98bd703c1d`.
+Date: 2026-11-14
+Branch inspected: `feat/anonymesh-private-agent-identity`
+Default branch inspected: `main`
 
-## Repository state observed
+## 1. Current feature-branch tree
 
-- Default branch: `main`.
-- The repository root returned an empty contents list at the time of inspection.
-- The latest two source commits on 2026-11-14 removed `anon.circom` and `AnonCommunity.sol`.
-- The historical implementation was recovered from commit diffs, not assumed to be present in the current branch.
-- No tests, generated verifier, dependency lockfile, CI workflow, or reproducible trusted-setup artifact were found in the inspected history.
+The inspected feature branch contains:
+- `README.md`
+- `docs/AUDIT.md`
+- `docs/THREAT_MODEL.md`
 
-## Critical findings
+The paths `circuits/anonymesh_membership.circom` and `contracts/AnonMeshRootRegistry.sol` are absent. They were deliberately removed after being identified as premature, unvalidated prototypes.
 
-### C-01 — action/message binding was ineffective
+## 2. Requested-component inventory
 
-The old circuit declared `messageHash` as public but only assigned `signal m2 <== messageHash * messageHash`. That signal was not used in a constraint or public output. The proof therefore did not establish the intended relationship between the proof and the message/recipient. The Solidity contract nevertheless supplied a message hash to the verifier.
+| Component | Current finding |
+|---|---|
+| Anonymous credential issuer / holder / verifier | Not present |
+| ZK proof circuit and verifier artifacts | Not present |
+| Selective disclosure / attribute predicates | Not present |
+| Challenge-response authentication | Not present |
+| Unlinkable presentations | Not present |
+| Delegated capabilities | Not present |
+| Privacy-preserving revocation | Not present |
+| NEAR contracts and tests | Not present |
+| Local-first private agent runtime | Not present |
+| Anti-replay, rate limits and policy enforcement | Not present |
+| Automated tests / CI / dependency lockfile | Not found in inspected feature-branch tree |
+| Benchmarks / privacy evaluation | Not present |
 
-**Impact:** the intended anti-front-running/action-binding property was not established by the circuit.
+## 3. Historical implementation findings
 
-### C-02 — public-signal ordering was not demonstrated
+The old `anon.circom` and `AnonCommunity.sol` were removed in prior repository commits. They were reviewed from Git history only and have not been restored.
 
-The old Solidity verifier interface expected four public values in the order `[nullifier, root, scope, msgHash]`. The old Circom main declared public inputs `[merkleRoot, scope, messageHash]` and an output `nullifierHash`. Circom/snarkjs public-signal ordering must be verified against the exact generated verifier and proof artifacts. The source did not document or test that ordering.
+- Historical critical finding: `messageHash` was not effectively constrained to the intended action/message statement.
+- Historical critical finding: Solidity verifier public-input ordering was not demonstrated against generated verifier artifacts.
+- Historical high finding: the depth-16 Merkle insertion path lacked an explicit capacity guard.
+- Historical high finding: wallet-based registration did not establish unique human or agent identity.
+- Historical high finding: public message events disclosed message content and metadata.
+- Historical high finding: trusted-setup and verifier-artifact provenance were underspecified.
 
-**Impact:** proof verification could reject valid proofs or, worse, verify a different statement than intended if the integration made an incorrect assumption.
+These findings describe deleted historical code, not active source files.
 
-## High findings
+## 4. Documentation defects found
 
-### H-01 — unbounded Merkle insertion
+The branch README incorrectly claimed a membership circuit and root registry prototype were implemented, and the remediation section of this audit repeated that claim. The two source files were already absent. These stale claims must be corrected before implementation proceeds.
 
-The old contract used a depth-16 tree but did not reject insertions once the index reached the tree capacity (65,536 leaves).
+## 5. Audit limits
 
-**Impact:** index/path assumptions can break after capacity is exceeded.
+This is a repository-tree and historical-source review. It is not yet a complete dependency vulnerability audit or independent cryptographic review. No active package manifests, lockfiles, tests, CI workflows or implementation source were found in the inspected feature-branch tree, so there is currently no active dependency graph or runnable project test suite to assess.
 
-### H-02 — wallet-based registration is not human/agent identity
+## 6. Next audit gate
 
-The old contract enforced one registration per EVM address and checked an NFT balance. This is not proof of one human or one agent per identity. Wallet rotation and multiple wallets can bypass the uniqueness assumption; NFT transfers and issuer semantics were not addressed.
+Before choosing dependencies, compare maintained anonymous-credential implementations and revocation designs for cryptographic assumptions, selective disclosure, predicates, unlinkability, revocation privacy, language/runtime support (including Android ARM64), maintenance, independent audits, interoperability, proof size, proof-generation latency, verification latency and memory.
 
-### H-03 — public event content leaks metadata
-
-The old `Message` event emitted the message text publicly. Even if the author is hidden, content, timing, transaction sender, relayer behavior, and repeated nullifier patterns can leak information.
-
-### H-04 — trusted setup and verifier provenance were underspecified
-
-The historical README suggested a local ceremony and generated verifier but did not define a multi-party ceremony, contribution verification, artifact hashes, reproducibility, or production ceremony policy.
-
-## Medium findings
-
-- No tests were present for invalid Merkle paths, bit constraints, duplicate nullifiers, unknown roots, recipient binding, tree capacity, or malformed public inputs.
-- The root registry and issuer authorization model were not separated from the application contract.
-- The `claim` flow accepted a recipient address; the intended recipient binding depended on the ineffective circuit binding described in C-01.
-- The old design's NFT gate disclosed a public wallet-to-membership registration relationship and is not a general anonymous credential issuance protocol.
-
-## Remediation in this branch
-
-- Replaced the ineffective unused `messageHash * messageHash` signal with an explicit Poseidon action-binding output in the new prototype circuit.
-- Documented the expected public-signal order in source comments.
-- Added a small issuer-controlled root registry with explicit prototype limitations.
-- Kept the work on a feature branch; `main` was not changed.
-
-## Not yet verified
-
-The current prototype has not yet been compiled with Circom, tested with snarkjs, compared against a generated Solidity verifier, fuzzed, or independently reviewed. No claim of cryptographic correctness or production security is made.
+No custom cryptographic primitive is permitted. No implementation, production-security, privacy, or performance claim is accepted without reproducible tests and evidence.
