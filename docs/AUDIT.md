@@ -6,12 +6,7 @@ Default branch inspected: `main`
 
 ## 1. Current feature-branch tree
 
-The inspected feature branch contains:
-- `README.md`
-- `docs/AUDIT.md`
-- `docs/THREAT_MODEL.md`
-
-The paths `circuits/anonymesh_membership.circom` and `contracts/AnonMeshRootRegistry.sol` are absent. They were deliberately removed after being identified as premature, unvalidated prototypes.
+The current feature branch contains the documentation, one Rust NEAR issuer/status registry crate, and one GitHub Actions workflow. The paths `circuits/anonymesh_membership.circom` and `contracts/AnonMeshRootRegistry.sol` are absent. They were deliberately removed after being identified as premature, unvalidated prototypes. No historical prototype was restored.
 
 ## 2. Requested-component inventory
 
