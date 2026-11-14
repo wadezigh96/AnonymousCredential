@@ -516,7 +516,7 @@ mod tests {
         let owner = agent_key(11);
         let mut issuer = owner.clone();
         let mut chain = Vec::new();
-        for i in 0..=MAX_DELEGATION_DEPTH {
+        for i in 0..=MAX_DELEGATION_DEPTH + 1 {
             let delegate = agent_key(20 + i as u8);
             let parent_digest = chain.last().map(|p: &Capability| p.digest().unwrap());
             let cap = capability(&issuer, &delegate, parent_digest, "read", 900, 100);
