@@ -23,6 +23,7 @@ function fixture({ validUntil = fixedNow + 600 } = {}) {
   const ledger = new ChallengeLedger();
   const challenge = ledger.issue({ ...context, now: fixedNow, ttlSeconds: 90 });
   const request = makePresentationRequest(challenge, fixedNow);
+  ledger.attachPresentationRequest(challenge.nonce, request.toJson());
   return { holder, ledger, challenge, request };
 }
 
@@ -43,6 +44,36 @@ test("Agent A proves an authorized role to Agent B without disclosing its privat
   const proofJson = JSON.stringify(presentation.toJson());
   assert.equal(proofJson.includes(PRIVATE_SUBJECT_MARKER), false);
   assert.match(proofJson, /weather_reader/);
+});
+
+
+test("invalid proof for a different nonce does not consume the original challenge", () => {
+  const f = fixture();
+  const otherChallenge = f.ledger.issue({ ...context, now: fixedNow, ttlSeconds: 90 });
+  const otherRequest = makePresentationRequest(otherChallenge, fixedNow);
+  f.ledger.attachPresentationRequest(otherChallenge.nonce, otherRequest.toJson());
+  const invalidPresentation = createAgentPresentation(f.holder, otherRequest);
+
+  assert.equal(verifyAgentPresentation({
+    presentation: invalidPresentation,
+    presentationRequest: f.request,
+    verifierSchema: f.holder.schema,
+    verifierCredentialDefinition: f.holder.credentialDefinition,
+    challengeLedger: f.ledger,
+    challengeContext: { nonce: f.challenge.nonce, ...context },
+    now: fixedNow,
+  }), false);
+
+  const validPresentation = createAgentPresentation(f.holder, f.request);
+  assert.equal(verifyAgentPresentation({
+    presentation: validPresentation,
+    presentationRequest: f.request,
+    verifierSchema: f.holder.schema,
+    verifierCredentialDefinition: f.holder.credentialDefinition,
+    challengeLedger: f.ledger,
+    challengeContext: { nonce: f.challenge.nonce, ...context },
+    now: fixedNow,
+  }), true);
 });
 
 test("challenge nonce cannot be replayed", () => {
