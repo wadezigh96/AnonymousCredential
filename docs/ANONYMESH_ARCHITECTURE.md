@@ -1,6 +1,6 @@
 # ANONYMESH — Protocol Architecture
 
-Status: **design specification only; none of the protocol components below are claimed implemented.**
+Status: **protocol design specification; the separate NEAR issuer/status registry scaffold is implemented and CI-verified, but none of the credential, ZK presentation, challenge-response, delegated-capability or privacy-preserving revocation flows are implemented.**
 
 ## 1. Goal and actors
 
