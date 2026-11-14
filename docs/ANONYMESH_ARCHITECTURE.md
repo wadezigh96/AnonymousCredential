@@ -39,11 +39,11 @@ Actors:
 | Presentation | Selective disclosure and hidden-attribute predicates | Implemented in Node demo and Android smoke-test code; Linux CI proof tests pass and a physical-device smoke test was reported successful |
 | Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not demonstrated; repeated-presentation correlation analysis absent |
-| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Prototype implemented; 21/21 CI tests passed; max depth 8; no quota accounting |
+| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Node/Rust verifier prototypes and separate Node authorization-runtime slice implemented with tests; runtime supports proof-of-possession and replay/quota consumption, including an optional SQLite store test; not integrated into the AnonCreds role-service flow or production tools |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
 | Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 14 unit tests and locked-mode WASM CI passed using an ephemeral generated lockfile; not deployed |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
-| Security | Anti-replay prototype in one process; rate limits, distributed replay protection and deny-by-default policy engine | Partial prototype; production controls not implemented |
+| Security | Anti-replay, rate limits, distributed replay protection and deny-by-default policy engine | AnonCreds role demo uses an in-memory single-process challenge ledger; separate Node runtime has memory/SQLite authorization-store slices; rate limits, distributed service integration and production policy enforcement are not implemented |
 
 ## 3. Credential lifecycle
 
@@ -55,7 +55,7 @@ Actors:
 6. Verifier checks issuer trust, signature/proof, audience, nonce, expiry, scope, revocation status and replay state.
 7. Agent runtime checks the delegated capability and local policy before invoking any tool.
 
-Credential schemas must distinguish `human` and `agent` subjects. Agent credentials must bind an agent public key to a delegator/controller relationship, allowed actions, resources, quotas, expiry and maximum delegation depth. A credential or issuer claim alone does not prove one-human-one-identity or that an agent is safe.
+Credential schemas must distinguish `human` and `agent` subjects. Agent credentials must bind an agent public key to a delegator/controller relationship, allowed actions, resources, quotas, expiry and maximum delegation depth. The current demo's `agent_subject` is a fixed sample marker, not that binding. A credential or issuer claim alone does not prove one-human-one-identity or that an agent is safe.
 
 ## 4. Cryptographic implementation selection
 
@@ -120,10 +120,10 @@ Test at minimum on Android ARM64 and a desktop/server baseline. Evaluate privacy
 - Human delegates a bounded capability to Agent A.
 - Agent B sends a fresh challenge bound to audience, task, nonce and expiry.
 - Agent A produces a presentation proving required authorization while disclosing only requested claims.
-- Agent B verifies issuer, proof, challenge, audience, expiry, scope and revocation.
+- Agent B verifies issuer, proof, challenge, audience and expiry. Capability scope and delegate proof-of-possession must be checked by the separate authorization-runtime prototype; this is not yet joined to the AnonCreds presentation flow. Revocation verification remains unimplemented.
 - Replaying the presentation or changing nonce, audience, task or capability digest fails.
 - A revoked or expired credential and an attenuated-away capability fail.
-- Agent B receives `VALID` without learning the human identity or Agent A's private credential data.
+- Agent B receives `VALID` for the tested credential role/expiry proof without learning the private subject marker. This result alone does not prove capability authorization, unlinkability or human-controller binding.
 - Two unrelated verifiers cannot correlate presentations through protocol-level stable identifiers.
 
 ## 13. Delivery sequence
