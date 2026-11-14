@@ -43,3 +43,72 @@ See [docs/ANONYMESH_ANDROID_VALIDATION.md](docs/ANONYMESH_ANDROID_VALIDATION.md)
 ## Other components
 
 Delegated capability verification and the preliminary NEAR issuer/status registry remain prototypes. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment, merge, or external submission is authorized by this work.
+
+
+## Architecture overview
+
+ANONYMESH is organized as a protocol with separate issuer, holder, verifier,
+agent-authorization and registry boundaries. The current repository contains
+working implementation slices, not a complete production protocol.
+
+```text
+Human / Agent
+     |
+     v
+Holder (Agent A) ---- presentation + proof ----> Verifier (Agent B)
+     |                                           |
+     | credential request                       | challenge + verification
+     v                                           v
+Issuer process                              Replay / policy checks
+                                                 |
+                                                 v
+                                      NEAR issuer/status registry
+                                      (public issuer metadata only)
+
+Android app: native AnonCreds integration smoke test
+Local runtime: planned; not yet implemented
+```
+
+### Repository structure
+
+```text
+anonymesh/
+├── apps/
+│   └── android/                 # React Native native AnonCreds smoke test
+├── packages/
+│   └── anoncreds-agent-demo/    # Node issuer, holder and verifier processes
+│       ├── src/roles/            # issuer.mjs, holder.mjs, verifier.mjs, HTTP helpers
+│       ├── src/                  # demo entrypoint and benchmark
+│       └── test/                 # proof flow and separate-process integration tests
+├── crates/
+│   └── agent-auth/              # Ed25519 challenge-response and delegated-capability prototypes
+├── contracts/
+│   └── near/issuer-registry/    # NEAR issuer/status registry scaffold and unit tests
+├── docs/
+│   ├── ANONYMESH_ARCHITECTURE.md
+│   ├── CRYPTO_SELECTION.md
+│   ├── THREAT_MODEL.md
+│   ├── AUDIT.md
+│   ├── HACKATHON_MVP.md
+│   └── ANONYMESH_ANDROID_VALIDATION.md
+└── .github/workflows/           # CI for Android, AnonCreds, agent-auth and NEAR contract
+```
+
+### Component status at a glance
+
+| Component | Current status |
+|---|---|
+| AnonCreds issuer-holder-verifier demo | Implemented as separate local Node processes; Linux CI tests pass |
+| Selective disclosure / hidden expiry predicate | Implemented in the AnonCreds demo; Android runtime still unverified |
+| Android native integration | Release APK build is being validated; physical-device proof test pending |
+| Ed25519 challenge-response | Prototype with CI tests; ordinary key-based authentication, not anonymous |
+| Delegated capability chain | Prototype verifier with CI tests; not yet enforced by a live agent runtime |
+| NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
+| Unlinkable presentations | Not demonstrated |
+| Privacy-preserving revocation | Not implemented |
+| Local-first agent runtime and durable wallet | Not implemented |
+| Production rate limits and distributed replay protection | Not implemented |
+
+For the full protocol design, actors, credential lifecycle, trust boundaries,
+security controls, acceptance criteria and release gates, read
+[ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md).
