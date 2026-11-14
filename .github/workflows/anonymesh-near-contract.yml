@@ -27,9 +27,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run issuer registry unit tests
         working-directory: contracts/near/issuer-registry
-        run: cargo test --locked
+        run: cargo test
       - name: Build WebAssembly contract
         working-directory: contracts/near/issuer-registry
         run: |
           rustup target add wasm32-unknown-unknown
-          cargo build --locked --target wasm32-unknown-unknown --release
+          cargo build --target wasm32-unknown-unknown --release
