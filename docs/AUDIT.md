@@ -60,3 +60,9 @@ No custom cryptographic primitive is permitted. No implementation, production-se
 ## 7. Cryptographic candidate review (2026-11-14)
 
 A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The provisional first local integration candidate is AnonCreds v1 / `anoncreds-rs` v0.2.3 or later, subject to upstream regression, Android ARM64 and dependency audit gates. A previous note cited GHSA-89r4-4c4j-7wx9 / CVE-2025-67498, but the advisory could not be independently retrieved or corroborated during follow-up. Its affected/fixed range is unverified and must not be treated as fact. Confirm advisories before selecting a dependency version. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no implementation is claimed.
+
+## 8. First NEAR registry implementation slice
+
+A Rust contract scaffold now exists at `contracts/near/issuer-registry` using `near-sdk = 5.30.1`. It stores issuer public-key metadata, key version, schema hash, active flag, status epoch and status root. Owner-only mutations and monotonic key/status version checks are implemented in source. Key rotation preserves suspension and status history. The contract does not verify ZK proofs or non-revocation witnesses and its status root is an opaque commitment only.
+
+Seven unit tests are present in source, including authorization, malformed hash, issuer suspension, key-version rollback, status epoch monotonicity and state preservation during key rotation. GitHub Actions workflow was added for tests and wasm build. **No successful workflow result or local compilation has yet been observed**, and no Cargo.lock has been committed; dependency resolution is therefore not yet fully reproducible. This is a code-level preliminary audit, not an independent security review.
