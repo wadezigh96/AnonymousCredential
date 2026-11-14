@@ -1,6 +1,6 @@
 # ANONYMESH — Protocol Architecture
 
-Status: **protocol design specification; NEAR issuer/status registry, Ed25519 challenge-response and a signed delegated-capability chain verifier are CI-tested prototypes. Anonymous credentials, ZK presentations, selective disclosure, unlinkability and privacy-preserving revocation remain unimplemented.**
+Status: **hybrid design specification plus tested implementation slices. The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; Linux CI covers the proof flow. The Android app integrates the official React Native AnonCreds wrapper, but physical-device runtime is not yet verified. Ed25519 challenge-response, delegated-capability verification and the NEAR issuer/status registry are separate prototypes. Unlinkability and privacy-preserving revocation are not implemented.**
 
 ## 1. Goal and actors
 
@@ -18,11 +18,11 @@ Actors:
 
 | Layer | Required design | Status |
 |---|---|---|
-| Identity | Anonymous credentials for human and agent subjects; issuer, schema, expiry and holder binding | Not implemented |
-| Cryptography | Reuse maintained ZK/credential libraries; no custom primitives | Not selected or implemented |
-| Presentation | Selective disclosure and hidden-attribute predicates | Not implemented |
+| Identity | Anonymous credentials for human and agent subjects; issuer, schema, expiry and holder binding | Agent demo credential implemented; human issuance and production identity binding not implemented |
+| Cryptography | Reuse maintained ZK/credential libraries; no custom primitives | AnonCreds CL library used in Node demo and official React Native wrapper in Android smoke app; Android runtime pending |
+| Presentation | Selective disclosure and hidden-attribute predicates | Implemented in Node demo and Android smoke-test code; Linux CI proof tests pass, physical Android runtime pending |
 | Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
-| Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not implemented |
+| Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not demonstrated; repeated-presentation correlation analysis absent |
 | Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Prototype implemented; 21/21 CI tests passed; max depth 8; no quota accounting |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
 | Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 14 unit tests and locked-mode WASM CI passed using an ephemeral generated lockfile; not deployed |
