@@ -36,3 +36,6 @@ Development is isolated on `feat/anonymesh-private-agent-identity`. `main` remai
 ## Privacy and security boundaries
 
 Do not publish raw identity attributes, holder secrets, stable global identifiers, or per-presentation activity on-chain. Do not claim that a credential proves human uniqueness or agent safety. Do not promise absolute unlinkability: timing, network metadata, rare attribute combinations, issuer/verifier collusion and revocation mechanisms can create correlation risks. No post-quantum security is claimed.
+## Current implementation slice
+
+A first NEAR issuer/status registry contract has been added under `contracts/near/issuer-registry`. It stores public issuer metadata and monotonically versioned status roots only. It does not verify credentials or ZK proofs and does not implement privacy-preserving revocation. Unit tests and a GitHub Actions workflow are present, but a successful CI run has not yet been verified. No deployment has occurred.
