@@ -177,6 +177,7 @@ test("tampered credential attributes do not produce a valid proof", () => {
     credentials: [{ credential: tamperedCredential }],
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},
@@ -198,7 +199,10 @@ test("proof for another nonce does not verify against the verifier request", () 
     name: "anonymesh-agent-authorization",
     version: "1.0",
     nonce: "123456789012345678901",
-    requested_attributes: { role_ref: { name: "agent_role" } },
+    requested_attributes: {
+      role_ref: { name: "agent_role" },
+      agent_key_ref: { name: "agent_public_key" },
+    },
     requested_predicates: {
       expiry_ref: { name: "valid_until", p_type: ">=", p_value: fixedNow },
     },
