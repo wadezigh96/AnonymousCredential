@@ -17,12 +17,12 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 | Selective disclosure / attribute predicates | Not present |
 | Challenge-response authentication | Ed25519 prototype in `crates/agent-auth`; 9 unit tests passed in GitHub Actions run #1 |
 | Unlinkable presentations | Not present |
-| Delegated capabilities | Signed parent-linked Ed25519 chain verifier in `crates/agent-auth`; 18 tests passed in run #5 |
+| Delegated capabilities | Signed parent-linked Ed25519 chain verifier in `crates/agent-auth`; 21 tests passed in run #7 |
 | Privacy-preserving revocation | Not present |
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 18 tests passed (run #5) | 
+| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 21 tests passed (run #7) | 
 | Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
 | Benchmarks / privacy evaluation | Not present |
 
@@ -59,7 +59,7 @@ A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTI
 
 ## 8. Delegated capability implementation slice
 
-`crates/agent-auth` now includes signed capabilities with parent digests, issuer/delegate Ed25519 keys, audience, exact action/resource, expiry and quota. `verify_capability_chain` checks the trusted root issuer, every signature and parent link, delegator continuity, exact scope equality, and non-increasing expiry/quota. GitHub Actions run #5 (`43603160347`) passed 18/18 tests, including action/expiry/quota escalation, wrong delegator, broken parent link and expired-root rejection. Limitations: action/resource are currently exact-match rather than expressive subset policies; quota is metadata only and is not atomically consumed; maximum delegation depth and revocation are not enforced. This is a prototype policy-chain verifier, not a complete runtime authorization engine.
+`crates/agent-auth` now includes signed capabilities with parent digests, issuer/delegate Ed25519 keys, audience, exact action/resource, expiry and quota. `verify_capability_chain` checks the trusted root issuer, every signature and parent link, delegator continuity, exact scope equality, and non-increasing expiry/quota, with a maximum delegation depth of 8. GitHub Actions run #7 (`43603320311`) passed 21/21 tests, including action/expiry/quota escalation, wrong delegator, broken parent link and expired-root rejection. Limitations: action/resource are currently exact-match rather than expressive subset policies; quota is metadata only and is not atomically consumed; revocation is not enforced. This is a prototype policy-chain verifier, not a complete runtime authorization engine.
 
 ## 9. Agent challenge-response implementation slice
 
