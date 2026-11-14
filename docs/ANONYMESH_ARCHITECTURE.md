@@ -43,12 +43,17 @@ Credential schemas must distinguish `human` and `agent` subjects. Agent credenti
 
 ## 4. Cryptographic implementation selection
 
-Candidate families to evaluate, not yet selected:
-- **Hyperledger AnonCreds:** mature issuer-holder-verifier flows, ZK presentations, selective disclosure, predicate proofs and privacy-preserving revocation in the established v1 ecosystem. Assess implementation/runtime compatibility and the exact version's maintenance and audit evidence.
-- **W3C BBS Data Integrity cryptosuite:** supports selective disclosure and unlinkable derived proofs. The current cited document is a Candidate Recommendation Draft, not a final Recommendation; evaluate implementation maturity, predicate support and revocation separately.
-- **SD-JWT VC:** useful interoperability comparator, but ordinary selective disclosure does not by itself provide unlinkable ZK presentations. Do not treat it as equivalent to BBS/AnonCreds privacy.
+See [docs/CRYPTO_SELECTION.md](CRYPTO_SELECTION.md) for the source-backed candidate comparison and version-security gate.
 
-Selection requires a written decision record with exact repositories, versions, maintenance activity, audit reports, cryptographic assumptions, supported platforms (especially Android ARM64), interoperability, revocation model, proof size and measured performance. Avoid combining schemes without a clear need and explicit threat model.
+Provisional first integration candidate: AnonCreds v1 / `anoncreds-rs` **v0.2.3 or later**, behind an adapter. This is a local prototype decision based on the issuer-holder-verifier lifecycle, selective disclosure, predicates, non-revocation proofs, active maintenance and Android ARM64 build workflow. It is not a production approval. Version 0.2.2 and earlier are prohibited because of CVE-2025-67498.
+
+AnonCreds v2 remains the leading next-generation research candidate because it supports BBS and PS suites, additional ZK presentation capabilities and ALLOSAUR revocation. Its own repository says a comprehensive interoperable specification is still future work, so it is not the first integration dependency.
+
+W3C BBS remains an interoperability candidate. Its 2026 specification is a Candidate Recommendation Draft and its interoperability report describes experimental implementations with pending/skipped and failed cases. BBS derived proofs provide selective disclosure and unlinkability, but the BBS cryptosuite alone does not supply the full predicate and revocation requirements.
+
+SD-JWT VC is not sufficient as the primary privacy engine because ordinary selective disclosure is not by itself an unlinkable zero-knowledge derived proof.
+
+No cryptographic dependency is added yet. Exact source versions, lockfile, platform build, upstream tests, regression tests and independent review are required before implementation is accepted.
 
 ## 5. Challenge-response and unlinkability
 
