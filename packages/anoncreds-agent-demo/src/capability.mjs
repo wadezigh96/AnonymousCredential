@@ -6,7 +6,7 @@ import {
   verify as ed25519Verify,
 } from "node:crypto";
 
-const DOMAIN = Buffer.from("ANONYMESH_DELEGATED_CAPABILITY_V1\\0", "utf8");
+const DOMAIN = Buffer.from("ANONYMESH_DELEGATED_CAPABILITY_V1\0", "utf8");
 const MAX_CHAIN_LENGTH = 9;
 const KEY_BYTES = 32;
 const SIGNATURE_BYTES = 64;
@@ -65,6 +65,28 @@ function publicKeyObject(rawKey) {
   return createPublicKey({ key: Buffer.concat([spkiPrefix, raw]), format: "der", type: "spki" });
 }
 
+function privateKeyObject(value) {
+  if (value && typeof value === "object" && value.type === "private") {
+    if (value.asymmetricKeyType !== "ed25519") fail("INVALID_PRIVATE_KEY_TYPE");
+    return value;
+  }
+
+  if (typeof value !== "string" && !Buffer.isBuffer(value) && !ArrayBuffer.isView(value)) {
+    fail("INVALID_PRIVATE_KEY");
+  }
+
+  let key;
+  try {
+    key = createPrivateKey(value);
+  } catch {
+    fail("INVALID_PRIVATE_KEY");
+  }
+  if (key.type !== "private" || key.asymmetricKeyType !== "ed25519") {
+    fail("INVALID_PRIVATE_KEY_TYPE");
+  }
+  return key;
+}
+
 export function capabilityDigest(capability) {
   validateFields(capability);
   const signature = decode(capability.signature, SIGNATURE_BYTES, "INVALID_SIGNATURE_ENCODING");
@@ -72,8 +94,8 @@ export function capabilityDigest(capability) {
   return createHash("sha256").update(canonical).digest("base64url");
 }
 
-export function signCapability(fields, privateKeyPem) {
-  const privateKey = createPrivateKey(privateKeyPem);
+export function signCapability(fields, privateKeyInput) {
+  const privateKey = privateKeyObject(privateKeyInput);
   const publicJwk = createPublicKey(privateKey).export({ format: "jwk" });
   const derivedIssuer = publicJwk.x;
   if (derivedIssuer !== fields.issuerKey) fail("SIGNER_DOES_NOT_MATCH_ISSUER");

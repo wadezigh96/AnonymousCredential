@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
+import { createPublicKey, generateKeyPairSync, verify as ed25519Verify } from "node:crypto";
 import {
   CapabilityVerificationError,
   capabilityDigest,
@@ -174,4 +174,83 @@ test("rejects an untrusted root issuer", () => {
     () => verifyCapabilityChain({ chain: f.chain, trustedRootIssuer: otherRoot.publicKey, expected, now }),
     (error) => error.code === "INVALID_ROOT",
   );
+});
+
+test("accepts PEM private-key input", () => {
+  const issuer = keys();
+  const delegate = keys();
+  const pem = issuer.privateKey.export({ format: "pem", type: "pkcs8" });
+  const capability = signCapability({
+    parentDigest: null,
+    issuerKey: issuer.publicKey,
+    delegateKey: delegate.publicKey,
+    audience: expected.audience,
+    action: expected.action,
+    resource: expected.resource,
+    expiresAt: now + 60,
+    quota: 1,
+  }, pem);
+  assert.equal(capability.signature.length > 0, true);
+});
+
+test("rejects malformed and non-Ed25519 private-key input clearly", () => {
+  const issuer = keys();
+  const delegate = keys();
+  const fields = {
+    parentDigest: null,
+    issuerKey: issuer.publicKey,
+    delegateKey: delegate.publicKey,
+    audience: expected.audience,
+    action: expected.action,
+    resource: expected.resource,
+    expiresAt: now + 60,
+    quota: 1,
+  };
+  assert.throws(
+    () => signCapability(fields, "not-a-private-key"),
+    (error) => error instanceof CapabilityVerificationError && error.code === "INVALID_PRIVATE_KEY",
+  );
+
+  const rsa = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  assert.throws(
+    () => signCapability(fields, rsa.privateKey),
+    (error) => error instanceof CapabilityVerificationError && error.code === "INVALID_PRIVATE_KEY_TYPE",
+  );
+});
+
+test("uses a real NUL byte for domain separation", () => {
+  const issuer = keys();
+  const delegate = keys();
+  const fields = {
+    parentDigest: null,
+    issuerKey: issuer.publicKey,
+    delegateKey: delegate.publicKey,
+    audience: expected.audience,
+    action: expected.action,
+    resource: expected.resource,
+    expiresAt: now + 60,
+    quota: 1,
+  };
+  const capability = signCapability(fields, issuer.privateKey);
+  const transcript = [
+    fields.parentDigest,
+    fields.issuerKey,
+    fields.delegateKey,
+    fields.audience,
+    fields.action,
+    fields.resource,
+    fields.expiresAt,
+    fields.quota,
+  ];
+  const message = Buffer.concat([
+    Buffer.from("ANONYMESH_DELEGATED_CAPABILITY_V1\0", "utf8"),
+    Buffer.from(JSON.stringify(transcript), "utf8"),
+  ]);
+  const rawPublicKey = Buffer.from(issuer.publicKey, "base64url");
+  const publicKey = createPublicKey({
+    key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), rawPublicKey]),
+    format: "der",
+    type: "spki",
+  });
+  assert.equal(ed25519Verify(null, message, publicKey, Buffer.from(capability.signature, "base64url")), true);
 });
