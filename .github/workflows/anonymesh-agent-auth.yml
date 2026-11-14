@@ -1,0 +1,34 @@
+name: ANONYMESH agent authentication
+on:
+  push:
+    branches:
+      - feat/anonymesh-private-agent-identity
+    paths:
+      - 'crates/agent-auth/**'
+      - '.github/workflows/anonymesh-agent-auth.yml'
+  pull_request:
+    paths:
+      - 'crates/agent-auth/**'
+      - '.github/workflows/anonymesh-agent-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  agent-auth-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/agent-auth -> target
+      - name: Generate lockfile
+        working-directory: crates/agent-auth
+        run: cargo generate-lockfile
+      - name: Run agent authentication tests
+        working-directory: crates/agent-auth
+        run: cargo test --locked
