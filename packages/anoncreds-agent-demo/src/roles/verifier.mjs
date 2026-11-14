@@ -39,6 +39,9 @@ const server = createServer(async (request, response) => {
       }
       const challenge = ledger.get(body.nonce);
       if (!challenge) return sendJson(response, 401, { valid: false, error: "Unknown challenge" });
+      if (challenge.consumed || challenge.expiresAt <= Math.floor(Date.now() / 1000)) {
+        return sendJson(response, 401, { valid: false, error: "Challenge expired or already consumed" });
+      }
       const valid = verifyAgentPresentation({
         presentationJson: body.presentation,
         presentationRequestJson: challenge.presentationRequest,
