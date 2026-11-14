@@ -31,7 +31,7 @@ cargo install --locked cargo-near
 cargo near build
 ```
 
-NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. Eight unit tests are included. No successful build or test run has yet been verified from GitHub Actions or a local environment. A Cargo.lock must be generated, reviewed and committed before treating dependency resolution as reproducible.
+NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. Eight unit tests are included. GitHub Actions run #10 at commit `7359f9e1` passed all 8 tests and the WASM release build. This is CI evidence, not an independent security review. A Cargo.lock is not committed; generate, review and commit it before treating dependency resolution as reproducible.
 
 ## Testnet deployment
 
