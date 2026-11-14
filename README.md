@@ -23,7 +23,7 @@ ANONYMESH is a privacy-preserving identity and authorization protocol for **peop
 
 Use maintained, independently reviewable cryptographic protocols and implementations. Do not invent cryptographic primitives. Compare candidate anonymous-credential systems for selective disclosure, unlinkability, predicates, revocation, platform support, maintenance and audit evidence before selecting dependencies.
 
-See [docs/ANONYMESH_ARCHITECTURE.md](docs/ANONYMESH_ARCHITECTURE.md) for the full architecture and acceptance criteria, [docs/AUDIT.md](docs/AUDIT.md) for repository findings, and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security boundaries.
+See [docs/ANONYMESH_ARCHITECTURE.md](docs/ANONYMESH_ARCHITECTURE.md) for the full architecture and acceptance criteria, [docs/CRYPTO_SELECTION.md](docs/CRYPTO_SELECTION.md) for the cryptographic candidate evaluation and version floor, [docs/AUDIT.md](docs/AUDIT.md) for repository findings, and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security boundaries.
 
 ## Completion criteria
 
