@@ -1,38 +1,38 @@
 # ANONYMESH — Private Agentic Identity
 
-ANONYMESH is an open protocol foundation for privacy-preserving identity and authorization for **people and AI agents**.
+ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**. A human can delegate bounded authority to an AI agent; agents can prove authorization to other agents and services without disclosing unnecessary identity data.
 
-The project is being developed audit-first. The initial implementation is deliberately narrow: a Circom membership proof with a scope-specific nullifier and an action-binding output, plus an issuer-controlled Merkle-root registry. It is **not yet a production anonymous-credential system**.
+**Current status: audit and protocol design. No requested protocol feature is currently implemented.**
 
-## Design goals
+## Required components
 
-- A person can authorize an AI agent without publishing their real-world identity.
-- A human or agent can prove membership in an issuer-approved credential set.
-- Verifiers learn only the public statement required for a particular action.
-- Proofs are bound to a scope and a canonical action/request digest.
-- Nullifiers prevent repeated use within a defined scope.
-- Private attributes and secrets stay with the holder; public chains store roots and verification outcomes only.
+| Component | Intended capability | Status |
+|---|---|---|
+| Anonymous credentials | Human and agent credential issuance, private holder, verification | Not implemented |
+| ZK proofs | Proof of credential possession and hidden-attribute predicates | Not implemented |
+| Selective disclosure | Reveal only verifier-requested claims | Not implemented |
+| Challenge-response | Fresh nonce, audience, task and expiry binding | Not implemented |
+| Unlinkable presentations | Randomized presentations and scoped pseudonyms where needed | Not implemented |
+| Delegated capability | Attenuable agent permissions and local policy enforcement | Not implemented |
+| Privacy-preserving revocation | Revocation proofs without exposing a stable holder identifier | Not implemented |
+| NEAR | Issuer governance and privacy-reviewed status/root commitments | Not implemented |
+| Local-first private AI | Holder wallet and agent runtime keep secrets local by default | Not implemented |
+| Security controls | Anti-replay, rate limits, key rotation, deny-by-default policies | Not implemented |
 
-## Current status
+## Engineering approach
 
-| Area | Status |
-|---|---|
-| Historical code audit | Initial findings documented in `docs/AUDIT.md` |
-| Membership circuit | Prototype implemented; requires compile/test and independent review |
-| Root registry | Minimal issuer-controlled prototype |
-| Credential issuance | Not implemented |
-| Human/agent credential schema | Specification work required |
-| Delegated agent capabilities | Not implemented |
-| Selective attribute disclosure | Not implemented |
-| NEAR integration | Not implemented |
-| Production readiness | **Not ready** |
+Use maintained, independently reviewable cryptographic protocols and implementations. Do not invent cryptographic primitives. Compare candidate anonymous-credential systems for selective disclosure, unlinkability, predicates, revocation, platform support, maintenance and audit evidence before selecting dependencies.
 
-## Repository policy
+See [docs/ANONYMESH_ARCHITECTURE.md](docs/ANONYMESH_ARCHITECTURE.md) for the full architecture and acceptance criteria, [docs/AUDIT.md](docs/AUDIT.md) for repository findings, and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for security boundaries.
 
-Work is being done on `feat/anonymesh-private-agent-identity`. The `main` branch is intentionally untouched. No deployment, transaction, merge, or hackathon submission is authorized by this work.
+## Completion criteria
 
-## Security boundary
+A feature is implemented only when code, reproducible positive and negative tests, adversarial tests, documentation, and performance/privacy measurements exist. Record proof generation time, verification time, memory use, proof size, NEAR gas where applicable, and known privacy leakage. A successful compile alone is not acceptance.
 
-The current circuit proves knowledge of a secret whose commitment is included under a published Merkle root. It does not prove that an issuer performed real-world identity checks, that a human is unique, that an agent is safe, or that a credential's attributes are true. Those claims require a separately specified and audited issuance/signature protocol.
+## Repository safety policy
 
-See [docs/AUDIT.md](docs/AUDIT.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+Development is isolated on `feat/anonymesh-private-agent-identity`. `main` remains untouched. No deployment, chain transaction, merge, or external submission is authorized without explicit user approval.
+
+## Privacy and security boundaries
+
+Do not publish raw identity attributes, holder secrets, stable global identifiers, or per-presentation activity on-chain. Do not claim that a credential proves human uniqueness or agent safety. Do not promise absolute unlinkability: timing, network metadata, rare attribute combinations, issuer/verifier collusion and revocation mechanisms can create correlation risks. No post-quantum security is claimed.
