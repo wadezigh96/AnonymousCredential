@@ -17,12 +17,12 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 | Selective disclosure / attribute predicates | Not present |
 | Challenge-response authentication | Ed25519 prototype in `crates/agent-auth`; 9 unit tests passed in GitHub Actions run #1 |
 | Unlinkable presentations | Not present |
-| Delegated capabilities | Not present |
+| Delegated capabilities | Signed parent-linked Ed25519 chain verifier in `crates/agent-auth`; 18 tests passed in run #5 |
 | Privacy-preserving revocation | Not present |
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth: 9 tests passed (run #1) | 
+| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 18 tests passed (run #5) | 
 | Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
 | Benchmarks / privacy evaluation | Not present |
 
@@ -57,7 +57,11 @@ No custom cryptographic primitive is permitted. No implementation, production-se
 
 A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTION.md). The provisional first local integration candidate is AnonCreds v1 / `anoncreds-rs` v0.2.3 or later, subject to upstream regression, Android ARM64 and dependency audit gates. A previous note cited GHSA-89r4-4c4j-7wx9 / CVE-2025-67498, but the advisory could not be independently retrieved or corroborated during follow-up. Its affected/fixed range is unverified and must not be treated as fact. Confirm advisories before selecting a dependency version. AnonCreds v2 remains a next-generation research candidate; W3C BBS remains an interoperability candidate. No dependency has been added and no implementation is claimed.
 
-## 8. Agent challenge-response implementation slice
+## 8. Delegated capability implementation slice
+
+`crates/agent-auth` now includes signed capabilities with parent digests, issuer/delegate Ed25519 keys, audience, exact action/resource, expiry and quota. `verify_capability_chain` checks the trusted root issuer, every signature and parent link, delegator continuity, exact scope equality, and non-increasing expiry/quota. GitHub Actions run #5 (`43603160347`) passed 18/18 tests, including action/expiry/quota escalation, wrong delegator, broken parent link and expired-root rejection. Limitations: action/resource are currently exact-match rather than expressive subset policies; quota is metadata only and is not atomically consumed; maximum delegation depth and revocation are not enforced. This is a prototype policy-chain verifier, not a complete runtime authorization engine.
+
+## 9. Agent challenge-response implementation slice
 
 A small Rust crate at `crates/agent-auth` verifies Ed25519 signatures over a domain-separated transcript binding nonce, audience, task, capability digest and expiry. Its in-memory replay guard rejects reused nonces and fails closed when full. GitHub Actions run #1 (`43602842365`) passed 9/9 tests. This is ordinary proof-of-possession authentication: it reveals/uses a stable public key and is **not** an anonymous credential, ZK proof, unlinkable presentation, durable distributed replay defense, or capability-policy engine. The lockfile is generated ephemerally in CI and is not committed.
 
