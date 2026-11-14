@@ -45,7 +45,7 @@ Credential schemas must distinguish `human` and `agent` subjects. Agent credenti
 
 See [docs/CRYPTO_SELECTION.md](CRYPTO_SELECTION.md) for the source-backed candidate comparison and version-security gate.
 
-Provisional first integration candidate: AnonCreds v1 / `anoncreds-rs` **v0.2.3 or later**, behind an adapter. This is a local prototype decision based on the issuer-holder-verifier lifecycle, selective disclosure, predicates, non-revocation proofs, active maintenance and Android ARM64 build workflow. It is not a production approval. The referenced CVE/advisory claim remains unverified; independently inspect the advisory database before choosing a safe version.
+Preferred protocol candidate: AnonCreds v1, behind an adapter, but **Rust dependency integration is currently blocked**. Upstream `anoncreds-rs` v0.2.3 is the patched release for GHSA-89r4-4c4j-7wx9 (affected 0.2.2, patched 0.2.3; advisory page lists no CVE ID), but its `anoncreds-clsignatures 0.3.2` dependency path reaches `glass_pumpkin 1.6.x` and yanked `core2 0.4.0`; upstream issue #372 remains open and docs.rs reports a failed build. The advisory fix and build blocker are separate. Do not add the dependency until a reproducible supported build exists.
 
 AnonCreds v2 remains the leading next-generation research candidate because it supports BBS and PS suites, additional ZK presentation capabilities and ALLOSAUR revocation. Its own repository says a comprehensive interoperable specification is still future work, so it is not the first integration dependency.
 
