@@ -60,12 +60,17 @@ impl IssuerRegistry {
         assert!(key_version > 0, "ERR_INVALID_KEY_VERSION");
         assert_hash(&schema_hash, "SCHEMA_HASH");
 
-        if let Some(existing) = self.issuers.get(&issuer_id) {
+        let record = if let Some(existing) = self.issuers.get(&issuer_id) {
             assert!(key_version > existing.key_version, "ERR_KEY_VERSION_NOT_INCREASED");
-        }
-
-        self.issuers.insert(
-            issuer_id,
+            IssuerRecord {
+                public_key,
+                key_version,
+                schema_hash,
+                active: existing.active,
+                status_epoch: existing.status_epoch,
+                status_root: existing.status_root,
+            }
+        } else {
             IssuerRecord {
                 public_key,
                 key_version,
@@ -73,29 +78,30 @@ impl IssuerRegistry {
                 active: true,
                 status_epoch: 0,
                 status_root: "0".repeat(64),
-            },
-        );
+            }
+        };
+        self.issuers.insert(&issuer_id, &record);
     }
 
     pub fn set_issuer_active(&mut self, issuer_id: AccountId, active: bool) {
         self.assert_owner();
-        let mut record = self.issuers.get(&issuer_id).cloned().expect("ERR_ISSUER_NOT_FOUND");
+        let mut record = self.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
         record.active = active;
-        self.issuers.insert(issuer_id, record);
+        self.issuers.insert(&issuer_id, &record);
     }
 
     pub fn update_status_root(&mut self, issuer_id: AccountId, epoch: U64, root: String) {
         self.assert_owner();
         assert_hash(&root, "STATUS_ROOT");
-        let mut record = self.issuers.get(&issuer_id).cloned().expect("ERR_ISSUER_NOT_FOUND");
+        let mut record = self.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
         assert!(epoch.0 > record.status_epoch, "ERR_STATUS_EPOCH_NOT_INCREASED");
         record.status_epoch = epoch.0;
         record.status_root = root;
-        self.issuers.insert(issuer_id, record);
+        self.issuers.insert(&issuer_id, &record);
     }
 
     pub fn get_issuer(&self, issuer_id: AccountId) -> Option<IssuerRecord> {
-        self.issuers.get(&issuer_id).cloned()
+        self.issuers.get(&issuer_id)
     }
 
     pub fn get_owner(&self) -> AccountId {
@@ -176,6 +182,24 @@ mod tests {
         assert!(!contract.get_issuer(account("issuer.testnet")).unwrap().active);
     }
 
+    #[test]
+    fn key_rotation_preserves_status_and_suspension() {
+        let mut contract = registry();
+        register(&mut contract);
+        contract.update_status_root(account("issuer.testnet"), U64(7), "b".repeat(64));
+        contract.set_issuer_active(account("issuer.testnet"), false);
+        contract.register_issuer(
+            account("issuer.testnet"),
+            "ed25519:rotated-public-key".to_string(),
+            2,
+            "c".repeat(64),
+        );
+        let issuer = contract.get_issuer(account("issuer.testnet")).unwrap();
+        assert_eq!(issuer.key_version, 2);
+        assert_eq!(issuer.status_epoch, 7);
+        assert_eq!(issuer.status_root, "b".repeat(64));
+        assert!(!issuer.active);
+    }
     #[test]
     fn status_epoch_must_increase() {
         let mut contract = registry();
