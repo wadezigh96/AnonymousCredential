@@ -2,7 +2,7 @@
 
 ANONYMESH is a privacy-preserving identity and authorization protocol for **people and AI agents**. A human can delegate bounded authority to an AI agent; agents can prove authorization to other agents and services without disclosing unnecessary identity data.
 
-**Current status: audit and protocol design. No requested protocol feature is currently implemented.**
+**Current status: preliminary NEAR issuer/status registry scaffold implemented; CI unit tests and WASM compilation pass. The ANONYMESH credential, ZK, agent-authentication and privacy protocol is not yet implemented.**
 
 ## Required components
 
