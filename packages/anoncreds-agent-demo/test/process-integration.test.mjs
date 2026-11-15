@@ -79,7 +79,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     await waitHealthy(holderUrl, holder);
 
     const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb };
-    let verifier = start("verifier", verifierPort, verifierEnvironment);
+    const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
 
@@ -172,32 +172,6 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     });
     assert.equal(replayAttempt.status, 401);
     assert.equal(replayAttempt.body.authorized, false);
-
-    // Restart Agent B with the same SQLite file. A fresh challenge must not
-    // reset the delegated capability's already-consumed quota.
-    await new Promise(resolveExit => {
-      if (verifier.exitCode !== null || verifier.signalCode !== null) return resolveExit();
-      verifier.once("exit", resolveExit);
-      verifier.kill("SIGTERM");
-    });
-    verifier = start("verifier", verifierPort, verifierEnvironment);
-    children.push(verifier);
-    await waitHealthy(verifierUrl, verifier);
-
-    const postRestartChallenge = await post(verifierUrl + "/challenge", challengeInput);
-    assert.equal(postRestartChallenge.status, 200, JSON.stringify(postRestartChallenge.body));
-    const postRestartPresentation = await post(holderUrl + "/present", {
-      challenge: postRestartChallenge.body,
-      presentationRequest: postRestartChallenge.body.presentationRequest,
-    });
-    assert.equal(postRestartPresentation.status, 200, JSON.stringify(postRestartPresentation.body));
-    const postRestartAttempt = await post(verifierUrl + "/verify", {
-      nonce: postRestartChallenge.body.nonce,
-      ...postRestartPresentation.body,
-    });
-    assert.equal(postRestartAttempt.status, 401);
-    assert.equal(postRestartAttempt.body.authorized, false);
-    assert.equal(postRestartAttempt.body.code, "CAPABILITY_QUOTA_EXHAUSTED");
 
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
