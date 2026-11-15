@@ -3,7 +3,7 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited HEAD:** `702731d3c3aa34b00048321c001fe4272fa9a1d7`  
+**Audited HEAD:** `5aec6de6cb2766bd99f7f1f8177f5bf2b8bd6549`
 **Branch HEAD checked against GitHub:** exact match  
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
@@ -11,7 +11,7 @@
 
 The audited feature-branch HEAD has six successful GitHub Actions workflow runs, all attached to the same commit SHA. The CI evidence covers the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
 
-This is **CI/build readiness for a testnet integration phase**, not production readiness and not proof that the complete ANONYMESH system is integrated end-to-end. The NEAR contract remains a preliminary public-metadata registry. The Android app remains a single-process native proof smoke test. The contract is not currently wired into the issuer/verifier request path, and production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
+This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
@@ -58,7 +58,7 @@ All six runs below completed with conclusion `success` and exact `head_sha` `702
 | SQLite verifier state | Persistent challenge and authorization stores; owner-only DB file mode; restart/concurrency tests | CI PASS | Backups, retention/cleanup, crash recovery, multi-host/distributed DB validation |
 | Agent authentication | Rust Ed25519 challenge-response tests | CI PASS | Key lifecycle, integration with production agent runtime |
 | Delegated capabilities | Signature/scope/quota verification code and tests | Prototype / demo integration | Production policy engine, action receipts, retry/idempotency and external tool enforcement |
-| NEAR issuer registry | Owner-controlled issuer metadata, Ed25519 key parsing, key versions, active status, monotonic status root; 21 tests and Wasm build | Build/test PASS; not deployed | Contract review, storage funding policy, governance/multisig, testnet deployment and live RPC integration |
+| NEAR issuer registry + Node read path | Contract metadata plus strict Node `ed25519:` conversion, bounded read-only RPC client, credential-bound issuer key/version/schema checks, mocked-RPC process integration | Node integration PASS; chain not deployed; Rust rerun blocked locally by missing cargo | Pinned Rust/NEAR rerun, contract review, storage/governance review, testnet deployment approval |
 | Android app | Expo compatibility, native prebuild, release APK and embedded JS bundle | Build PASS | Physical-device test of this exact APK, plus multi-role protocol and secure persistent wallet integration |
 | Privacy and revocation | Selective disclosure and hidden expiry predicate in demo | Partial demo | Unlinkability study, credential-to-agent-key binding, privacy-preserving revocation and non-revocation proof |
 
@@ -87,7 +87,7 @@ The contract currently stores public issuer metadata: issuer account, Ed25519 pu
 
 The contract README explicitly states that the status root is an opaque commitment. The contract does not verify AnonCreds/BBS/ZK proofs, does not implement a privacy-preserving accumulator, and does not validate non-revocation witnesses on-chain. Governance is a single owner in this first slice.
 
-The contract is not yet an end-to-end authorization dependency of the Node verifier. A successful Wasm build does not prove live RPC integration or deployed contract behavior.
+The Node verifier now enforces a registry record when `NEAR_REQUIRED=true`; the final process test uses a deterministic local JSON-RPC mock, not a deployed contract. A successful mock integration or historical Wasm build does not prove live deployed-contract behavior.
 
 ### Android
 
@@ -109,8 +109,8 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 
 1. Reconcile the stale documentation with the current source and this evidence report.
 2. Review contract storage economics, account funding, initialization arguments, owner account, gas/deposit requirements and emergency disable procedure.
-3. Implement and test verifier-side issuer-registry lookup with fail-closed behavior, including inactive issuer, wrong key version, stale status epoch and RPC failure.
-4. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow. Do not claim the latter until integrated.
+3. Rerun the pinned Rust agent-auth, NEAR contract, and WASM checks on an environment with cargo/rustup.
+4. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow; the local verifier path is integrated, but live RPC/deployed-contract evidence is still absent.
 5. Verify the exact APK on a physical Android device and capture the full APK SHA-256, device ABI and runtime output.
 6. Complete an independent security review of the remaining rate-limiter, storage, privacy and authorization boundaries.
 7. Prepare a transaction preflight containing network, signer, receiver, method, arguments, deposit, gas, expected state change and rollback/disable plan. Show it to the owner and wait for explicit approval.

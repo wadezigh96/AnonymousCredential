@@ -1,6 +1,6 @@
 # ANONYMESH — Private Agentic Identity Infrastructure (PAII): Protocol Architecture
 
-Status: **hybrid design specification plus tested implementation slices. The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; Linux CI covers the proof flow. The Android native smoke test has been reported as successful on a physical device, but it is a single-process proof check, not the separate-role protocol demo. Ed25519 challenge-response, delegated-capability verification and the NEAR issuer/status registry are separate prototypes. Unlinkability and privacy-preserving revocation are not implemented.**
+Status: **hybrid design specification plus tested implementation slices. The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; the verifier's required mode now reads and enforces a mocked read-only NEAR issuer record before authorization. The Android native smoke test is a single-process proof check, not the separate-role protocol demo. Unlinkability and privacy-preserving revocation are not implemented, and no contract is deployed.**
 
 ## PAII innovation category
 
@@ -39,9 +39,9 @@ Actors:
 | Presentation | Selective disclosure and hidden-attribute predicates | Implemented in Node demo and Android smoke-test code; Linux CI proof tests pass and a physical-device smoke test was reported successful |
 | Authentication | Ed25519 challenge-response bound to nonce, audience, task, capability digest and expiry | Prototype implemented; 9/9 tests passed; ordinary key-based auth, not anonymous |
 | Privacy | Unlinkable randomized presentations; pairwise pseudonyms only where explicitly required | Not demonstrated; repeated-presentation correlation analysis absent |
-| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Node/Rust verifier prototypes and separate Node authorization-runtime slice implemented with tests; runtime supports proof-of-possession and replay/quota consumption, including an optional SQLite store test; not integrated into the AnonCreds role-service flow or production tools |
+| Authorization | Signed parent-linked capability chain; exact audience/action/resource; expiry/quota attenuation | Node verifier path now combines AnonCreds, credential-bound issuer/agent keys, read-only registry trust, proof-of-possession, replay, and quota checks; not a production tool policy engine |
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
-| Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold implemented; 14 unit tests and locked-mode WASM CI passed using an ephemeral generated lockfile; not deployed |
+| Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold plus Node read adapter; local mocked-RPC integration passes; no live deployment or on-chain mutation |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
 | Security | Anti-replay, rate limits, distributed replay protection and deny-by-default policy engine | AnonCreds role demo uses an in-memory single-process challenge ledger; separate Node runtime has memory/SQLite authorization-store slices; rate limits, distributed service integration and production policy enforcement are not implemented |
 
@@ -52,7 +52,7 @@ Actors:
 3. Holder stores the credential and secret locally; raw identity data and secrets are never written to public chain state.
 4. Verifier sends a presentation request specifying protocol version, audience, verifier identity, fresh unpredictable nonce, requested claims/predicates, action/resource scope and expiry.
 5. Holder creates a randomized presentation revealing only requested claims and proving any required predicates.
-6. Verifier checks issuer trust, signature/proof, audience, nonce, expiry, scope, revocation status and replay state.
+6. Verifier checks registry-backed issuer trust, signature/proof, audience, nonce, expiry, scope, and replay state; the opaque status root is not revocation proof.
 7. Agent runtime checks the delegated capability and local policy before invoking any tool.
 
 Credential schemas must distinguish `human` and `agent` subjects. Agent credentials must bind an agent public key to a delegator/controller relationship, allowed actions, resources, quotas, expiry and maximum delegation depth. The current demo's `agent_subject` is a fixed sample marker, not that binding. A credential or issuer claim alone does not prove one-human-one-identity or that an agent is safe.

@@ -13,7 +13,7 @@ npm run demo --prefix packages/anoncreds-agent-demo
 npm run benchmark --prefix packages/anoncreds-agent-demo
 ```
 
-The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The verified feature branch currently passes 42 Node tests, including the separate-process integration test; always record a fresh run before reporting a pass. The standalone AnonCreds demo should show `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. The separate authorization-runtime tests exercise capability binding and quota/replay controls, but they are not joined to the AnonCreds role-service flow. The latest verified CI runs are the [AnonCreds integration](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722), [agent-auth Rust](https://github.com/wadezigh96/anonymesh/actions/runs/43632313304), and [NEAR contract](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085) workflows.
+The install script downloads the official Linux native AnonCreds release for the host. Do not copy an Android `.so` into a Linux runtime. The current local suite passes 80 Node tests, including the separate-process integration test with `NEAR_REQUIRED=true`, a persisted issuer key, and a deterministic local JSON-RPC registry mock. The standalone AnonCreds demo should show `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. For a registry-backed run, configure `NEAR_NETWORK`, `NEAR_REGISTRY_CONTRACT`, `NEAR_RPC_URL`, `NEAR_ISSUER_ACCOUNT_ID`, `NEAR_EXPECTED_KEY_VERSION`, `NEAR_EXPECTED_SCHEMA_HASH`, and `NEAR_REQUIRED=true`; never use a fake record for deployment evidence.
 
 ## Rust and contract checks
 
@@ -25,7 +25,7 @@ cargo build --manifest-path contracts/near/issuer-registry/Cargo.toml --locked \
   --target wasm32-unknown-unknown --release
 ```
 
-These commands validate source and build artifacts locally. They do not deploy the contract.
+These commands validate source and build artifacts locally. They do not deploy the contract. In the current sandbox, `cargo` and `rustup` were unavailable, so no Rust or WASM result is claimed from this run.
 
 ## Transaction preflight requirement
 
@@ -42,4 +42,4 @@ Show that payload to the owner and wait for explicit confirmation. Never paste p
 
 ## Demo evidence
 
-A valid hackathon demo should show both a successful proof and rejected attempts for wrong nonce, replay, wrong task/audience, changed capability digest, expired challenge, and tampered credential. It must label the NEAR registry as a public metadata anchor, not as an on-chain proof verifier or identity database.
+A valid hackathon demo should show both a successful proof and rejected attempts for wrong nonce, replay, wrong task/audience, changed capability digest, expired challenge, tampered credential, inactive/unknown issuer, key mismatch, and RPC failure. It must label the NEAR registry as a public metadata anchor, not as an on-chain proof verifier or identity database. The opaque status root does not establish revocation or non-revocation.
