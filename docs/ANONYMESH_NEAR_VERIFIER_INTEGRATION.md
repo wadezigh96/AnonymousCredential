@@ -63,9 +63,9 @@ From `packages/anoncreds-agent-demo`:
 
 - `node --test test/near-key-format.test.mjs test/near-issuer-registry.test.mjs`: **7 passed, 0 failed**.
 - `node --test test/issuer-key-store.test.mjs`: **2 passed, 0 failed**.
-- `node --test test/paai-verifier.test.mjs`: **10 passed, 0 failed**.
+- `node --test test/paai-verifier.test.mjs`: **11 passed, 0 failed**.
 - `node --test test/process-integration.test.mjs`: **1 passed, 0 failed**; registry required, local RPC mock, persisted issuer key, restart/replay/concurrency checks.
-- `npm test`: **80 passed, 0 failed, 0 skipped**.
+- `npm test`: **81 passed, 0 failed, 0 skipped**.
 
 Rust/Cargo and Android Gradle/ADB were unavailable in this sandbox, but the final branch's manually dispatched GitHub workflows passed: agent-auth [43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180), Android [43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260), and NEAR contract/WASM [43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625). These are build/test results, not live-chain or physical-device protocol evidence.
 
@@ -75,4 +75,4 @@ The registry is a public metadata trust anchor, not an on-chain proof verifier. 
 
 No testnet or mainnet contract was deployed. No chain transaction or mutation was sent. No pull request or merge was created. Deployment readiness is **NOT READY** until the pinned Rust/NEAR and Android checks are rerun on the final commit, the contract/client compatibility is reviewed in the target environment, and an explicit testnet preflight is approved separately.
 
-**Final branch commit SHA:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`.
+**Previously CI-tested implementation SHA:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`. The local reconciliation and CI-trigger/test update is committed as `e42032de9c2fa94a06905afb617b54b8a6bb5875`; CI must rerun for that newer commit before it is described as green.

@@ -3,19 +3,19 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited HEAD:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
-**Branch HEAD checked against GitHub:** exact match after push
+**Audited CI evidence HEAD:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
+**Local reconciliation commit:** `e42032de9c2fa94a06905afb617b54b8a6bb5875` (pending fresh CI)
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-The final branch head has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
+The previously audited implementation commit has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build. The later reconciliation commit changes two PR branch filters, adds one fail-closed regression test, and requires a fresh CI run before it can be called green.
 
 This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-All six final runs below completed with conclusion `success` on the audited branch head.
+All six runs below completed with conclusion `success` on the audited CI evidence HEAD, not on the later reconciliation commit.
 
 | Workflow | Result | Evidence |
 |---|---:|---|
@@ -119,6 +119,6 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 
 **No deployment was performed. No NEAR testnet or mainnet transaction was sent. No contract was initialized. No production secret or private key was used. No merge or pull request was created.**
 
-The evidence supports: **feature-branch CI green and NEAR Wasm build successful; ready for final integration review and an explicitly approved testnet deployment plan.**
+The evidence supports: **implementation commit CI green and NEAR Wasm build successful; the later reconciliation commit is ready for CI validation and final integration review.**
 
 It does not support: **production-ready, fully integrated, anonymous/unlinkable identity, revocation-complete, or mainnet-ready.**
