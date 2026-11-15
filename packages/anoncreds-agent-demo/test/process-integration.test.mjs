@@ -154,12 +154,39 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(replayAttempt.status, 401);
     assert.equal(replayAttempt.body.authorized, false);
 
-    // The fixed issuer policy rejects a capability for an unapproved resource.
-    const escalationAttempt = await post(verifierUrl + "/challenge", {
-      ...challengeInput,
-      resource: "weather:all",
+    // A tampered delegated capability is rejected, and the same challenge
+    // remains usable with the authentic chain and proof.
+    const tamperedChain = structuredClone(capabilityChain);
+    tamperedChain[1].action = "transfer:funds";
+    const tamperedAttempt = await post(verifierUrl + "/verify", {
+      nonce: secondChallenge.body.nonce,
+      ...wrongChallengeBundle.body,
+      capabilityChain: tamperedChain,
     });
-    assert.equal(escalationAttempt.status, 403);
+    assert.equal(tamperedAttempt.status, 401);
+    assert.equal(tamperedAttempt.body.authorized, false);
+    assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
+
+    const secondValidAttempt = await post(verifierUrl + "/verify", {
+      nonce: secondChallenge.body.nonce,
+      ...wrongChallengeBundle.body,
+    });
+    assert.equal(secondValidAttempt.status, 200, JSON.stringify(secondValidAttempt.body));
+    assert.equal(secondValidAttempt.body.authorized, true);
+    assert.equal(secondValidAttempt.body.remainingQuota, 0);
+
+    // The fixed issuer policy rejects an unapproved resource, action, or audience.
+    for (const override of [
+      { resource: "weather:all" },
+      { task: "transfer:funds" },
+      { audience: "agent-c.anonymesh.integration" },
+    ]) {
+      const escalationAttempt = await post(verifierUrl + "/challenge", {
+        ...challengeInput,
+        ...override,
+      });
+      assert.equal(escalationAttempt.status, 403, JSON.stringify(override));
+    }
   } catch (error) {
     const diagnostics = children.map(child => child.diagnosticOutput()).join("\n");
     throw new Error(String(error) + "\nService logs:\n" + diagnostics);
