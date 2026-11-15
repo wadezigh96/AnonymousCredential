@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use near_sdk::borsh::{self, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U64;
-use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault};
+use near_sdk::{env, near, AccountId, BorshStorageKey, CurveType, PanicOnDefault, PublicKey};
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
@@ -37,6 +39,24 @@ fn assert_hash(value: &str, field: &str) {
     );
 }
 
+fn assert_valid_ed25519_public_key(public_key: &str) {
+    assert!(!public_key.is_empty(), "ERR_EMPTY_PUBLIC_KEY");
+    assert!(public_key.len() <= 512, "ERR_PUBLIC_KEY_TOO_LONG");
+    assert!(
+        public_key.starts_with("ed25519:"),
+        "ERR_INVALID_PUBLIC_KEY_PREFIX"
+    );
+
+    let parsed = PublicKey::from_str(public_key)
+        .unwrap_or_else(|_| env::panic_str("ERR_INVALID_PUBLIC_KEY"));
+
+    assert_eq!(
+        parsed.curve_type(),
+        CurveType::ED25519,
+        "ERR_PUBLIC_KEY_NOT_ED25519"
+    );
+}
+
 #[near]
 impl IssuerRegistry {
     #[init]
@@ -55,8 +75,7 @@ impl IssuerRegistry {
         schema_hash: String,
     ) {
         self.assert_owner();
-        assert!(!public_key.is_empty(), "ERR_EMPTY_PUBLIC_KEY");
-        assert!(public_key.len() <= 512, "ERR_PUBLIC_KEY_TOO_LONG");
+        assert_valid_ed25519_public_key(&public_key);
         assert!(key_version > 0, "ERR_INVALID_KEY_VERSION");
         assert_hash(&schema_hash, "SCHEMA_HASH");
 
@@ -118,6 +137,10 @@ mod tests {
     use super::*;
     use near_sdk::test_utils::VMContextBuilder;
     use near_sdk::testing_env;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    const VALID_ED25519_KEY: &str =
+        "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp";
 
     fn account(value: &str) -> AccountId {
         value.parse().expect("valid account id")
@@ -137,7 +160,7 @@ mod tests {
     fn register(registry: &mut IssuerRegistry) {
         registry.register_issuer(
             account("issuer.testnet"),
-            "ed25519:example-public-key".to_string(),
+            VALID_ED25519_KEY.to_string(),
             1,
             "a".repeat(64),
         );
@@ -152,6 +175,7 @@ mod tests {
         assert!(issuer.active);
         assert_eq!(issuer.schema_hash, "a".repeat(64));
         assert_eq!(issuer.status_epoch, 0);
+        assert_eq!(issuer.public_key, VALID_ED25519_KEY);
     }
 
     #[test]
@@ -168,7 +192,7 @@ mod tests {
         let mut contract = registry();
         contract.register_issuer(
             account("issuer.testnet"),
-            "public-key".to_string(),
+            VALID_ED25519_KEY.to_string(),
             1,
             "not-a-hash".to_string(),
         );
@@ -190,7 +214,7 @@ mod tests {
         contract.set_issuer_active(account("issuer.testnet"), false);
         contract.register_issuer(
             account("issuer.testnet"),
-            "ed25519:rotated-public-key".to_string(),
+            VALID_ED25519_KEY.to_string(),
             2,
             "c".repeat(64),
         );
@@ -227,12 +251,11 @@ mod tests {
         register(&mut contract);
         contract.register_issuer(
             account("issuer.testnet"),
-            "replacement-key".to_string(),
+            VALID_ED25519_KEY.to_string(),
             1,
             "c".repeat(64),
         );
     }
-
 
     #[test]
     #[should_panic(expected = "ERR_INVALID_STATUS_ROOT")]
@@ -278,7 +301,7 @@ mod tests {
         let mut contract = registry();
         contract.register_issuer(
             account("issuer.testnet"),
-            "ed25519:example-public-key".to_string(),
+            VALID_ED25519_KEY.to_string(),
             0,
             "a".repeat(64),
         );
@@ -291,4 +314,103 @@ mod tests {
         contract.update_status_root(account("missing.testnet"), U64(1), "b".repeat(64));
     }
 
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_PUBLIC_KEY_PREFIX")]
+    fn rejects_bare_base58_public_key() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            VALID_ED25519_KEY.trim_start_matches("ed25519:").to_string(),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_PUBLIC_KEY_PREFIX")]
+    fn rejects_unknown_public_key_prefix() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            "ed25519x:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp".to_string(),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_PUBLIC_KEY")]
+    fn rejects_invalid_base58_public_key() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            "ed25519:0OIl".to_string(),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_INVALID_PUBLIC_KEY")]
+    fn rejects_wrong_length_public_key() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            "ed25519:2".to_string(),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ERR_PUBLIC_KEY_TOO_LONG")]
+    fn rejects_oversized_public_key() {
+        let mut contract = registry();
+        contract.register_issuer(
+            account("issuer.testnet"),
+            format!("ed25519:{}", "1".repeat(600)),
+            1,
+            "a".repeat(64),
+        );
+    }
+
+    #[test]
+    fn invalid_registration_does_not_create_issuer_record() {
+        let mut contract = registry();
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            contract.register_issuer(
+                account("issuer.testnet"),
+                "ed25519:0OIl".to_string(),
+                1,
+                "a".repeat(64),
+            );
+        }));
+        assert!(result.is_err());
+        assert!(contract.get_issuer(account("issuer.testnet")).is_none());
+    }
+
+    #[test]
+    fn invalid_key_rotation_preserves_previous_record() {
+        let mut contract = registry();
+        register(&mut contract);
+        let before = contract.get_issuer(account("issuer.testnet")).unwrap();
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            contract.register_issuer(
+                account("issuer.testnet"),
+                "ed25519:0OIl".to_string(),
+                2,
+                "b".repeat(64),
+            );
+        }));
+
+        assert!(result.is_err());
+        let after = contract.get_issuer(account("issuer.testnet")).unwrap();
+        assert_eq!(after.public_key, before.public_key);
+        assert_eq!(after.key_version, before.key_version);
+        assert_eq!(after.schema_hash, before.schema_hash);
+        assert_eq!(after.active, before.active);
+        assert_eq!(after.status_epoch, before.status_epoch);
+        assert_eq!(after.status_root, before.status_root);
+    }
 }
