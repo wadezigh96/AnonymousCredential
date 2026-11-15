@@ -9,11 +9,14 @@ import {SqliteAuthorizationStore} from "../authorization-store.mjs";
 import {SqliteChallengeLedger} from "../sqlite-challenge-ledger.mjs";
 import {capabilityDigest} from "../capability.mjs";
 import {verifyAndAuthorizeAgentRequest} from "../paai-verifier.mjs";
-import {readJson,requireApiToken,requireBearerToken,routeError,sendJson} from "./http.mjs";
+import {configuredRateLimit,createRateLimiter,readJson,requireApiToken,requireBearerToken,routeError,sendJson} from "./http.mjs";
 const issuerUrl=process.env.ISSUER_URL??"http://127.0.0.1:4311",port=Number(process.env.PORT??4313),host=process.env.HOST??"127.0.0.1";
 const defaultStateDb=join(homedir(),".local","state","anonymesh","authorization.sqlite");
 const stateDb=process.env.STATE_DB??process.env.AUTHORIZATION_DB??defaultStateDb;
 const verifierToken=requireApiToken("VERIFIER_API_TOKEN");
+const rateLimitWindow=configuredRateLimit("RATE_LIMIT_WINDOW_MS",60_000);
+const challengeRateLimit=createRateLimiter({limit:configuredRateLimit("VERIFIER_CHALLENGE_RATE_LIMIT"),windowMs:rateLimitWindow});
+const verifyRateLimit=createRateLimiter({limit:configuredRateLimit("VERIFIER_VERIFY_RATE_LIMIT"),windowMs:rateLimitWindow});
 mkdirSync(dirname(stateDb),{recursive:true});
 const database=new DatabaseSync(stateDb);
 const authorizationStore=new SqliteAuthorizationStore({database});
@@ -27,6 +30,7 @@ const server=createServer(async(request,response)=>{
   if(request.method==="GET"&&url.pathname==="/health")return sendJson(response,200,{role:"verifier",ready:true});
   if(request.method==="POST"&&url.pathname==="/challenge"){
    if(!requireBearerToken(request,response,verifierToken))return;
+   if(!challengeRateLimit(request,response))return;
    const body=await readJson(request);
    if(body.audience!==publicConfig.demoPolicy.audience||body.task!==publicConfig.demoPolicy.action||body.resource!==publicConfig.demoPolicy.resource)return sendJson(response,403,{error:"Requested scope is outside demo verifier policy"});
    if(!Array.isArray(body.capabilityChain)||!body.capabilityChain.length)return sendJson(response,400,{error:"A capability chain is required"});
@@ -37,6 +41,7 @@ const server=createServer(async(request,response)=>{
   }
   if(request.method==="POST"&&url.pathname==="/verify"){
    if(!requireBearerToken(request,response,verifierToken))return;
+   if(!verifyRateLimit(request,response))return;
    const body=await readJson(request);
    if(typeof body.nonce!=="string"||!body.presentation||!Array.isArray(body.capabilityChain)||!body.requestProof)return sendJson(response,400,{authorized:false,code:"INVALID_VERIFICATION_INPUT"});
    const challenge=ledger.get(body.nonce);if(!challenge)return sendJson(response,401,{authorized:false,code:"UNKNOWN_CHALLENGE"});

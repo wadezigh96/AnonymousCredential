@@ -7,13 +7,19 @@ import {
 } from "../index.mjs";
 import { createAgentRequestProof } from "../agent-runtime.mjs";
 import { capabilityDigest, signCapability } from "../capability.mjs";
-import { readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
+import { configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
 const port = Number(process.env.PORT ?? 4312);
 const host = process.env.HOST ?? "127.0.0.1";
 const holderToken = requireApiToken("HOLDER_API_TOKEN");
 const issuerToken = requireApiToken("ISSUER_API_TOKEN");
+const rateLimitWindow = configuredRateLimit("RATE_LIMIT_WINDOW_MS", 60_000);
+const routeRateLimits = new Map([
+  ["/enroll", createRateLimiter({ limit: configuredRateLimit("HOLDER_ENROLL_RATE_LIMIT"), windowMs: rateLimitWindow })],
+  ["/delegate", createRateLimiter({ limit: configuredRateLimit("HOLDER_DELEGATE_RATE_LIMIT"), windowMs: rateLimitWindow })],
+  ["/present", createRateLimiter({ limit: configuredRateLimit("HOLDER_PRESENT_RATE_LIMIT"), windowMs: rateLimitWindow })],
+]);
 let wallet = null;
 
 async function enroll() {
@@ -61,6 +67,7 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && ["/enroll", "/delegate", "/present"].includes(url.pathname)) {
       if (!requireBearerToken(request, response, holderToken)) return;
+      if (!routeRateLimits.get(url.pathname)(request, response)) return;
     }
     if (request.method === "POST" && url.pathname === "/enroll") {
       if (wallet) return sendJson(response, 409, { error: "Holder already enrolled" });

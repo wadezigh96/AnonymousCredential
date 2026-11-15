@@ -286,6 +286,37 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(concurrentResults.filter(result => result.status === 401 && !result.body.authorized).length, 1,
       JSON.stringify(concurrentResults));
 
+    // A separately configured verifier enforces independent challenge and
+    // verification request budgets and emits Retry-After when a bucket is full.
+    const rateLimitedPort = await freePort();
+    const rateLimitedUrl = "http://127.0.0.1:" + rateLimitedPort;
+    const rateLimitedVerifier = start("verifier", rateLimitedPort, {
+      ...verifierEnvironment,
+      VERIFIER_CHALLENGE_RATE_LIMIT: "2",
+      VERIFIER_VERIFY_RATE_LIMIT: "2",
+    });
+    children.push(rateLimitedVerifier);
+    await waitHealthy(rateLimitedUrl, rateLimitedVerifier);
+    const limitedChallengeInput = { ...challengeInput, capabilityChain: secondDelegation.body.capabilityChain };
+    const limitedChallenges = await Promise.all([
+      post(rateLimitedUrl + "/challenge", limitedChallengeInput),
+      post(rateLimitedUrl + "/challenge", limitedChallengeInput),
+    ]);
+    assert.deepEqual(limitedChallenges.map(result => result.status), [200, 200]);
+    const excessChallenge = await post(rateLimitedUrl + "/challenge", limitedChallengeInput);
+    assert.equal(excessChallenge.status, 429);
+    assert.equal(excessChallenge.body.error, "Too many requests");
+    assert.ok(Number(excessChallenge.headers.get("retry-after")) >= 1);
+    const limitedVerifications = await Promise.all([
+      post(rateLimitedUrl + "/verify", {}),
+      post(rateLimitedUrl + "/verify", {}),
+    ]);
+    assert.deepEqual(limitedVerifications.map(result => result.status), [400, 400]);
+    const excessVerification = await post(rateLimitedUrl + "/verify", {});
+    assert.equal(excessVerification.status, 429);
+    assert.equal(excessVerification.body.error, "Too many requests");
+    assert.equal((await fetch(rateLimitedUrl + "/health")).status, 200);
+
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
       { resource: "weather:all" },
