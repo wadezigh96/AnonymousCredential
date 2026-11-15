@@ -110,7 +110,17 @@ export function startRoleServer(server, { host = "127.0.0.1", port = 0 } = {}) {
   });
 }
 
+export function configureHttpServer(server) {
+  server.headersTimeout = 10_000;
+  server.requestTimeout = 15_000;
+  server.keepAliveTimeout = 5_000;
+  server.maxRequestsPerSocket = 100;
+  return server;
+}
+
 export function routeError(response, error) {
-  const message = error instanceof Error ? error.message : "Request failed";
-  sendJson(response, 400, { error: message });
+  if (response.destroyed || response.writableEnded) return;
+  if (error instanceof HttpRequestError) return sendJson(response, error.statusCode, { error: error.message });
+  if (error instanceof SyntaxError) return sendJson(response, 400, { error: "Invalid JSON request body" });
+  sendJson(response, 500, { error: "Internal server error" });
 }
