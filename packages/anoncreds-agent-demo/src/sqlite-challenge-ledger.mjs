@@ -23,6 +23,7 @@ export class SqliteChallengeLedger {
         audience TEXT NOT NULL,
         task TEXT NOT NULL,
         capability_digest TEXT NOT NULL,
+        resource TEXT NOT NULL,
         issued_at INTEGER NOT NULL,
         expires_at INTEGER NOT NULL,
         consumed INTEGER NOT NULL DEFAULT 0 CHECK (consumed IN (0, 1)),
@@ -31,19 +32,19 @@ export class SqliteChallengeLedger {
     `);
   }
 
-  issue({ audience, task, capabilityDigest, now = Math.floor(Date.now() / 1000), ttlSeconds = 60 }) {
-    if (!audience || !task || !capabilityDigest || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
+  issue({ audience, task, capabilityDigest, resource, now = Math.floor(Date.now() / 1000), ttlSeconds = 60 }) {
+    if (!audience || !task || !capabilityDigest || typeof resource !== "string" || resource.length === 0 || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
       throw new Error("Invalid challenge parameters");
     }
     const nonce = Nonce.generate();
     const challenge = {
-      nonce, audience, task, capabilityDigest,
+      nonce, audience, task, capabilityDigest, resource,
       issuedAt: now, expiresAt: now + ttlSeconds,
     };
     this.#db.prepare(`
-      INSERT INTO challenges (nonce, audience, task, capability_digest, issued_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(nonce, audience, task, capabilityDigest, challenge.issuedAt, challenge.expiresAt);
+      INSERT INTO challenges (nonce, audience, task, capability_digest, resource, issued_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(nonce, audience, task, capabilityDigest, resource, challenge.issuedAt, challenge.expiresAt);
     return Object.freeze(challenge);
   }
 
@@ -70,6 +71,7 @@ export class SqliteChallengeLedger {
       audience: row.audience,
       task: row.task,
       capabilityDigest: row.capability_digest,
+      resource: row.resource,
       issuedAt: row.issued_at,
       expiresAt: row.expires_at,
       consumed: row.consumed === 1,
