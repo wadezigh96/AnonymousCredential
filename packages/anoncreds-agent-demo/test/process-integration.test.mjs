@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer, connect } from "node:net";
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
@@ -98,6 +98,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const verifierTwoUrl = "http://127.0.0.1:" + verifierTwoPort;
   const children = [];
   const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
+  chmodSync(stateDirectory, 0o755);
   const stateDb = join(stateDirectory, "verifier-state.sqlite");
 
   try {
@@ -116,6 +117,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
+    assert.equal(statSync(stateDb).mode & 0o777, 0o600, "SQLite authorization state must not be readable by other local users");
     const verifierTwo = start("verifier", verifierTwoPort, verifierEnvironment);
     children.push(verifierTwo);
     await waitHealthy(verifierTwoUrl, verifierTwo);
@@ -180,6 +182,9 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     };
     const challengeResult = await post(verifierUrl + "/challenge", challengeInput);
     assert.equal(challengeResult.status, 200, JSON.stringify(challengeResult.body));
+    for (const statePath of [stateDb, `${stateDb}-wal`, `${stateDb}-shm`]) {
+      if (existsSync(statePath)) assert.equal(statSync(statePath).mode & 0o777, 0o600, `${statePath} must be private`);
+    }
 
     const presentationResult = await post(holderUrl + "/present", {
       challenge: challengeResult.body,
