@@ -175,8 +175,11 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
 
     // Restart Agent B with the same SQLite file. A fresh challenge must not
     // reset the delegated capability's already-consumed quota.
-    verifier.kill("SIGTERM");
-    await once(verifier, "exit");
+    await new Promise(resolveExit => {
+      if (verifier.exitCode !== null) return resolveExit();
+      verifier.once("exit", resolveExit);
+      verifier.kill("SIGTERM");
+    });
     verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
