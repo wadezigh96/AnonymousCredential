@@ -3,28 +3,27 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited CI evidence HEAD:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
-**Local reconciliation commit:** `e42032de9c2fa94a06905afb617b54b8a6bb5875` (pending fresh CI)
+**Audited CI evidence HEAD:** `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-The previously audited implementation commit has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build. The later reconciliation commit changes two PR branch filters, adds one fail-closed regression test, and requires a fresh CI run before it can be called green.
+The audited final branch head has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
 
 This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-All six runs below completed with conclusion `success` on the audited CI evidence HEAD, not on the later reconciliation commit.
+All six runs below completed with conclusion `success` on the audited final branch HEAD.
 
 | Workflow | Result | Evidence |
 |---|---:|---|
-| ANONYMESH AnonCreds integration | PASS — native demo, adversarial tests, ARM64 benchmark job | [Run 43734056349](https://github.com/wadezigh96/anonymesh/actions/runs/43734056349) |
-| ANONYMESH AnonCreds process integration | PASS — SQLite rollback and multi-process authorization | [Run 43734056402](https://github.com/wadezigh96/anonymesh/actions/runs/43734056402) |
-| ANONYMESH agent authentication | PASS — Rust test job | [Run 43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180) |
-| ANONYMESH Linux ARM64 benchmark | PASS — native ARM64 runner and artifact upload | [Run 43734056425](https://github.com/wadezigh96/anonymesh/actions/runs/43734056425) |
-| ANONYMESH Android native proof smoke test | PASS — release APK, embedded JS verification, artifact upload | [Run 43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260) |
-| ANONYMESH NEAR contract | PASS — locked Rust tests and Wasm release build | [Run 43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625) |
+| ANONYMESH AnonCreds integration | PASS — native demo, adversarial tests, ARM64 benchmark job | [Run 43736039368](https://github.com/wadezigh96/anonymesh/actions/runs/43736039368) |
+| ANONYMESH AnonCreds process integration | PASS — SQLite rollback and multi-process authorization | [Run 43736039006](https://github.com/wadezigh96/anonymesh/actions/runs/43736039006) |
+| ANONYMESH agent authentication | PASS — Rust test job | [Run 43737487949](https://github.com/wadezigh96/anonymesh/actions/runs/43737487949) |
+| ANONYMESH Linux ARM64 benchmark | PASS — native ARM64 runner and artifact upload | [Run 43736039070](https://github.com/wadezigh96/anonymesh/actions/runs/43736039070) |
+| ANONYMESH Android native proof smoke test | PASS — release APK, embedded JS verification, artifact upload | [Run 43736039084](https://github.com/wadezigh96/anonymesh/actions/runs/43736039084) |
+| ANONYMESH NEAR contract | PASS — locked Rust tests and Wasm release build | [Run 43737492296](https://github.com/wadezigh96/anonymesh/actions/runs/43737492296) |
 
 ### Android artifact
 

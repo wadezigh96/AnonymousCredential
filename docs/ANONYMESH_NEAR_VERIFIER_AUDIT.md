@@ -3,7 +3,7 @@
 **Audit date:** 2026-11-15
 **Repository:** `wadezigh96/anonymesh`
 **Branch:** `feat/anonymesh-private-agent-identity`
-**Audited HEAD:** `62ed87c9595a6adfeebe6d08813b3feaadc5f7ad`
+**Audited HEAD:** `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`
 
 ## Scope and safety boundary
 
@@ -27,11 +27,11 @@ The Android app is explicitly a single-process native AnonCreds proof smoke test
 ## Test baseline
 
 - Command: `npm install --no-audit --no-fund --package-lock=false --ignore-scripts=false && npm test` from `packages/anoncreds-agent-demo`
-- Result: **PASS — 80 passed, 0 failed, 0 skipped**
+- Result: **PASS — 81 passed, 0 failed, 0 skipped**
 - Duration: 58.675 seconds
 - Command: `cargo test --manifest-path crates/agent-auth/Cargo.toml --locked` and `cargo test --manifest-path contracts/near/issuer-registry/Cargo.toml --locked`
 - Result: **NOT EXECUTED — `cargo: command not found`**
-- GitHub Actions evidence exists for the prior implementation commit `87e1f0b`; it is not evidence for later untested changes. WASM and Android were not executed in this sandbox audit.
+- GitHub Actions evidence for the audited HEAD is recorded in runs 43736039368, 43736039006, 43736039070, 43736039084, 43737487949, and 43737492296. Local Cargo/Android tools remain unavailable in this sandbox; the Rust/WASM and Android results are GitHub-hosted evidence.
 
 ## Files expected to change
 
