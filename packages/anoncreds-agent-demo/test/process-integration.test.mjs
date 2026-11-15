@@ -79,8 +79,14 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
 
     const enrollment = await post(holderUrl + "/enroll", {});
     assert.equal(enrollment.status, 200, JSON.stringify(enrollment.body));
-    const { capabilityChain, policy } = enrollment.body;
-    assert.equal(capabilityChain.length, 1);
+    const { policy } = enrollment.body;
+    assert.equal(enrollment.body.capabilityChain.length, 1);
+    const delegation = await post(holderUrl + "/delegate", {});
+    assert.equal(delegation.status, 200, JSON.stringify(delegation.body));
+    const capabilityChain = delegation.body.capabilityChain;
+    assert.equal(capabilityChain.length, 2);
+    assert.notEqual(delegation.body.delegatePublicKey, enrollment.body.agentPublicKey);
+    assert.equal(delegation.body.delegationDepth, 1);
 
     const challengeInput = {
       audience: policy.audience,

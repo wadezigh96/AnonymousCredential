@@ -6,6 +6,7 @@ import {
   processHolderCredential,
 } from "../index.mjs";
 import { createAgentRequestProof } from "../agent-runtime.mjs";
+import { capabilityDigest, signCapability } from "../capability.mjs";
 import { readJson, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
@@ -40,6 +41,7 @@ async function enroll() {
   wallet = {
     linkSecret, credentialJson, publicConfig, agentKeyPair,
     agentPublicKey, capabilityChain,
+    requestKeyPair: agentKeyPair,
   };
   return {
     enrolled: true,
@@ -59,6 +61,33 @@ const server = createServer(async (request, response) => {
       if (wallet) return sendJson(response, 409, { error: "Holder already enrolled" });
       return sendJson(response, 200, await enroll());
     }
+    if (request.method === "POST" && url.pathname === "/delegate") {
+      if (!wallet) return sendJson(response, 409, { error: "Holder is not enrolled" });
+      if (wallet.capabilityChain.length >= 2) {
+        return sendJson(response, 409, { error: "Demo delegation depth limit reached" });
+      }
+      const parent = wallet.capabilityChain[wallet.capabilityChain.length - 1];
+      const delegateKeyPair = generateKeyPairSync("ed25519");
+      const delegatePublicKey = delegateKeyPair.publicKey.export({ format: "jwk" }).x;
+      const delegatedCapability = signCapability({
+        parentDigest: capabilityDigest(parent),
+        issuerKey: parent.delegateKey,
+        delegateKey: delegatePublicKey,
+        audience: parent.audience,
+        action: parent.action,
+        resource: parent.resource,
+        expiresAt: parent.expiresAt,
+        quota: Math.min(parent.quota, 1),
+      }, wallet.requestKeyPair.privateKey);
+      wallet.capabilityChain = [...wallet.capabilityChain, delegatedCapability];
+      wallet.requestKeyPair = delegateKeyPair;
+      return sendJson(response, 200, {
+        delegated: true,
+        delegationDepth: wallet.capabilityChain.length - 1,
+        delegatePublicKey,
+        capabilityChain: wallet.capabilityChain,
+      });
+    }
     if (request.method === "POST" && url.pathname === "/present") {
       if (!wallet) return sendJson(response, 409, { error: "Holder is not enrolled" });
       const body = await readJson(request);
@@ -74,7 +103,7 @@ const server = createServer(async (request, response) => {
       const requestProof = createAgentRequestProof({
         challenge: body.challenge,
         capabilityChain: wallet.capabilityChain,
-        privateKey: wallet.agentKeyPair.privateKey,
+        privateKey: wallet.requestKeyPair.privateKey,
       });
       return sendJson(response, 200, {
         presentation,

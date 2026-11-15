@@ -140,13 +140,25 @@ export function verifyAndAuthorizeAgentRequest({
         return false;
       }
 
+      // The credential remains bound to the original holder at the root.
+      // A delegated leaf may use another key, which must prove possession.
+      if (
+        !Array.isArray(capabilityChain) ||
+        capabilityChain.length === 0 ||
+        capabilityChain[0]?.delegateKey !== credentialKey
+      ) {
+        failureCode = "CREDENTIAL_CAPABILITY_KEY_MISMATCH";
+        return false;
+      }
+      const delegatedKey = capabilityChain[capabilityChain.length - 1]?.delegateKey;
+
       try {
         authorization = runtime.authorizeAndConsume({
           chain: capabilityChain,
           trustedRootIssuer,
           challenge,
           proof: requestProof,
-          expected: { ...expected, delegateKey: credentialKey },
+          expected: { ...expected, delegateKey: delegatedKey },
           now,
         });
         return true;
