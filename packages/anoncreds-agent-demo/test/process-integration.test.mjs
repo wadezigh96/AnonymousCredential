@@ -61,10 +61,12 @@ async function post(url, body) {
 test("separate issuer, holder and verifier processes enforce the complete PAII authorization flow", async () => {
   const issuerPort = await freePort();
   const holderPort = await freePort();
+  const holderTwoPort = await freePort();
   const verifierPort = await freePort();
   const verifierTwoPort = await freePort();
   const issuerUrl = "http://127.0.0.1:" + issuerPort;
   const holderUrl = "http://127.0.0.1:" + holderPort;
+  const holderTwoUrl = "http://127.0.0.1:" + holderTwoPort;
   const verifierUrl = "http://127.0.0.1:" + verifierPort;
   const verifierTwoUrl = "http://127.0.0.1:" + verifierTwoPort;
   const children = [];
@@ -80,6 +82,9 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl });
     children.push(holder);
     await waitHealthy(holderUrl, holder);
+    const holderTwo = start("holder", holderTwoPort, { ISSUER_URL: issuerUrl });
+    children.push(holderTwo);
+    await waitHealthy(holderTwoUrl, holderTwo);
 
     const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb, CHALLENGE_DB: challengeDb };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
@@ -89,6 +94,10 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(verifierTwo);
     await waitHealthy(verifierTwoUrl, verifierTwo);
 
+    const secondEnrollment = await post(holderTwoUrl + "/enroll", {});
+    assert.equal(secondEnrollment.status, 200, JSON.stringify(secondEnrollment.body));
+    const secondDelegation = await post(holderTwoUrl + "/delegate", {});
+    assert.equal(secondDelegation.status, 200, JSON.stringify(secondDelegation.body));
     const enrollment = await post(holderUrl + "/enroll", {});
     assert.equal(enrollment.status, 200, JSON.stringify(enrollment.body));
     const { policy } = enrollment.body;
@@ -196,15 +205,13 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
 
     // Two independent verifier processes share the same SQLite files.
     // Simultaneous submissions of one fresh challenge must authorize exactly once.
-    const secondDelegation = await post(holderUrl + "/delegate", {});
-    assert.equal(secondDelegation.status, 200, JSON.stringify(secondDelegation.body));
     const concurrentChain = secondDelegation.body.capabilityChain;
     const concurrentChallenge = await post(verifierUrl + "/challenge", {
       ...challengeInput,
       capabilityChain: concurrentChain,
     });
     assert.equal(concurrentChallenge.status, 200, JSON.stringify(concurrentChallenge.body));
-    const concurrentPresentation = await post(holderUrl + "/present", {
+    const concurrentPresentation = await post(holderTwoUrl + "/present", {
       challenge: concurrentChallenge.body,
       presentationRequest: concurrentChallenge.body.presentationRequest,
     });
