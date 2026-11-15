@@ -208,6 +208,28 @@ test("Agent B executes the guarded tool only after successful authorization", as
   assert.equal(executions, 1);
 });
 
+
+test("does not refund quota when an authorized action callback fails", async () => {
+  const f = fixture({ quota: 1 });
+  const runtime = new AgentAuthorizationRuntime();
+  const args = {
+    chain: f.chain,
+    trustedRootIssuer: f.issuer.publicKey,
+    challenge: f.challenge,
+    proof: f.proof,
+    expected: { audience, action, resource, delegateKey: f.agentA.publicKey },
+    now,
+  };
+  await assert.rejects(
+    runtime.authorizeAndExecute(args, async () => { throw new Error("tool failed"); }),
+    /tool failed/,
+  );
+  assert.throws(
+    () => runtime.authorizeAndConsume(args),
+    error => error.code === "CHALLENGE_REPLAY",
+  );
+});
+
 test("SQLite replay and quota state survives store restart", () => {
   const directory = mkdtempSync(join(tmpdir(), "anonymesh-auth-"));
   const filename = join(directory, "authorization.sqlite");
