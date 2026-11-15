@@ -4,7 +4,7 @@
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
 **Audited HEAD:** `5aec6de6cb2766bd99f7f1f8177f5bf2b8bd6549`
-**Branch HEAD checked against GitHub:** no; local implementation commits are ahead of origin  
+**Branch HEAD checked against GitHub:** no; local implementation commits are ahead of origin
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
