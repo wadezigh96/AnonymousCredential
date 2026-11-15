@@ -178,6 +178,7 @@ test("tampered credential attributes do not produce a valid proof", () => {
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "issuer_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},
@@ -202,6 +203,7 @@ test("proof for another nonce does not verify against the verifier request", () 
     requested_attributes: {
       role_ref: { name: "agent_role" },
       agent_key_ref: { name: "agent_public_key" },
+      issuer_key_ref: { name: "issuer_registry_key" },
     },
     requested_predicates: {
       expiry_ref: { name: "valid_until", p_type: ">=", p_value: fixedNow },

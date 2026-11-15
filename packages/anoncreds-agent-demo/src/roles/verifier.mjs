@@ -8,6 +8,7 @@ import {SqliteChallengeLedger} from "../sqlite-challenge-ledger.mjs";
 import {capabilityDigest} from "../capability.mjs";
 import {verifyAndAuthorizeAgentRequest} from "../paai-verifier.mjs";
 import {openPrivateDatabase} from "../private-state.mjs";
+import {createNearIssuerRegistryClient} from "../near-issuer-registry.mjs";
 import { configureHttpServer,configuredRateLimit,createRateLimiter,readJson,requireApiToken,requireBearerToken,routeError,sendJson} from "./http.mjs";
 const issuerUrl=process.env.ISSUER_URL??"http://127.0.0.1:4311",port=Number(process.env.PORT??4313),host=process.env.HOST??"127.0.0.1";
 const defaultStateDb=join(homedir(),".local","state","anonymesh","authorization.sqlite");
@@ -23,6 +24,10 @@ const ledger=new SqliteChallengeLedger({database});
 const runtime=new AgentAuthorizationRuntime({store:authorizationStore});
 const publicResponse=await fetch(issuerUrl+"/public");if(!publicResponse.ok)throw new Error("Issuer public configuration unavailable");
 const publicConfig=await publicResponse.json();
+const registryRequired=process.env.NEAR_REQUIRED==="true";
+const expectedKeyVersion=Number(process.env.NEAR_EXPECTED_KEY_VERSION??publicConfig.issuerKeyVersion??1);
+const expectedSchemaHash=process.env.NEAR_EXPECTED_SCHEMA_HASH??publicConfig.schemaHash;
+const registryClient=registryRequired?createNearIssuerRegistryClient({network:process.env.NEAR_NETWORK,contractAccount:process.env.NEAR_REGISTRY_CONTRACT,rpcUrl:process.env.NEAR_RPC_URL,issuerAccount:process.env.NEAR_ISSUER_ACCOUNT_ID??publicConfig.issuerAccountId,expectedKeyVersion,expectedSchemaHash,minimumStatusEpoch:process.env.NEAR_EXPECTED_STATUS_EPOCH===undefined?undefined:Number(process.env.NEAR_EXPECTED_STATUS_EPOCH),cacheTtlMs:Number(process.env.NEAR_CACHE_TTL_MS??0),maxStaleMs:Number(process.env.NEAR_MAX_STALE_AGE_MS??0),timeoutMs:Number(process.env.NEAR_RPC_TIMEOUT_MS??5000)}):null;
 const server=configureHttpServer(createServer(async(request,response)=>{
  try{
   const url=new URL(request.url,"http://localhost");
@@ -44,9 +49,11 @@ const server=configureHttpServer(createServer(async(request,response)=>{
    const body=await readJson(request);
    if(typeof body.nonce!=="string"||!body.presentation||!Array.isArray(body.capabilityChain)||!body.requestProof)return sendJson(response,400,{authorized:false,code:"INVALID_VERIFICATION_INPUT"});
    const challenge=ledger.get(body.nonce);if(!challenge)return sendJson(response,401,{authorized:false,code:"UNKNOWN_CHALLENGE"});
+   let issuerRecord=null;
+   if(registryRequired){try{issuerRecord=await registryClient.getIssuerRecord();}catch(error){return sendJson(response,401,{authorized:false,code:error.code??"REGISTRY_UNAVAILABLE"});}}
    const result=verifyAndAuthorizeAgentRequest({nonce:body.nonce,presentationJson:body.presentation,capabilityChain:body.capabilityChain,requestProof:body.requestProof,
-    trustedRootIssuer:publicConfig.trustedRootIssuer,expected:{audience:challenge.audience,action:challenge.task,resource:challenge.resource},
-    challengeLedger:ledger,verifierSchema:publicConfig.schema,verifierCredentialDefinition:publicConfig.credentialDefinition,runtime});
+    trustedRootIssuer:publicConfig.trustedRootIssuer,expected:{audience:challenge.audience,action:challenge.task,resource:challenge.resource,issuerKeyVersion:expectedKeyVersion,schemaHash:expectedSchemaHash},
+    challengeLedger:ledger,verifierSchema:publicConfig.schema,verifierCredentialDefinition:publicConfig.credentialDefinition,issuerRecord,registryRequired,runtime});
    return sendJson(response,result.authorized?200:401,result);
   }
   return sendJson(response,404,{error:"Not found"});

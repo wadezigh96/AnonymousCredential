@@ -12,6 +12,7 @@ target/
 .env.*
 *.pem
 *.key
+*.issuer-key.json
 
 # OS/editor files
 .DS_Store

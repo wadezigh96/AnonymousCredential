@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { createServer, connect } from "node:net";
+import { connect } from "node:net";
+import { createServer } from "node:http";
 import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { generateIssuerKeyFile } from "../src/issuer-key-store.mjs";
+import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
@@ -24,6 +27,19 @@ async function freePort() {
   const port = server.address().port;
   await new Promise(done => server.close(done));
   return port;
+}
+
+async function startMockRegistry(recordHolder) {
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {}
+    const result = Array.from(Buffer.from(JSON.stringify(recordHolder.record), "utf8"));
+    const payload = JSON.stringify({ jsonrpc: "2.0", id: "anonymesh-registry", result: { result } });
+    response.writeHead(200, { "content-type": "application/json", "content-length": Buffer.byteLength(payload) });
+    response.end(payload);
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise(done => server.close(done)) };
 }
 
 async function assertConfiguredHeaderTimeout(port) {
@@ -100,11 +116,17 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
   chmodSync(stateDirectory, 0o755);
   const stateDb = join(stateDirectory, "verifier-state.sqlite");
+  const issuerKeyFile = join(stateDirectory, "issuer-key.json");
+  generateIssuerKeyFile({ file: issuerKeyFile, keyVersion: 1 });
+  const registryState = { record: null };
+  const mockRegistry = await startMockRegistry(registryState);
 
   try {
-    const issuer = start("issuer", issuerPort, { ISSUER_API_TOKEN: TEST_TOKENS.issuer });
+    const issuer = start("issuer", issuerPort, { ISSUER_API_TOKEN: TEST_TOKENS.issuer, ISSUER_KEY_FILE: issuerKeyFile, NODE_ENV: "test", NEAR_EXPECTED_KEY_VERSION: "1" });
     children.push(issuer);
     await waitHealthy(issuerUrl, issuer);
+    const issuerPublic = await (await fetch(issuerUrl + "/public")).json();
+    registryState.record = { public_key: nodeEd25519PublicKeyToNear(issuerPublic.issuerRegistryPublicKey), key_version: 1, schema_hash: issuerPublic.schemaHash, active: true, status_epoch: 0, status_root: "0".repeat(64) };
 
     const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holder);
@@ -113,7 +135,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holderTwo);
     await waitHealthy(holderTwoUrl, holderTwo);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0" };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
@@ -374,5 +396,6 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
       setTimeout(() => { child.kill("SIGKILL"); resolveDone(); }, 1500).unref();
     })));
     rmSync(stateDirectory, { recursive: true, force: true });
+    await mockRegistry.close();
   }
 });

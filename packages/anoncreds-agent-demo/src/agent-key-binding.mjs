@@ -37,3 +37,16 @@ export function extractCredentialAgentPublicKey(input) {
   if (attr.encoded !== encodeAnonCredsAttribute(key)) fail("AGENT_KEY_ENCODING_MISMATCH");
   return key;
 }
+
+export function extractCredentialIssuerRegistryKey(input) {
+  let presentation = input;
+  if (typeof input === "string") {
+    try { presentation = JSON.parse(input); }
+    catch { fail("MALFORMED_PRESENTATION_JSON"); }
+  }
+  const attr = presentation?.requested_proof?.revealed_attrs?.issuer_key_ref;
+  if (!attr || typeof attr.raw !== "string" || typeof attr.encoded !== "string") fail("MISSING_REVEALED_ISSUER_KEY");
+  const key = validateAgentPublicKey(attr.raw);
+  if (attr.encoded !== encodeAnonCredsAttribute(key)) fail("ISSUER_KEY_ENCODING_MISMATCH");
+  return key;
+}

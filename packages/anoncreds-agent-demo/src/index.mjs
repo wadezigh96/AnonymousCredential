@@ -106,12 +106,13 @@ export class ChallengeLedger {
   }
 }
 
-export function createIssuerSetup() {
+export function createIssuerSetup({ issuerRegistryPublicKey } = {}) {
+  const registryKey = issuerRegistryPublicKey ?? generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
   const schema = Schema.create({
     name: "anonymesh-agent-authorization",
     version: "1.0",
     issuerId: ISSUER_ID,
-    attributeNames: ["agent_role", "agent_subject", "valid_until", "capability_scope", "agent_public_key"],
+    attributeNames: ["agent_role", "agent_subject", "valid_until", "capability_scope", "agent_public_key", "issuer_registry_key"],
   });
   const { credentialDefinition, credentialDefinitionPrivate, keyCorrectnessProof } =
     CredentialDefinition.create({
@@ -128,6 +129,7 @@ export function createIssuerSetup() {
     credentialDefinition: credentialDefinition.toJson(),
     credentialDefinitionPrivate: credentialDefinitionPrivate.toJson(),
     offer: offer.toJson(),
+    issuerRegistryPublicKey: registryKey,
   };
 }
 
@@ -163,6 +165,7 @@ export function issueCredentialForRequest({ issuerConfig, credentialRequest, val
       valid_until: String(validUntil),
       capability_scope: "weather:read",
       agent_public_key: agentPublicKey,
+      issuer_registry_key: issuerConfig.issuerRegistryPublicKey,
     },
   });
   return credential.toJson();
@@ -186,6 +189,7 @@ export function makePresentationRequest(challenge, now = Math.floor(Date.now() /
     requested_attributes: {
       role_ref: { name: "agent_role" },
       agent_key_ref: { name: "agent_public_key" },
+      issuer_key_ref: { name: "issuer_registry_key" },
     },
     requested_predicates: {
       expiry_ref: { name: "valid_until", p_type: ">=", p_value: now },
@@ -201,6 +205,7 @@ export function createPresentationFromWallet({ credentialJson, linkSecret, publi
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "issuer_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},
@@ -279,6 +284,7 @@ export function issueAgentCredential({ validUntil, privateSubject = PRIVATE_SUBJ
     credentialDefinitionId: CRED_DEF_ID,
     agentPublicKey,
     agentPrivateKey: agentKeyPair.privateKey,
+    issuerRegistryPublicKey: issuerConfig.issuerRegistryPublicKey,
   };
 }
 
@@ -289,6 +295,7 @@ export function createAgentPresentation(holder, presentationRequest) {
     credentialsProve: [
       { entryIndex: 0, referent: "role_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "agent_key_ref", isPredicate: false, reveal: true },
+      { entryIndex: 0, referent: "issuer_key_ref", isPredicate: false, reveal: true },
       { entryIndex: 0, referent: "expiry_ref", isPredicate: true, reveal: false },
     ],
     selfAttest: {},
