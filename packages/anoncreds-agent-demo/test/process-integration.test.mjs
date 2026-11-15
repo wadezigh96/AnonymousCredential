@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -63,6 +66,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const holderUrl = "http://127.0.0.1:" + holderPort;
   const verifierUrl = "http://127.0.0.1:" + verifierPort;
   const children = [];
+  const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
+  const authorizationDb = join(stateDirectory, "authorization.sqlite");
 
   try {
     const issuer = start("issuer", issuerPort);
@@ -73,7 +78,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holder);
     await waitHealthy(holderUrl, holder);
 
-    const verifier = start("verifier", verifierPort, { ISSUER_URL: issuerUrl });
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb };
+    let verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
 
@@ -167,6 +173,29 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(replayAttempt.status, 401);
     assert.equal(replayAttempt.body.authorized, false);
 
+    // Restart Agent B with the same SQLite file. A fresh challenge must not
+    // reset the delegated capability's already-consumed quota.
+    verifier.kill("SIGTERM");
+    await once(verifier, "exit");
+    verifier = start("verifier", verifierPort, verifierEnvironment);
+    children.push(verifier);
+    await waitHealthy(verifierUrl, verifier);
+
+    const postRestartChallenge = await post(verifierUrl + "/challenge", challengeInput);
+    assert.equal(postRestartChallenge.status, 200, JSON.stringify(postRestartChallenge.body));
+    const postRestartPresentation = await post(holderUrl + "/present", {
+      challenge: postRestartChallenge.body,
+      presentationRequest: postRestartChallenge.body.presentationRequest,
+    });
+    assert.equal(postRestartPresentation.status, 200, JSON.stringify(postRestartPresentation.body));
+    const postRestartAttempt = await post(verifierUrl + "/verify", {
+      nonce: postRestartChallenge.body.nonce,
+      ...postRestartPresentation.body,
+    });
+    assert.equal(postRestartAttempt.status, 401);
+    assert.equal(postRestartAttempt.body.authorized, false);
+    assert.equal(postRestartAttempt.body.code, "CAPABILITY_QUOTA_EXHAUSTED");
+
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
       { resource: "weather:all" },
@@ -189,5 +218,6 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
       child.once("exit", resolveDone);
       setTimeout(() => { child.kill("SIGKILL"); resolveDone(); }, 1500).unref();
     })));
+    rmSync(stateDirectory, { recursive: true, force: true });
   }
 });

@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import {
   ChallengeLedger,
   makePresentationRequest,
@@ -15,9 +17,10 @@ const port = Number(process.env.PORT ?? 4313);
 const host = process.env.HOST ?? "127.0.0.1";
 const ledger = new ChallengeLedger();
 const resourceByNonce = new Map();
-const authorizationStore = new SqliteAuthorizationStore({
-  filename: process.env.AUTHORIZATION_DB ?? ":memory:",
-});
+const defaultAuthorizationDb = join(homedir(), ".local", "state", "anonymesh", "authorization.sqlite");
+const authorizationDb = process.env.AUTHORIZATION_DB ?? defaultAuthorizationDb;
+mkdirSync(dirname(authorizationDb), { recursive: true });
+const authorizationStore = new SqliteAuthorizationStore({ filename: authorizationDb });
 const runtime = new AgentAuthorizationRuntime({ store: authorizationStore });
 
 const publicResponse = await fetch(issuerUrl + "/public");
