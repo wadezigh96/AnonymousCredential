@@ -1,15 +1,25 @@
 import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
 import {
   ChallengeLedger,
   makePresentationRequest,
-  verifyAgentPresentation,
 } from "../index.mjs";
+import { AgentAuthorizationRuntime } from "../agent-runtime.mjs";
+import { SqliteAuthorizationStore } from "../authorization-store.mjs";
+import { capabilityDigest } from "../capability.mjs";
+import { verifyAndAuthorizeAgentRequest } from "../paai-verifier.mjs";
 import { readJson, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
 const port = Number(process.env.PORT ?? 4313);
 const host = process.env.HOST ?? "127.0.0.1";
 const ledger = new ChallengeLedger();
+const resourceByNonce = new Map();
+const authorizationStore = new SqliteAuthorizationStore({
+  filename: process.env.AUTHORIZATION_DB ?? ":memory:",
+});
+const runtime = new AgentAuthorizationRuntime({ store: authorizationStore });
+
 const publicResponse = await fetch(issuerUrl + "/public");
 if (!publicResponse.ok) throw new Error("Issuer public configuration unavailable");
 const publicConfig = await publicResponse.json();
@@ -22,40 +32,56 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname === "/challenge") {
       const body = await readJson(request);
+      if (body.audience !== publicConfig.demoPolicy.audience ||
+          body.task !== publicConfig.demoPolicy.action ||
+          body.resource !== publicConfig.demoPolicy.resource) {
+        return sendJson(response, 403, { error: "Requested scope is outside demo verifier policy" });
+      }
+      if (!Array.isArray(body.capabilityChain) || body.capabilityChain.length === 0) {
+        return sendJson(response, 400, { error: "A capability chain is required" });
+      }
+      const leaf = body.capabilityChain[body.capabilityChain.length - 1];
+      const digest = capabilityDigest(leaf);
       const challenge = ledger.issue({
         audience: body.audience,
         task: body.task,
-        capabilityDigest: body.capabilityDigest,
+        capabilityDigest: digest,
         ttlSeconds: body.ttlSeconds ?? 60,
       });
       const presentationRequest = makePresentationRequest(challenge).toJson();
       ledger.attachPresentationRequest(challenge.nonce, presentationRequest);
+      resourceByNonce.set(challenge.nonce, body.resource);
       return sendJson(response, 200, { ...challenge, presentationRequest });
     }
     if (request.method === "POST" && url.pathname === "/verify") {
       const body = await readJson(request);
-      if (typeof body.nonce !== "string" || !body.presentation) {
-        return sendJson(response, 400, { error: "nonce and presentation are required" });
+      if (typeof body.nonce !== "string" || !body.presentation ||
+          !Array.isArray(body.capabilityChain) || !body.requestProof) {
+        return sendJson(response, 400, { authorized: false, code: "INVALID_VERIFICATION_INPUT" });
       }
       const challenge = ledger.get(body.nonce);
-      if (!challenge) return sendJson(response, 401, { valid: false, error: "Unknown challenge" });
-      if (challenge.consumed || challenge.expiresAt <= Math.floor(Date.now() / 1000)) {
-        return sendJson(response, 401, { valid: false, error: "Challenge expired or already consumed" });
-      }
-      const valid = verifyAgentPresentation({
+      if (!challenge) return sendJson(response, 401, { authorized: false, code: "UNKNOWN_CHALLENGE" });
+      const resource = resourceByNonce.get(body.nonce);
+      if (!resource) return sendJson(response, 401, { authorized: false, code: "UNKNOWN_CHALLENGE_SCOPE" });
+
+      const result = verifyAndAuthorizeAgentRequest({
+        nonce: body.nonce,
         presentationJson: body.presentation,
-        presentationRequestJson: challenge.presentationRequest,
+        capabilityChain: body.capabilityChain,
+        requestProof: body.requestProof,
+        trustedRootIssuer: publicConfig.trustedRootIssuer,
+        expected: {
+          audience: challenge.audience,
+          action: challenge.task,
+          resource,
+        },
+        challengeLedger: ledger,
         verifierSchema: publicConfig.schema,
         verifierCredentialDefinition: publicConfig.credentialDefinition,
-        challengeLedger: ledger,
-        challengeContext: {
-          nonce: challenge.nonce,
-          audience: challenge.audience,
-          task: challenge.task,
-          capabilityDigest: challenge.capabilityDigest,
-        },
+        runtime,
       });
-      return sendJson(response, valid ? 200 : 401, { valid });
+      if (result.authorized) resourceByNonce.delete(body.nonce);
+      return sendJson(response, result.authorized ? 200 : 401, result);
     }
     return sendJson(response, 404, { error: "Not found" });
   } catch (error) {
