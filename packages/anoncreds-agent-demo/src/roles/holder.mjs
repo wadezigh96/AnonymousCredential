@@ -5,6 +5,7 @@ import {
   createPresentationFromWallet,
   processHolderCredential,
 } from "../index.mjs";
+import { createAgentRequestProof } from "../agent-runtime.mjs";
 import { readJson, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
@@ -26,14 +27,26 @@ async function enroll() {
     body: JSON.stringify({ credentialRequest, agentPublicKey }),
   });
   if (!issuedResponse.ok) throw new Error("Issuer rejected holder credential request");
-  const { credential } = await issuedResponse.json();
+  const { credential, capabilityChain } = await issuedResponse.json();
+  if (!Array.isArray(capabilityChain) || capabilityChain.length === 0) {
+    throw new Error("Issuer did not return an authorization capability");
+  }
   const credentialJson = processHolderCredential({
     credentialJson: credential,
     credentialRequestMetadata,
     linkSecret,
     publicConfig,
   });
-  wallet = { linkSecret, credentialJson, publicConfig, agentKeyPair, agentPublicKey };
+  wallet = {
+    linkSecret, credentialJson, publicConfig, agentKeyPair,
+    agentPublicKey, capabilityChain,
+  };
+  return {
+    enrolled: true,
+    agentPublicKey,
+    capabilityChain,
+    policy: publicConfig.demoPolicy,
+  };
 }
 
 const server = createServer(async (request, response) => {
@@ -44,20 +57,30 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname === "/enroll") {
       if (wallet) return sendJson(response, 409, { error: "Holder already enrolled" });
-      await enroll();
-      return sendJson(response, 200, { enrolled: true });
+      return sendJson(response, 200, await enroll());
     }
     if (request.method === "POST" && url.pathname === "/present") {
       if (!wallet) return sendJson(response, 409, { error: "Holder is not enrolled" });
       const body = await readJson(request);
-      if (!body.presentationRequest) throw new Error("presentationRequest is required");
+      if (!body.presentationRequest || !body.challenge) {
+        throw new Error("presentationRequest and challenge are required");
+      }
       const presentation = createPresentationFromWallet({
         credentialJson: wallet.credentialJson,
         linkSecret: wallet.linkSecret,
         publicConfig: wallet.publicConfig,
         presentationRequestJson: body.presentationRequest,
       });
-      return sendJson(response, 200, { presentation });
+      const requestProof = createAgentRequestProof({
+        challenge: body.challenge,
+        capabilityChain: wallet.capabilityChain,
+        privateKey: wallet.agentKeyPair.privateKey,
+      });
+      return sendJson(response, 200, {
+        presentation,
+        capabilityChain: wallet.capabilityChain,
+        requestProof,
+      });
     }
     return sendJson(response, 404, { error: "Not found" });
   } catch (error) {
