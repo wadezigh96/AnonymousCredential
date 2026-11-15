@@ -202,6 +202,30 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(replayAfterRestart.body.authorized, false);
     assert.equal(replayAfterRestart.body.code, "CHALLENGE_EXPIRED_OR_CONSUMED");
 
+    // A fresh challenge cannot reset the capability quota after verifier restart.
+    // Reuse the exact capability whose one-unit quota was consumed above.
+    const quotaChallenge = await post(verifierUrl + "/challenge", challengeInput);
+    assert.equal(quotaChallenge.status, 200, JSON.stringify(quotaChallenge.body));
+    const quotaPresentation = await post(holderUrl + "/present", {
+      challenge: quotaChallenge.body,
+      presentationRequest: quotaChallenge.body.presentationRequest,
+    });
+    assert.equal(quotaPresentation.status, 200, JSON.stringify(quotaPresentation.body));
+    const exhaustedQuotaAttempt = await post(verifierUrl + "/verify", {
+      nonce: quotaChallenge.body.nonce,
+      ...quotaPresentation.body,
+    });
+    assert.equal(exhaustedQuotaAttempt.status, 401, JSON.stringify(exhaustedQuotaAttempt.body));
+    assert.equal(exhaustedQuotaAttempt.body.authorized, false);
+    assert.equal(exhaustedQuotaAttempt.body.code, "CAPABILITY_QUOTA_EXHAUSTED");
+    // A rejected authorization must not consume the new challenge.
+    const quotaChallengeRetry = await post(verifierUrl + "/verify", {
+      nonce: quotaChallenge.body.nonce,
+      ...quotaPresentation.body,
+    });
+    assert.equal(quotaChallengeRetry.status, 401);
+    assert.equal(quotaChallengeRetry.body.code, "CAPABILITY_QUOTA_EXHAUSTED");
+
     // Two independent verifier processes share the same SQLite files.
     // Simultaneous submissions of one fresh challenge must authorize exactly once.
     const concurrentChain = secondDelegation.body.capabilityChain;
