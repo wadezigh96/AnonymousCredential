@@ -22,8 +22,8 @@ The current feature branch contains documentation, a Rust NEAR issuer/status reg
 | NEAR issuer/status registry contract | Present; preliminary scaffold only |
 | Local-first private agent runtime | Not present |
 | Anti-replay, rate limits and policy enforcement | Not present |
-| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 21 tests passed (run #7) | 
-| Cargo.lock | Generated ephemerally in CI; not committed, so dependency resolution is not pinned across runs |
+| Automated tests / CI | NEAR registry: 14 tests passed (run #13); agent auth and capability verifier: 21 tests passed (run #7) |
+| Cargo.lock | Committed at `contracts/near/issuer-registry/Cargo.lock`; NEAR workflow uses `--locked` for tests and WASM release build |
 | Benchmarks / privacy evaluation | 20-iteration Linux x64 benchmark recorded; Android and unlinkability evaluation remain pending |
 
 ## 3. Historical implementation findings
@@ -68,12 +68,12 @@ A source-backed comparison is recorded in [`CRYPTO_SELECTION.md`](CRYPTO_SELECTI
 
 `crates/agent-auth` now includes signed capabilities with parent digests, issuer/delegate Ed25519 keys, audience, exact action/resource, expiry and quota. `verify_capability_chain` checks the trusted root issuer, every signature and parent link, delegator continuity, exact scope equality, and non-increasing expiry/quota, with a maximum delegation depth of 8. GitHub Actions run #7 (`43603320311`) passed 21/21 tests, including action/expiry/quota escalation, wrong delegator, broken parent link and expired-root rejection. Limitations: action/resource are currently exact-match rather than expressive subset policies; quota is metadata only and is not atomically consumed; revocation is not enforced. This is a prototype policy-chain verifier, not a complete runtime authorization engine.
 
-## 9. Agent challenge-response implementation slice
+## 10. Agent challenge-response implementation slice
 
 A small Rust crate at `crates/agent-auth` verifies Ed25519 signatures over a domain-separated transcript binding nonce, audience, task, capability digest and expiry. Its in-memory replay guard rejects reused nonces and fails closed when full. Local verification passed 21/21 tests. This is ordinary proof-of-possession authentication: it reveals/uses a stable public key and is **not** an anonymous credential, ZK proof, unlinkable presentation, durable distributed replay defense, or capability-policy engine. Its Cargo.lock is committed for reproducible locked resolution.
 
-## 9. First NEAR registry implementation slice
+## 11. First NEAR registry implementation slice
 
 A Rust contract scaffold now exists at `contracts/near/issuer-registry` using `near-sdk = 5.30.1`. It stores issuer public-key metadata, key version, schema hash, active flag, status epoch and status root. Owner-only mutations and monotonic key/status version checks are implemented in source. Key rotation preserves suspension and status history. The contract does not verify ZK proofs or non-revocation witnesses and its status root is an opaque commitment only.
 
-Fourteen unit tests are present in source, covering owner authorization, malformed schema/status hashes, issuer suspension, key-version rollback, status epoch monotonicity, unknown issuer handling, empty key and state preservation during key rotation. Local verification passed 14/14 tests and the `wasm32-unknown-unknown --release` build. `Cargo.lock` is committed and the CI workflow uses locked resolution. This is a code-level preliminary audit, not an independent security review.
+Fourteen unit tests are present in source, covering owner authorization, malformed schema/status hashes, issuer suspension, key-version rollback, status epoch monotonicity, unknown issuer handling, empty key and state preservation during key rotation. Local verification passed 14/14 tests and the `wasm32-unknown-unknown --release` build. `Cargo.lock` is committed at `contracts/near/issuer-registry/Cargo.lock`, and the NEAR workflow uses locked dependency resolution for both tests and the WASM release build. The recorded [NEAR contract CI run #13](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085) passed both steps. This is a code-level preliminary audit, not an independent security review.
