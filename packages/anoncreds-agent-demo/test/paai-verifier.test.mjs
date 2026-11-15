@@ -170,3 +170,17 @@ test("registry-backed verifier requires the credential-bound issuer key and meta
   assert.deepEqual(rejected, { authorized: false, code: "ISSUER_REGISTRY_KEY_MISMATCH" });
   assert.equal(second.ledger.get(second.challenge.nonce).consumed, false);
 });
+
+test("required registry mode fails closed before consuming challenge state", () => {
+  for (const issuerRecord of [null, { active: false, nodePublicKey: "ignored", keyVersion: 1, schemaHash: "a".repeat(64) }]) {
+    const f = fixture();
+    const rejected = verifyAndAuthorizeAgentRequest({
+      ...f.args,
+      issuerRecord,
+      registryRequired: true,
+      runtime: f.runtime,
+    });
+    assert.deepEqual(rejected, { authorized: false, code: "REGISTRY_UNAVAILABLE" });
+    assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
+  }
+});

@@ -6,7 +6,7 @@ on:
       - "packages/anoncreds-agent-demo/**"
       - ".github/workflows/anonymesh-anoncreds.yml"
   pull_request:
-    branches: [main]
+    branches: [feat/anonymesh-private-agent-identity]
     paths:
       - "packages/anoncreds-agent-demo/**"
       - ".github/workflows/anonymesh-anoncreds.yml"
