@@ -2,13 +2,14 @@ import { createServer } from "node:http";
 import { generateKeyPairSync } from "node:crypto";
 import { createIssuerSetup, issueCredentialForRequest } from "../index.mjs";
 import { signCapability } from "../capability.mjs";
-import { readJson, routeError, sendJson } from "./http.mjs";
+import { readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 
 const config = createIssuerSetup();
 const authorizationRoot = generateKeyPairSync("ed25519");
 const trustedRootIssuer = authorizationRoot.publicKey.export({ format: "jwk" }).x;
 const port = Number(process.env.PORT ?? 4311);
 const host = process.env.HOST ?? "127.0.0.1";
+const issueToken = requireApiToken("ISSUER_API_TOKEN");
 
 // Deliberately narrow demo policy. This issuer is a local reference fixture,
 // not a remotely exposed production authorization authority.
@@ -35,6 +36,7 @@ const server = createServer(async (request, response) => {
       });
     }
     if (request.method === "POST" && url.pathname === "/issue") {
+      if (!requireBearerToken(request, response, issueToken)) return;
       const body = await readJson(request);
       const now = Math.floor(Date.now() / 1000);
       const validUntil = now + 3600;

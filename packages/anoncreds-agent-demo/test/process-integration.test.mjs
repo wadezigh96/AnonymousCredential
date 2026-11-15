@@ -10,6 +10,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const TEST_TOKENS = Object.freeze({
+  issuer: "test-issuer-token-anonymesh-0123456789abcdef",
+  holder: "test-holder-token-anonymesh-0123456789abcdef",
+  verifier: "test-verifier-token-anonymesh-0123456789abcdef",
+});
 const rolePath = name => resolve(here, "../src/roles", name + ".mjs");
 
 async function freePort() {
@@ -49,13 +54,20 @@ function start(name, port, extra = {}) {
   return child;
 }
 
-async function post(url, body) {
+async function post(url, body, authorization = "auto") {
+  const path = new URL(url).pathname;
+  const automaticToken = path === "/issue" ? TEST_TOKENS.issuer
+    : ["/enroll", "/delegate", "/present"].includes(path) ? TEST_TOKENS.holder
+    : ["/challenge", "/verify"].includes(path) ? TEST_TOKENS.verifier : null;
+  const token = authorization === "auto" ? automaticToken : authorization;
+  const headers = { "content-type": "application/json" };
+  if (token) headers.authorization = "Bearer " + token;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: await response.json(), headers: response.headers };
 }
 
 test("separate issuer, holder and verifier processes enforce the complete PAII authorization flow", async () => {
@@ -74,24 +86,46 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const stateDb = join(stateDirectory, "verifier-state.sqlite");
 
   try {
-    const issuer = start("issuer", issuerPort);
+    const issuer = start("issuer", issuerPort, { ISSUER_API_TOKEN: TEST_TOKENS.issuer });
     children.push(issuer);
     await waitHealthy(issuerUrl, issuer);
 
-    const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl });
+    const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holder);
     await waitHealthy(holderUrl, holder);
-    const holderTwo = start("holder", holderTwoPort, { ISSUER_URL: issuerUrl });
+    const holderTwo = start("holder", holderTwoPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holderTwo);
     await waitHealthy(holderTwoUrl, holderTwo);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
     const verifierTwo = start("verifier", verifierTwoPort, verifierEnvironment);
     children.push(verifierTwo);
     await waitHealthy(verifierTwoUrl, verifierTwo);
+
+    // Mutating endpoints reject missing and incorrect bearer credentials before
+    // parsing bodies or performing issuance, wallet, challenge, or proof work.
+    const protectedEndpoints = [
+      [issuerUrl + "/issue", TEST_TOKENS.issuer],
+      [holderUrl + "/enroll", TEST_TOKENS.holder],
+      [holderUrl + "/delegate", TEST_TOKENS.holder],
+      [holderUrl + "/present", TEST_TOKENS.holder],
+      [verifierUrl + "/challenge", TEST_TOKENS.verifier],
+      [verifierUrl + "/verify", TEST_TOKENS.verifier],
+    ];
+    for (const [endpoint, expectedToken] of protectedEndpoints) {
+      for (const suppliedToken of [null, "incorrect-token-anonymesh-0123456789"]) {
+        const rejected = await post(endpoint, {}, suppliedToken);
+        assert.equal(rejected.status, 401, endpoint);
+        assert.deepEqual(rejected.body, { error: "Unauthorized" });
+        assert.match(rejected.headers.get("www-authenticate") ?? "", /^Bearer /);
+        assert.equal(JSON.stringify(rejected.body).includes(expectedToken), false);
+      }
+    }
+    assert.equal((await fetch(issuerUrl + "/public")).status, 200);
+    assert.equal((await fetch(verifierUrl + "/health")).status, 200);
 
     const secondEnrollment = await post(holderTwoUrl + "/enroll", {});
     assert.equal(secondEnrollment.status, 200, JSON.stringify(secondEnrollment.body));

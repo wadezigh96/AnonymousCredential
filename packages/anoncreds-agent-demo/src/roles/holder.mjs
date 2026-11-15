@@ -7,11 +7,13 @@ import {
 } from "../index.mjs";
 import { createAgentRequestProof } from "../agent-runtime.mjs";
 import { capabilityDigest, signCapability } from "../capability.mjs";
-import { readJson, routeError, sendJson } from "./http.mjs";
+import { readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
 const port = Number(process.env.PORT ?? 4312);
 const host = process.env.HOST ?? "127.0.0.1";
+const holderToken = requireApiToken("HOLDER_API_TOKEN");
+const issuerToken = requireApiToken("ISSUER_API_TOKEN");
 let wallet = null;
 
 async function enroll() {
@@ -24,7 +26,7 @@ async function enroll() {
   const agentPublicKey = agentKeyPair.publicKey.export({ format: "jwk" }).x;
   const issuedResponse = await fetch(issuerUrl + "/issue", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer " + issuerToken },
     body: JSON.stringify({ credentialRequest, agentPublicKey }),
   });
   if (!issuedResponse.ok) throw new Error("Issuer rejected holder credential request");
@@ -56,6 +58,9 @@ const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
       return sendJson(response, 200, { role: "holder", ready: true, enrolled: Boolean(wallet) });
+    }
+    if (request.method === "POST" && ["/enroll", "/delegate", "/present"].includes(url.pathname)) {
+      if (!requireBearerToken(request, response, holderToken)) return;
     }
     if (request.method === "POST" && url.pathname === "/enroll") {
       if (wallet) return sendJson(response, 409, { error: "Holder already enrolled" });

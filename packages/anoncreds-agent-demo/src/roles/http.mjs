@@ -1,3 +1,26 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
+export function requireApiToken(name) {
+  const token = process.env[name];
+  if (typeof token !== "string" || token.length < 32) {
+    throw new Error(name + " must be configured with at least 32 characters");
+  }
+  return token;
+}
+
+export function requireBearerToken(request, response, expectedToken) {
+  const header = request.headers.authorization;
+  const match = typeof header === "string" ? /^Bearer ([A-Za-z0-9._~+/-]+)$/.exec(header) : null;
+  const supplied = match ? match[1] : "";
+  const expectedDigest = createHash("sha256").update(expectedToken, "utf8").digest();
+  const suppliedDigest = createHash("sha256").update(supplied, "utf8").digest();
+  const valid = timingSafeEqual(expectedDigest, suppliedDigest);
+  if (valid) return true;
+  response.setHeader("www-authenticate", 'Bearer realm="anonymesh"');
+  sendJson(response, 401, { error: "Unauthorized" });
+  return false;
+}
+
 export async function readJson(request, maxBytes = 1024 * 1024) {
   const chunks = [];
   let size = 0;
