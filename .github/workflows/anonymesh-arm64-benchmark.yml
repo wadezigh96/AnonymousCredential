@@ -1,0 +1,54 @@
+name: ANONYMESH Linux ARM64 benchmark
+
+on:
+  push:
+    branches:
+      - feat/anonymesh-private-agent-identity
+    paths:
+      - 'packages/anoncreds-agent-demo/**'
+      - '.github/workflows/anonymesh-arm64-benchmark.yml'
+  pull_request:
+    paths:
+      - 'packages/anoncreds-agent-demo/**'
+      - '.github/workflows/anonymesh-arm64-benchmark.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-arm64-benchmark:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: ''
+
+      - name: Verify native ARM64 runner
+        run: test "$(uname -m)" = "aarch64"
+
+      - name: Install native AnonCreds dependencies
+        working-directory: packages/anoncreds-agent-demo
+        run: npm install --no-audit --no-fund --package-lock=false --ignore-scripts=false
+
+      - name: Run benchmark and save JSON result
+        working-directory: packages/anoncreds-agent-demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node ./src/benchmark.mjs | tee benchmark-linux-arm64.json
+          node -e 'const r=require("./benchmark-linux-arm64.json"); if(r.architecture!=="arm64" && r.architecture!=="aarch64") process.exit(1)'
+
+      - name: Upload Linux ARM64 benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymesh-linux-arm64-benchmark
+          path: packages/anoncreds-agent-demo/benchmark-linux-arm64.json
+          if-no-files-found: error
+          retention-days: 14
