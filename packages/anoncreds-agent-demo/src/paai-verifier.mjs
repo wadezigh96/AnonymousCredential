@@ -1,179 +1,43 @@
-import { AnoncredsError, Presentation, PresentationRequest } from "@hyperledger/anoncreds-nodejs";
-import { extractCredentialAgentPublicKey } from "./agent-key-binding.mjs";
-import { AgentAuthorizationRuntime } from "./agent-runtime.mjs";
-import { CRED_DEF_ID, SCHEMA_ID } from "./index.mjs";
-
-const REQUIRED_SCHEMA_ATTRIBUTES = [
-  "agent_role",
-  "agent_subject",
-  "valid_until",
-  "capability_scope",
-  "agent_public_key",
-];
-
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+import {AnoncredsError,Presentation,PresentationRequest} from "@hyperledger/anoncreds-nodejs";
+import {extractCredentialAgentPublicKey} from "./agent-key-binding.mjs";
+import {AgentAuthorizationRuntime} from "./agent-runtime.mjs";
+import {CRED_DEF_ID,SCHEMA_ID} from "./index.mjs";
+const REQUIRED_SCHEMA_ATTRIBUTES=["agent_role","agent_subject","valid_until","capability_scope","agent_public_key"];
+function isRecord(v){return v!==null&&typeof v==="object"&&!Array.isArray(v);}
+function serializedConfig(v){if(!isRecord(v))return null;if(typeof v.toJson!=="function")return v;try{return v.toJson();}catch{return null;}}
+function verifierConfigurationError(schema,definition){
+  schema=serializedConfig(schema);definition=serializedConfig(definition);if(!isRecord(schema)||!isRecord(definition))return true;
+  if(schema.name!=="anonymesh-agent-authorization"||schema.version!=="1.0"||schema.issuerId!=="did:example:anonymesh:issuer"||
+    !Array.isArray(schema.attrNames)||schema.attrNames.length!==REQUIRED_SCHEMA_ATTRIBUTES.length||
+    schema.attrNames.some((n,i)=>n!==REQUIRED_SCHEMA_ATTRIBUTES[i]))return true;
+  return definition.schemaId!==SCHEMA_ID||definition.type!=="CL"||definition.tag!=="v1"||!isRecord(definition.value)||!isRecord(definition.value.primary);
 }
-
-function serializedConfig(value) {
-  if (!isRecord(value)) return null;
-  if (typeof value.toJson !== "function") return value;
-  try {
-    return value.toJson();
-  } catch {
-    return null;
-  }
+export function classifyVerificationError(error){
+  if(error instanceof AnoncredsError&&error.code===7&&typeof error.message==="string"&&error.message.startsWith("Proof rejected:"))return "ANONCREDS_PROOF_INVALID";
+  return error instanceof AnoncredsError?"ANONCREDS_NATIVE_ERROR":"ANONCREDS_INTERNAL_ERROR";
 }
-
-function verifierConfigurationError(verifierSchema, verifierCredentialDefinition) {
-  verifierSchema = serializedConfig(verifierSchema);
-  verifierCredentialDefinition = serializedConfig(verifierCredentialDefinition);
-  if (!isRecord(verifierSchema) || !isRecord(verifierCredentialDefinition)) return true;
-  if (
-    verifierSchema.name !== "anonymesh-agent-authorization" ||
-    verifierSchema.version !== "1.0" ||
-    verifierSchema.issuerId !== "did:example:anonymesh:issuer" ||
-    !Array.isArray(verifierSchema.attrNames) ||
-    verifierSchema.attrNames.length !== REQUIRED_SCHEMA_ATTRIBUTES.length ||
-    verifierSchema.attrNames.some((name, index) => name !== REQUIRED_SCHEMA_ATTRIBUTES[index])
-  ) return true;
-  return (
-    verifierCredentialDefinition.schemaId !== SCHEMA_ID ||
-    verifierCredentialDefinition.type !== "CL" ||
-    verifierCredentialDefinition.tag !== "v1" ||
-    !isRecord(verifierCredentialDefinition.value) ||
-    !isRecord(verifierCredentialDefinition.value.primary)
-  );
-}
-
-export function classifyVerificationError(error) {
-  // anoncreds-nodejs exposes native verification rejection as AnoncredsError
-  // code 7 with the stable "Proof rejected:" message prefix. Other native
-  // errors, including the package's code-100 initialization error, remain
-  // diagnosable as native failures.
-  if (
-    error instanceof AnoncredsError &&
-    error.code === 7 &&
-    typeof error.message === "string" &&
-    error.message.startsWith("Proof rejected:")
-  ) return "ANONCREDS_PROOF_INVALID";
-  return error instanceof AnoncredsError
-    ? "ANONCREDS_NATIVE_ERROR"
-    : "ANONCREDS_INTERNAL_ERROR";
-}
-
-/**
- * One authorization decision across AnonCreds, Ed25519 PoP and delegated
- * capability verification. The challenge ledger only consumes after the
- * callback succeeds; the runtime consumes replay/quota state after all
- * cryptographic and policy checks have passed.
- */
-export function verifyAndAuthorizeAgentRequest({
-  nonce,
-  presentationJson,
-  capabilityChain,
-  requestProof,
-  trustedRootIssuer,
-  expected,
-  challengeLedger,
-  verifierSchema,
-  verifierCredentialDefinition,
-  runtime = new AgentAuthorizationRuntime(),
-  now = Math.floor(Date.now() / 1000),
-}) {
-  if (typeof nonce !== "string" || !nonce || !challengeLedger || !presentationJson) {
-    return Object.freeze({ authorized: false, code: "INVALID_VERIFICATION_INPUT" });
-  }
-  if (verifierConfigurationError(verifierSchema, verifierCredentialDefinition)) {
-    return Object.freeze({ authorized: false, code: "INVALID_VERIFIER_CONFIGURATION" });
-  }
-
-  const challenge = challengeLedger.get(nonce);
-  if (!challenge) return Object.freeze({ authorized: false, code: "UNKNOWN_CHALLENGE" });
-  if (challenge.consumed || challenge.expiresAt <= now) {
-    return Object.freeze({ authorized: false, code: "CHALLENGE_EXPIRED_OR_CONSUMED" });
-  }
-
-  let authorization = null;
-  let failureCode = null;
-  const valid = challengeLedger.verifyAndConsume({
-    nonce: challenge.nonce,
-    audience: challenge.audience,
-    task: challenge.task,
-    capabilityDigest: challenge.capabilityDigest,
-    now,
-    verify: trustedRequestJson => {
-      let presentation;
-      try {
-        presentation = Presentation.fromJson(presentationJson);
-      } catch {
-        failureCode = "ANONCREDS_PROOF_INVALID";
-        return false;
-      }
-
-      let anonCredsValid = false;
-      try {
-        anonCredsValid = presentation.verify({
-          presentationRequest: PresentationRequest.fromJson(trustedRequestJson),
-          schemas: { [SCHEMA_ID]: verifierSchema },
-          credentialDefinitions: {
-            [CRED_DEF_ID]: verifierCredentialDefinition,
-          },
-        });
-      } catch (error) {
-        // Do not turn native initialization or unexpected internal failures
-        // into a proof verdict. Return only a safe code; retain details in the
-        // caller's diagnostic context rather than exposing credential data.
-        failureCode = classifyVerificationError(error);
-        return false;
-      }
-      if (!anonCredsValid) {
-        failureCode = "ANONCREDS_PROOF_INVALID";
-        return false;
-      }
-
-      let credentialKey;
-      try {
-        credentialKey = extractCredentialAgentPublicKey(presentationJson);
-      } catch (error) {
-        failureCode = error.code ?? "CREDENTIAL_KEY_INVALID";
-        return false;
-      }
-
-      // The credential remains bound to the original holder at the root.
-      // A delegated leaf may use another key, which must prove possession.
-      if (
-        !Array.isArray(capabilityChain) ||
-        capabilityChain.length === 0 ||
-        capabilityChain[0]?.delegateKey !== credentialKey
-      ) {
-        failureCode = "CREDENTIAL_CAPABILITY_KEY_MISMATCH";
-        return false;
-      }
-      const delegatedKey = capabilityChain[capabilityChain.length - 1]?.delegateKey;
-
-      try {
-        authorization = runtime.authorizeAndConsume({
-          chain: capabilityChain,
-          trustedRootIssuer,
-          challenge,
-          proof: requestProof,
-          expected: { ...expected, delegateKey: delegatedKey },
-          now,
-        });
+export function verifyAndAuthorizeAgentRequest({nonce,presentationJson,capabilityChain,requestProof,trustedRootIssuer,expected,challengeLedger,verifierSchema,verifierCredentialDefinition,runtime=new AgentAuthorizationRuntime(),now=Math.floor(Date.now()/1000)}){
+  if(typeof nonce!=="string"||!nonce||!challengeLedger||!presentationJson)return Object.freeze({authorized:false,code:"INVALID_VERIFICATION_INPUT"});
+  if(verifierConfigurationError(verifierSchema,verifierCredentialDefinition))return Object.freeze({authorized:false,code:"INVALID_VERIFIER_CONFIGURATION"});
+  const challenge=challengeLedger.get(nonce);if(!challenge)return Object.freeze({authorized:false,code:"UNKNOWN_CHALLENGE"});
+  if(challenge.consumed||challenge.expiresAt<=now)return Object.freeze({authorized:false,code:"CHALLENGE_EXPIRED_OR_CONSUMED"});
+  let authorization=null,failureCode=null;
+  const valid=challengeLedger.verifyAndConsume({nonce:challenge.nonce,audience:challenge.audience,task:challenge.task,capabilityDigest:challenge.capabilityDigest,now,
+    verify:trustedRequestJson=>{
+      let presentation;try{presentation=Presentation.fromJson(presentationJson);}catch{failureCode="ANONCREDS_PROOF_INVALID";return false;}
+      let anonCredsValid=false;
+      try{anonCredsValid=presentation.verify({presentationRequest:PresentationRequest.fromJson(trustedRequestJson),schemas:{[SCHEMA_ID]:verifierSchema},credentialDefinitions:{[CRED_DEF_ID]:verifierCredentialDefinition}});}
+      catch(error){failureCode=classifyVerificationError(error);return false;}
+      if(!anonCredsValid){failureCode="ANONCREDS_PROOF_INVALID";return false;}
+      let credentialKey;try{credentialKey=extractCredentialAgentPublicKey(presentationJson);}catch(error){failureCode=error.code??"CREDENTIAL_KEY_INVALID";return false;}
+      if(!Array.isArray(capabilityChain)||!capabilityChain.length||capabilityChain[0]?.delegateKey!==credentialKey){failureCode="CREDENTIAL_CAPABILITY_KEY_MISMATCH";return false;}
+      try{
+        authorization=runtime.authorizeAndConsume({chain:capabilityChain,trustedRootIssuer,challenge,proof:requestProof,
+          expected:{...expected,delegateKey:capabilityChain.at(-1)?.delegateKey},now,
+          withinTransaction:challengeLedger.atomicAuthorization===true});
         return true;
-      } catch (error) {
-        failureCode = error.code ?? "CAPABILITY_AUTHORIZATION_FAILED";
-        return false;
-      }
-    },
-  });
-
-  if (!valid) {
-    return Object.freeze({
-      authorized: false,
-      code: failureCode ?? "CHALLENGE_VERIFICATION_FAILED",
-    });
-  }
-  return Object.freeze({ ...authorization, authorized: true });
+      }catch(error){failureCode=error.code??"CAPABILITY_AUTHORIZATION_FAILED";return false;}
+    }});
+  if(!valid)return Object.freeze({authorized:false,code:failureCode??"CHALLENGE_VERIFICATION_FAILED"});
+  return Object.freeze({...authorization,authorized:true});
 }

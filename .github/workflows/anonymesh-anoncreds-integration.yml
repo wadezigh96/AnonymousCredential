@@ -34,6 +34,10 @@ jobs:
         working-directory: packages/anoncreds-agent-demo
         run: npm install --no-audit --no-fund --package-lock=false --ignore-scripts=false
 
+      - name: Run SQLite atomic rollback test
+        working-directory: packages/anoncreds-agent-demo
+        run: node --test test/sqlite-atomic-authorization.test.mjs
+
       - name: Run multi-process authorization integration test
         working-directory: packages/anoncreds-agent-demo
         run: npm test -- --test-name-pattern="separate issuer, holder and verifier processes"

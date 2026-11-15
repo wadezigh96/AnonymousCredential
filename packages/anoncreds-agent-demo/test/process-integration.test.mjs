@@ -71,8 +71,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const verifierTwoUrl = "http://127.0.0.1:" + verifierTwoPort;
   const children = [];
   const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
-  const authorizationDb = join(stateDirectory, "authorization.sqlite");
-  const challengeDb = join(stateDirectory, "challenges.sqlite");
+  const stateDb = join(stateDirectory, "verifier-state.sqlite");
 
   try {
     const issuer = start("issuer", issuerPort);
@@ -86,7 +85,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holderTwo);
     await waitHealthy(holderTwoUrl, holderTwo);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb, CHALLENGE_DB: challengeDb };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
