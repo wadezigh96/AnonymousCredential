@@ -126,6 +126,36 @@ test("rejects an expired capability", () => {
   );
 });
 
+test("rejects delegated audience, action, and resource escalation even when the child is correctly signed", () => {
+  const f = fixture();
+  const escalations = [
+    { field: "audience", value: "agent-c.example", code: "AUDIENCE_ESCALATION" },
+    { field: "action", value: "transfer:funds", code: "ACTION_ESCALATION" },
+    { field: "resource", value: "wallet:all", code: "RESOURCE_ESCALATION" },
+  ];
+
+  for (const escalation of escalations) {
+    const child = makeCapability({
+      issuer: f.agentA,
+      delegate: f.agentB,
+      parentDigest: capabilityDigest(f.chain[0]),
+      expiresAt: now + 200,
+      quota: 5,
+      [escalation.field]: escalation.value,
+    });
+    assert.throws(
+      () => verifyCapabilityChain({
+        chain: [f.chain[0], child],
+        trustedRootIssuer: f.rootIssuer.publicKey,
+        expected,
+        now,
+      }),
+      error => error.code === escalation.code,
+      escalation.field + " escalation must be rejected",
+    );
+  }
+});
+
 test("rejects expiry and quota escalation", () => {
   const f = fixture();
   const expiryEscalation = makeCapability({
