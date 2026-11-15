@@ -1,6 +1,6 @@
 # ANONYMESH NEAR Issuer Registry Verifier Integration
 
-**Status:** implemented and locally verified on `feat/anonymesh-private-agent-identity`; not deployed.
+**Status:** baseline integration implemented on `feat/anonymesh-private-agent-identity`; not deployed. Follow-up hardening is a separate code revision from the audited SHA below and is not covered by the six CI runs recorded here.
 
 ## Architecture and data flow
 
@@ -22,7 +22,13 @@ The contract format is `ed25519:<Base58>`, using the NEAR alphabet and exactly 3
 
 The client sends a finality `query` request to the configured `NEAR_RPC_URL` with `request_type: call_function`, the configured `NEAR_REGISTRY_CONTRACT`, method `get_issuer`, and base64-encoded `{ "issuer_id": "..." }` arguments. It expects `result.result` to be a byte array containing JSON with `public_key`, `key_version`, `schema_hash`, `active`, `status_epoch`, and `status_root`. The client has no transaction signer or mutation API.
 
-The client enforces a timeout and response-size limit, validates account IDs and all fields, and supports a bounded per-client cache. `NEAR_CACHE_TTL_MS` controls fresh-cache use; `NEAR_MAX_STALE_AGE_MS` is an explicit upper bound and is never used for inactive or unknown records. A conservative `0` TTL is recommended where immediate status changes matter.
+The client enforces a timeout and response-size limit, validates account IDs and all fields, and supports a bounded per-client cache. In the follow-up working tree, response bytes are counted while reading the body stream; the body is cancelled on an over-limit declared `Content-Length`, and the reader is cancelled as soon as actual bytes exceed the configured limit. `Content-Length` is an early rejection hint, not the enforcement mechanism. `NEAR_CACHE_TTL_MS` controls fresh-cache use. Stale fallback is limited to network errors, timeouts, and HTTP 408/429/5xx, and only while the cached record remains within `NEAR_MAX_STALE_AGE_MS` measured at fallback time. Malformed responses, unknown/inactive issuers, and fresh key/schema/status mismatches are denied rather than hidden by stale data. A conservative `0` TTL is recommended where immediate status changes matter.
+
+## Trust assumptions and configuration bootstrap
+
+The verifier fetches the issuer's `/public` configuration once at startup. That response supplies the verifier schema and credential definition, trusted capability-root issuer, demo policy, and default issuer account/key-version/schema expectations. Environment values `NEAR_ISSUER_ACCOUNT_ID`, `NEAR_EXPECTED_KEY_VERSION`, and `NEAR_EXPECTED_SCHEMA_HASH` can override or pin those registry expectations, but are optional in the current role wiring. The registry-bound issuer key in the credential is compared with the registry record; this does not independently authenticate the `/public` schema, credential definition, capability root, or policy. Deployments must protect and trust the `/public` source and should externally pin expected values rather than assume registry mode establishes all verifier trust inputs.
+
+The client asks the configured RPC endpoint for `finality: final`, but trusts that endpoint's JSON-RPC response; it does not verify a NEAR state proof or block header locally. For `testnet` and `mainnet`, the client restricts the URL to the canonical NEAR RPC hostname; `local` accepts an explicitly configured HTTP(S) endpoint for fixtures. No endpoint, contract, or live-chain state was validated in this integration. A production design requiring trust-minimized reads would need independent state-proof/light-client verification or an explicitly accepted RPC-provider trust model.
 
 ## Environment variables
 
@@ -32,9 +38,9 @@ The client enforces a timeout and response-size limit, validates account IDs and
 | `NEAR_NETWORK` | `local`, `testnet`, or `mainnet`; `local` is intended for deterministic fixtures. |
 | `NEAR_REGISTRY_CONTRACT` | Explicit registry contract account; never hardcoded by the client. |
 | `NEAR_RPC_URL` | Read-only JSON-RPC endpoint. |
-| `NEAR_ISSUER_ACCOUNT_ID` | Issuer account queried from the registry. |
-| `NEAR_EXPECTED_KEY_VERSION` | Required positive key version. |
-| `NEAR_EXPECTED_SCHEMA_HASH` | Required lowercase 64-character schema hash. |
+| `NEAR_ISSUER_ACCOUNT_ID` | Optional issuer-account override/pin; otherwise sourced from `/public`. |
+| `NEAR_EXPECTED_KEY_VERSION` | Optional positive key-version pin; otherwise uses `/public.issuerKeyVersion`, falling back to `1` if absent. |
+| `NEAR_EXPECTED_SCHEMA_HASH` | Optional lowercase 64-character schema-hash pin; otherwise sourced from `/public`. |
 | `NEAR_EXPECTED_STATUS_EPOCH` | Optional minimum accepted status epoch. |
 | `NEAR_CACHE_TTL_MS` | Fresh cache TTL; default `0`. |
 | `NEAR_MAX_STALE_AGE_MS` | Maximum bounded stale age; default `0`. |
@@ -46,18 +52,24 @@ The client enforces a timeout and response-size limit, validates account IDs and
 | Condition | Decision |
 |---|---|
 | Missing/incomplete registry configuration in required mode | Deny / startup configuration error |
-| RPC timeout, HTTP error, network error, malformed JSON or oversized response | Deny |
-| Unknown issuer or incomplete record | Deny |
+| No usable cache and RPC timeout/network failure or HTTP 408/429/5xx | Deny |
+| Eligible transient availability failure and a cached record within the configured stale-age bound | Use the previously validated record; age is checked when fallback occurs |
+| HTTP 4xx other than 408/429, malformed JSON/RPC/result, incomplete record, or oversized body | Deny; do not use stale cache |
+| Unknown issuer or inactive issuer | Deny; do not use stale cache |
 | Invalid account, key prefix, Base58, key length, hash, version, or status epoch | Deny |
-| Inactive issuer | Deny |
-| Credential-bound issuer key mismatch | Deny |
-| Key-version or schema-hash mismatch | Deny |
-| Status epoch below configured minimum or cache beyond maximum stale age | Deny |
+| Credential-bound issuer key mismatch, key-version/schema-hash mismatch, or status epoch below configured minimum | Deny; do not use stale cache to mask the fresh record |
+| Cache exceeds the configured maximum stale age | Deny |
 | Valid active record plus valid existing proof/capability checks | Continue to authorization |
 
 The registry `status_root` remains an opaque commitment. This integration does not verify revocation or non-revocation witnesses and makes no revocation-complete claim.
 
+## Follow-up local verification
+
+The follow-up changes add tests for fresh key-version/schema mismatches, stale-age expiry during a failing request, transient versus non-transient HTTP status handling, missing/understated `Content-Length`, early cancellation for an over-limit declared `Content-Length`, and a process-level HTTP 503 followed by a retry of the same challenge and proof. The full local `npm test` run from `packages/anoncreds-agent-demo` passed 86 tests (0 failed, 0 skipped, 0 todo) on 2026-11-16. The 81-test statement below is the historical audited-baseline result; the 86-test result is local evidence for these follow-up changes only, not CI evidence for them or live NEAR evidence.
+
 ## Test and CI evidence
+
+The following 81-test statement is historical evidence for the audited baseline, not the later local follow-up working tree result recorded above.
 
 **Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test`, run from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and the local execution was not rerun here.
 

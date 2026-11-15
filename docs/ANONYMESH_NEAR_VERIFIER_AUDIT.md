@@ -18,14 +18,20 @@ The Rust contract at `contracts/near/issuer-registry` stores public issuer metad
 
 The Android app is explicitly a single-process native AnonCreds proof smoke test. It is not a separate-role wallet/verifier integration and must not be represented as one.
 
-## Confirmed defects/gaps
+## Audit findings at the audited HEAD
 
-1. The NEAR contract is not deployed or live-tested; all Node registry evidence uses deterministic local RPC mocks.
-2. The opaque `status_root` is validated as a hash-shaped commitment but is not a revocation or non-revocation proof.
-3. The issuer capability-root key remains an in-memory demo key; only the registry-bound issuer Ed25519 key has the persisted lifecycle needed by registry mode.
-4. Historical documentation and workflow evidence must remain tied to their exact commit and must not be presented as evidence for later changes.
+1. **High — No live-chain verification.** The contract was not deployed or queried on NEAR. Node registry integration evidence uses a deterministic local JSON-RPC mock; successful mock tests and a Wasm build do not establish deployed-contract compatibility or live RPC correctness.
+2. **High — `status_root` is not revocation evidence.** The contract and client validate a hash-shaped opaque commitment and an optional minimum status epoch. No accumulator, revocation witness, or non-revocation proof is checked by this integration.
+3. **High — RPC and verifier-configuration trust are implicit.** The verifier fetches `/public` once at startup and uses it for schema, credential definition, trusted capability-root key, policy, and defaults for issuer account/key-version/schema expectations (`packages/anoncreds-agent-demo/src/roles/verifier.mjs`). The NEAR client requests `finality: final` from the configured RPC and consumes the returned JSON-RPC bytes; it does not independently verify a NEAR state proof or block header. The `/public` source and RPC provider are therefore trust dependencies, not cryptographically authenticated inputs in this design.
+4. **High — Stale cache could mask fresh semantic changes.** At the audited HEAD, stale fallback could return a cached record after most validation failures, including key-version or schema mismatch, and measured age using the timestamp captured before the network request. The follow-up working-tree changes described below restrict fallback to transient availability errors and evaluate age when fallback occurs.
+5. **Moderate — Response-size check occurred after full buffering.** At the audited HEAD, the client called `arrayBuffer()` and only then checked the body size. A missing or understated `Content-Length` could therefore cause the full response to be buffered before rejection. Follow-up working-tree changes enforce the limit while streaming.
+6. **Moderate — Centralized governance and demo key lifecycle.** Contract mutations are controlled by one owner account, without multisig or production governance. The issuer capability-root key remains an in-memory demo key; registry-bound issuer Ed25519 key persistence does not solve that separate trust-root lifecycle gap.
+
+Historical SHA and workflow evidence are evidence-handling controls, not verifier defects; all CI claims in this audit remain tied to the exact audited HEAD above.
 
 ## Test and CI evidence
+
+The following 81-test statement is historical evidence for the audited baseline, not the later local follow-up working tree result recorded below.
 
 **Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test`, run from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and that local execution was not rerun here.
 
@@ -44,18 +50,20 @@ The six verified GitHub Actions runs are:
 
 GitHub run metadata independently confirms for all six: `head_branch = feat/anonymesh-private-agent-identity`, `head_sha = 8857ba2e91a781efe3792ef17230b4ee4ad6c31c`, `status = completed`, `conclusion = success`, and `event = workflow_dispatch`. These Rust/WASM and Android checks are GitHub-hosted evidence, not local test executions. Workflow success does not establish live-chain correctness or production readiness.
 
-Local Cargo/Android commands were not run in this documentation-only task; no local Cargo or Android result is represented as a pass.
+The original documentation-only reconciliation did not run local Cargo or Android commands, and this follow-up did not run them either; no local Cargo or Android result is represented as a pass.
 
-## Files expected to change
+## Follow-up hardening after the audited HEAD
 
-- `packages/anoncreds-agent-demo/src/near-issuer-registry.mjs` (strict read-only RPC client and validation)
-- `packages/anoncreds-agent-demo/src/near-key-format.mjs` (raw Ed25519 and `ed25519:` Base58 conversion)
-- `packages/anoncreds-agent-demo/src/issuer-key-store.mjs` and issuer role wiring (only if stable persisted issuer identity is compatible with current demo protocol)
-- `packages/anoncreds-agent-demo/src/paai-verifier.mjs` and verifier role wiring (registry-backed authorization gate)
-- focused Node tests for conversion, client failure modes, key lifecycle, and real verifier authorization
-- `.gitignore`/documentation only if required to protect the selected key-file convention
-- `docs/ANONYMESH_NEAR_VERIFIER_INTEGRATION.md` plus the four named readiness/security/architecture/demo docs
-- NEAR contract source/tests only if a demonstrated compatibility defect requires it
+The follow-up code changes add stale-cache eligibility/age checks, bounded streaming reads with body cancellation when declared or observed size exceeds the limit, semantic-mismatch regression coverage, and a process test that simulates a registry HTTP 503 then retries the same challenge and proof. These changes are not part of audited HEAD `8857ba2e91a781efe3792ef17230b4ee4ad6c31c` and are not covered by the six GitHub runs listed above. A separate local `npm test` result for these follow-up changes is recorded in the integration and deployment-readiness documents; it is not evidence of live NEAR behavior.
+
+## Implementation surface reviewed
+
+- `packages/anoncreds-agent-demo/src/near-issuer-registry.mjs` — read-only RPC client, record validation, cache, and bounded response handling.
+- `packages/anoncreds-agent-demo/src/near-key-format.mjs` — Ed25519 raw-key and `ed25519:` Base58 conversion.
+- `packages/anoncreds-agent-demo/src/issuer-key-store.mjs` and issuer role wiring — persisted registry-bound issuer key lifecycle.
+- `packages/anoncreds-agent-demo/src/paai-verifier.mjs` and verifier role wiring — registry-backed authorization gate and trust bootstrap.
+- Node tests for conversion, client failure modes, key lifecycle, verifier authorization, and mocked process integration.
+- `contracts/near/issuer-registry/src/lib.rs` and contract tests — public metadata registry and owner-only mutation rules.
 
 ## Risks and compatibility constraints
 

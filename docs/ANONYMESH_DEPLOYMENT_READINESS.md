@@ -6,7 +6,7 @@
 **Audited CI evidence HEAD:** `8857ba2e91a781efe3792ef17230b4ee4ad6c31c`
 **Canonical commit:** https://github.com/wadezigh96/anonymesh/commit/8857ba2e91a781efe3792ef17230b4ee4ad6c31c
 **Deployment decision:** **TESTNET NOT READY**
-**Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
+**Scope:** CI evidence review at the audited SHA plus a separately labeled local working-tree follow-up. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
@@ -27,9 +27,15 @@ All six run records below were independently checked through GitHub run metadata
 | ANONYMESH agent authentication | `completed` / `success` | [Run 43737655482](https://github.com/wadezigh96/anonymesh/actions/runs/43737655482) |
 | ANONYMESH NEAR contract | `completed` / `success` | [Run 43737658221](https://github.com/wadezigh96/anonymesh/actions/runs/43737658221) |
 
+The following 81-test statement is the historical audited-baseline result; the later working-tree result is reported separately below and in the integration document.
+
 **Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test` from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and the local execution was not rerun here.
 
 Separately, the inspected GitHub Actions log for [run 43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575), job `anoncreds-native-demo`, step `Run issuer-holder-verifier and adversarial tests`, records `npm test --prefix packages/anoncreds-agent-demo` and reports `# tests 81`, `# pass 81`, `# fail 0`, `# skipped 0`, and `# todo 0`. This specific count is supported by inspected job output, not inferred from the run metadata.
+
+### Follow-up working-tree changes (not covered by the six runs)
+
+After the audited SHA, local follow-up changes tightened stale-cache fallback, enforced the RPC body-size limit while streaming (including early cancellation when `Content-Length` alone exceeds the limit), and added cache-regression and mocked process-failure/retry tests. The full `npm test` run from `packages/anoncreds-agent-demo` passed 86 tests (0 failed, 0 skipped, 0 todo) on 2026-11-16. This is local evidence for the follow-up changes only, not CI evidence for their commit and not live-chain evidence. Review fresh CI for the follow-up commit before relying on it.
 
 ### Artifact and live-chain evidence limits
 

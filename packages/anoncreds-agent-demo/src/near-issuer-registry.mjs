@@ -5,6 +5,7 @@ const NETWORKS = Object.freeze({
   testnet: /^https:\/\/rpc\.testnet\.near\.org\/?$/,
   mainnet: /^https:\/\/rpc\.mainnet\.near\.org\/?$/,
 });
+const STALE_CACHE_ELIGIBLE_ERRORS = new Set(["RPC_HTTP_UNAVAILABLE", "RPC_TIMEOUT", "RPC_NETWORK_ERROR"]);
 const ACCOUNT = /^(?!.*\.\.)(?:[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
 const HASH = /^[0-9a-f]{64}$/;
 
@@ -14,13 +15,39 @@ export class IssuerRegistryUnavailableError extends Error {
 function fail(code, cause) { throw new IssuerRegistryUnavailableError(code, cause); }
 function account(value, code) { if (typeof value !== "string" || value.length > 64 || !ACCOUNT.test(value)) fail(code); return value; }
 function hash(value, code) { if (typeof value !== "string" || !HASH.test(value)) fail(code); return value; }
-function boundedJson(response, maxBytes) {
-  const length = Number(response.headers?.get?.("content-length") ?? 0);
-  if (Number.isSafeInteger(length) && length > maxBytes) fail("RPC_RESPONSE_TOO_LARGE");
-  return response.arrayBuffer().then(buffer => {
-    if (buffer.byteLength > maxBytes) fail("RPC_RESPONSE_TOO_LARGE");
-    try { return JSON.parse(Buffer.from(buffer).toString("utf8")); } catch (error) { fail("RPC_MALFORMED_JSON", error); }
-  });
+async function boundedJson(response, maxBytes) {
+  const lengthHeader = response.headers?.get?.("content-length");
+  const declaredLength = lengthHeader === null || lengthHeader === undefined ? null : Number(lengthHeader);
+  if (Number.isSafeInteger(declaredLength) && declaredLength > maxBytes) {
+    try {
+      const cancellation = response.body?.cancel?.();
+      if (cancellation && typeof cancellation.catch === "function") void cancellation.catch(() => {});
+    } catch {}
+    fail("RPC_RESPONSE_TOO_LARGE");
+  }
+  if (!response.body || typeof response.body.getReader !== "function") fail("RPC_MALFORMED_RESPONSE");
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) fail("RPC_MALFORMED_RESPONSE");
+      if (totalBytes + value.byteLength > maxBytes) {
+        try { await reader.cancel(); } catch {}
+        fail("RPC_RESPONSE_TOO_LARGE");
+      }
+      totalBytes += value.byteLength;
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    try { reader.releaseLock(); } catch {}
+  }
+
+  try { return JSON.parse(Buffer.concat(chunks, totalBytes).toString("utf8")); }
+  catch (error) { fail("RPC_MALFORMED_JSON", error); }
 }
 function validateRecord(raw, expected) {
   if (raw === null) fail("UNKNOWN_ISSUER");
@@ -67,7 +94,11 @@ export function createNearIssuerRegistryClient({
     try {
       const args = Buffer.from(JSON.stringify({ issuer_id: issuerAccount }), "utf8").toString("base64");
       const response = await fetchImpl(rpcUrl, { method: "POST", signal: controller.signal, headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "anonymesh-registry", method: "query", params: { request_type: "call_function", finality: "final", account_id: contractAccount, method_name: "get_issuer", args_base64: args } }) });
-      if (!response?.ok) fail("RPC_HTTP_ERROR");
+      if (!response?.ok) {
+        const status = response?.status;
+        if (status === 408 || status === 429 || (Number.isInteger(status) && status >= 500 && status <= 599)) fail("RPC_HTTP_UNAVAILABLE");
+        fail("RPC_HTTP_ERROR");
+      }
       const payload = await boundedJson(response, maxResponseBytes);
       const encoded = payload?.result?.result;
       if (!Array.isArray(encoded) || encoded.some(byte => !Number.isInteger(byte) || byte < 0 || byte > 255)) fail("RPC_MALFORMED_RESULT");
@@ -86,7 +117,8 @@ export function createNearIssuerRegistryClient({
       if (!forceRefresh && cache && timestamp - cache.fetchedAt <= cacheTtlMs) return cache.record;
       try { return await fetchRecord(); }
       catch (error) {
-        if (cache && maxStaleMs > 0 && timestamp - cache.fetchedAt <= maxStaleMs && error.code !== "INACTIVE_ISSUER" && error.code !== "UNKNOWN_ISSUER") return cache.record;
+        const staleAge = cache ? now() - cache.fetchedAt : Number.POSITIVE_INFINITY;
+        if (cache && STALE_CACHE_ELIGIBLE_ERRORS.has(error.code) && maxStaleMs > 0 && staleAge >= 0 && staleAge <= maxStaleMs) return cache.record;
         throw error;
       }
     },
