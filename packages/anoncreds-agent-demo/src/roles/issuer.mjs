@@ -10,9 +10,14 @@ const trustedRootIssuer = authorizationRoot.publicKey.export({ format: "jwk" }).
 const port = Number(process.env.PORT ?? 4311);
 const host = process.env.HOST ?? "127.0.0.1";
 const issueToken = requireApiToken("ISSUER_API_TOKEN");
+const rateLimitWindow = configuredRateLimit("RATE_LIMIT_WINDOW_MS", 60_000);
+const authenticationFailureRateLimit = createRateLimiter({
+  limit: configuredRateLimit("ISSUER_AUTH_FAILURE_RATE_LIMIT", 10),
+  windowMs: rateLimitWindow,
+});
 const issueRateLimit = createRateLimiter({
   limit: configuredRateLimit("ISSUER_ISSUE_RATE_LIMIT"),
-  windowMs: configuredRateLimit("RATE_LIMIT_WINDOW_MS", 60_000),
+  windowMs: rateLimitWindow,
 });
 
 // Deliberately narrow demo policy. This issuer is a local reference fixture,
@@ -40,7 +45,7 @@ const server = configureHttpServer(createServer(async (request, response) => {
       });
     }
     if (request.method === "POST" && url.pathname === "/issue") {
-      if (!requireBearerToken(request, response, issueToken)) return;
+      if (!requireBearerToken(request, response, issueToken, { failureRateLimiter: authenticationFailureRateLimit })) return;
       if (!issueRateLimit(request, response)) return;
       const body = await readJson(request);
       const now = Math.floor(Date.now() / 1000);

@@ -15,6 +15,7 @@ const defaultStateDb=join(homedir(),".local","state","anonymesh","authorization.
 const stateDb=process.env.STATE_DB??process.env.AUTHORIZATION_DB??defaultStateDb;
 const verifierToken=requireApiToken("VERIFIER_API_TOKEN");
 const rateLimitWindow=configuredRateLimit("RATE_LIMIT_WINDOW_MS",60_000);
+const authenticationFailureRateLimit=createRateLimiter({limit:configuredRateLimit("VERIFIER_AUTH_FAILURE_RATE_LIMIT",10),windowMs:rateLimitWindow});
 const challengeRateLimit=createRateLimiter({limit:configuredRateLimit("VERIFIER_CHALLENGE_RATE_LIMIT"),windowMs:rateLimitWindow});
 const verifyRateLimit=createRateLimiter({limit:configuredRateLimit("VERIFIER_VERIFY_RATE_LIMIT"),windowMs:rateLimitWindow});
 mkdirSync(dirname(stateDb),{recursive:true});
@@ -29,7 +30,7 @@ const server=configureHttpServer(createServer(async(request,response)=>{
   const url=new URL(request.url,"http://localhost");
   if(request.method==="GET"&&url.pathname==="/health")return sendJson(response,200,{role:"verifier",ready:true});
   if(request.method==="POST"&&url.pathname==="/challenge"){
-   if(!requireBearerToken(request,response,verifierToken))return;
+   if(!requireBearerToken(request,response,verifierToken,{failureRateLimiter:authenticationFailureRateLimit}))return;
    if(!challengeRateLimit(request,response))return;
    const body=await readJson(request);
    if(body.audience!==publicConfig.demoPolicy.audience||body.task!==publicConfig.demoPolicy.action||body.resource!==publicConfig.demoPolicy.resource)return sendJson(response,403,{error:"Requested scope is outside demo verifier policy"});
@@ -40,7 +41,7 @@ const server=configureHttpServer(createServer(async(request,response)=>{
    return sendJson(response,200,{...challenge,presentationRequest});
   }
   if(request.method==="POST"&&url.pathname==="/verify"){
-   if(!requireBearerToken(request,response,verifierToken))return;
+   if(!requireBearerToken(request,response,verifierToken,{failureRateLimiter:authenticationFailureRateLimit}))return;
    if(!verifyRateLimit(request,response))return;
    const body=await readJson(request);
    if(typeof body.nonce!=="string"||!body.presentation||!Array.isArray(body.capabilityChain)||!body.requestProof)return sendJson(response,400,{authorized:false,code:"INVALID_VERIFICATION_INPUT"});

@@ -8,7 +8,7 @@ export function requireApiToken(name) {
   return token;
 }
 
-export function requireBearerToken(request, response, expectedToken) {
+export function requireBearerToken(request, response, expectedToken, { failureRateLimiter } = {}) {
   const header = request.headers.authorization;
   const match = typeof header === "string" ? /^Bearer ([A-Za-z0-9._~+/-]+)$/.exec(header) : null;
   const supplied = match ? match[1] : "";
@@ -16,6 +16,11 @@ export function requireBearerToken(request, response, expectedToken) {
   const suppliedDigest = createHash("sha256").update(supplied, "utf8").digest();
   const valid = timingSafeEqual(expectedDigest, suppliedDigest);
   if (valid) return true;
+
+  // Authentication failures use a dedicated IP bucket, separate from the
+  // authenticated endpoint quota. Only socket.remoteAddress is trusted.
+  if (failureRateLimiter && !failureRateLimiter(request, response)) return false;
+  if (response.destroyed || response.writableEnded) return false;
   response.setHeader("www-authenticate", 'Bearer realm="anonymesh"');
   sendJson(response, 401, { error: "Unauthorized" });
   return false;
@@ -90,6 +95,11 @@ export async function readJson(request, maxBytes = 1024 * 1024) {
 }
 
 export function sendJson(response, status, value) {
+  if (response.destroyed || response.writableEnded) return false;
+  if (response.headersSent) {
+    response.destroy();
+    return false;
+  }
   const body = JSON.stringify(value);
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -97,6 +107,7 @@ export function sendJson(response, status, value) {
     "cache-control": "no-store",
   });
   response.end(body);
+  return true;
 }
 
 export function startRoleServer(server, { host = "127.0.0.1", port = 0 } = {}) {
@@ -110,17 +121,27 @@ export function startRoleServer(server, { host = "127.0.0.1", port = 0 } = {}) {
   });
 }
 
-export function configureHttpServer(server) {
-  server.headersTimeout = 10_000;
-  server.requestTimeout = 15_000;
-  server.keepAliveTimeout = 5_000;
-  server.maxRequestsPerSocket = 100;
+export function configureHttpServer(server, {
+  headersTimeout = 10_000,
+  requestTimeout = 15_000,
+  keepAliveTimeout = 5_000,
+  maxRequestsPerSocket = 100,
+} = {}) {
+  server.headersTimeout = headersTimeout;
+  server.requestTimeout = requestTimeout;
+  server.keepAliveTimeout = keepAliveTimeout;
+  server.maxRequestsPerSocket = maxRequestsPerSocket;
+  server.connectionsCheckingInterval = Math.max(1, Math.min(1_000, headersTimeout, requestTimeout));
   return server;
 }
 
 export function routeError(response, error) {
-  if (response.destroyed || response.writableEnded) return;
+  if (response.destroyed || response.writableEnded) return false;
+  if (response.headersSent) {
+    response.destroy();
+    return false;
+  }
   if (error instanceof HttpRequestError) return sendJson(response, error.statusCode, { error: error.message });
   if (error instanceof SyntaxError) return sendJson(response, 400, { error: "Invalid JSON request body" });
-  sendJson(response, 500, { error: "Internal server error" });
+  return sendJson(response, 500, { error: "Internal server error" });
 }

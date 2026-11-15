@@ -15,6 +15,10 @@ const host = process.env.HOST ?? "127.0.0.1";
 const holderToken = requireApiToken("HOLDER_API_TOKEN");
 const issuerToken = requireApiToken("ISSUER_API_TOKEN");
 const rateLimitWindow = configuredRateLimit("RATE_LIMIT_WINDOW_MS", 60_000);
+const authenticationFailureRateLimit = createRateLimiter({
+  limit: configuredRateLimit("HOLDER_AUTH_FAILURE_RATE_LIMIT", 10),
+  windowMs: rateLimitWindow,
+});
 const routeRateLimits = new Map([
   ["/enroll", createRateLimiter({ limit: configuredRateLimit("HOLDER_ENROLL_RATE_LIMIT"), windowMs: rateLimitWindow })],
   ["/delegate", createRateLimiter({ limit: configuredRateLimit("HOLDER_DELEGATE_RATE_LIMIT"), windowMs: rateLimitWindow })],
@@ -66,7 +70,7 @@ const server = configureHttpServer(createServer(async (request, response) => {
       return sendJson(response, 200, { role: "holder", ready: true, enrolled: Boolean(wallet) });
     }
     if (request.method === "POST" && ["/enroll", "/delegate", "/present"].includes(url.pathname)) {
-      if (!requireBearerToken(request, response, holderToken)) return;
+      if (!requireBearerToken(request, response, holderToken, { failureRateLimiter: authenticationFailureRateLimit })) return;
       if (!routeRateLimits.get(url.pathname)(request, response)) return;
     }
     if (request.method === "POST" && url.pathname === "/enroll") {

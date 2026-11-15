@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { createServer } from "node:net";
+import { createServer, connect } from "node:net";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,6 +24,21 @@ async function freePort() {
   const port = server.address().port;
   await new Promise(done => server.close(done));
   return port;
+}
+
+async function assertConfiguredHeaderTimeout(port) {
+  const socket = connect(port, "127.0.0.1");
+  await once(socket, "connect");
+  let response = "";
+  socket.setEncoding("utf8");
+  socket.on("data", chunk => { response += chunk; });
+  const closed = once(socket, "close");
+  socket.write("POST / HTTP/1.1\r\nHost: localhost\r\nX-Incomplete:");
+  await Promise.race([
+    closed,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("configured HTTP header timeout did not close the socket")), 13_000).unref()),
+  ]);
+  assert.match(response, /^(?:HTTP\/1\.[01] 408|$)/);
 }
 
 async function waitHealthy(url, child) {
@@ -105,6 +120,14 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(verifierTwo);
     await waitHealthy(verifierTwoUrl, verifierTwo);
 
+    // Exercise Node's actual configured headersTimeout on each independently
+    // running role server, rather than only asserting timeout property values.
+    await Promise.all([
+      assertConfiguredHeaderTimeout(issuerPort),
+      assertConfiguredHeaderTimeout(holderPort),
+      assertConfiguredHeaderTimeout(verifierPort),
+    ]);
+
     // Mutating endpoints reject missing and incorrect bearer credentials before
     // parsing bodies or performing issuance, wallet, challenge, or proof work.
     const protectedEndpoints = [
@@ -124,6 +147,12 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
         assert.equal(JSON.stringify(rejected.body).includes(expectedToken), false);
       }
     }
+    // The issuer's dedicated failure bucket saturates on the same client IP;
+    // a later legitimate holder issuance must still pass authentication.
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      assert.equal((await post(issuerUrl + "/issue", {}, "invalid-token")).status, 401);
+    }
+    assert.equal((await post(issuerUrl + "/issue", {}, "invalid-token")).status, 429);
     assert.equal((await fetch(issuerUrl + "/public")).status, 200);
     assert.equal((await fetch(verifierUrl + "/health")).status, 200);
 
