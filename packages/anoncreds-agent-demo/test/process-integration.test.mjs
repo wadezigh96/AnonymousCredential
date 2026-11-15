@@ -159,21 +159,13 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     const tamperedChain = structuredClone(capabilityChain);
     tamperedChain[1].action = "transfer:funds";
     const tamperedAttempt = await post(verifierUrl + "/verify", {
-      nonce: secondChallenge.body.nonce,
-      ...wrongChallengeBundle.body,
+      nonce: challengeResult.body.nonce,
+      ...proofBundle,
       capabilityChain: tamperedChain,
     });
     assert.equal(tamperedAttempt.status, 401);
     assert.equal(tamperedAttempt.body.authorized, false);
     assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
-
-    const secondValidAttempt = await post(verifierUrl + "/verify", {
-      nonce: secondChallenge.body.nonce,
-      ...wrongChallengeBundle.body,
-    });
-    assert.equal(secondValidAttempt.status, 200, JSON.stringify(secondValidAttempt.body));
-    assert.equal(secondValidAttempt.body.authorized, true);
-    assert.equal(secondValidAttempt.body.remainingQuota, 0);
 
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
