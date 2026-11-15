@@ -14,6 +14,23 @@ The official Node.js wrapper is useful for Linux CI, but its Linux ARM64 binary 
 - Physical-device execution of **Run native proof test** remains pending. Android 15 runtime and Android ARM64 performance are not yet verified.
 - Termux Node.js alone is not the supported Android integration target for the official React Native wrapper.
 
+## Install the CI APK and run the Android 15 smoke test
+
+The latest successful Android release build available during this validation is [workflow run #6](https://github.com/wadezigh96/anonymesh/actions/runs/43632737251). Its artifact is named `anonymesh-android-standalone-release` (about 40 MB) and is retained until 21 November 2026. The artifact archive SHA-256 reported by GitHub is:
+
+`0a11dcaa43b27992dde27b5fe6ed8e652a1c0162022d5b5729f7c8c981b1a1bb`
+
+On the physical Android 15 device:
+
+1. Open the workflow run above and download `anonymesh-android-standalone-release`.
+2. Extract the ZIP and locate `app-release.apk`.
+3. Install the APK using the Android file manager. If Android asks, allow installation from that file manager for this install.
+4. Open **ANONYMESH** and tap **Run native proof test**.
+5. Expected result: **PROOF VERIFIED**, `Private subject disclosed: false`, and role `weather_reader`.
+6. If it fails, capture the full error text and do not treat the CI build result as a device pass.
+
+This is only a native AnonCreds smoke test. It does not validate the full multi-process Issuer–Holder–Verifier service, durable wallet storage, capability authorization or NEAR integration.
+
 ## Device acceptance checklist
 
 Install the standalone APK produced by the `anonymesh-android-standalone-release` GitHub Actions artifact on a physical ARM64 Android device, launch ANONYMESH, and tap **Run native proof test**. Record:
