@@ -52,9 +52,9 @@ The intended authorization flow is:
 
 A credential proof is **not by itself proof that a particular action is authorized**. The authorization and policy-enforcement layer is a distinct part of the design and remains under development.
 
-## Target secure authorization flow (integration in progress)
+## Integrated local authorization demo (prototype; not production)
 
-The intended end-to-end flow connects anonymous credentials to agent-key possession and delegated authorization. This is the security design being implemented; **it is not yet an integrated or production-ready flow**.
+The local three-process demo now connects AnonCreds verification, issuer-attested agent-key binding, Ed25519 proof-of-possession, a signed capability, verifier challenge binding, replay checks and quota consumption. This is an executable integration prototype, **not a production-ready authorization service**.
 
 ```text
 Issuer
@@ -99,11 +99,11 @@ ANONYMESH therefore does not claim full unlinkability or resistance to all verif
 
 ### Implementation status of this flow
 
-The AnonCreds issuer-holder-verifier demo and the Ed25519 capability/authorization-runtime prototypes currently exist as separate implementation slices. The credential-to-agent-key binding and the complete proof-to-capability-to-action integration described above remain **in progress / not yet demonstrated end-to-end**. The diagram describes the target protocol behavior, not a completed testnet feature.
+The local HTTP integration now carries the issuer-created capability and holder proof into the verifier's unified gate. The verifier checks the AnonCreds presentation, checks that the revealed credential key matches the capability delegate, validates the Ed25519 request proof and capability chain, then consumes nonce and quota state. The demo returns an authorization decision; it does not execute a real external action. It uses one issuer-created root capability rather than demonstrating multi-agent delegation across separate network trust domains. The HTTP services are loopback-only test harnesses, not production endpoints.
 
 ## Current implementation status
 
-ANONYMESH is a platform-independent protocol and agent-identity architecture. The main runnable issuer-holder-verifier integration demo is implemented as three separate local Node.js processes in `packages/anoncreds-agent-demo`. The verifier checks an AnonCreds proof before consuming a nonce; invalid proofs leave the challenge available, while a valid proof consumes it exactly once in the verifier process. Linux CI covers this process boundary. Revocation, unlinkability analysis and independent cryptographic review remain pending.
+ANONYMESH is a platform-independent protocol and agent-identity architecture. The runnable local demo is implemented as three separate Node.js processes in `packages/anoncreds-agent-demo`. The unified verifier checks AnonCreds, credential-to-key binding, Ed25519 proof-of-possession and a signed delegated-capability chain before consuming nonce/quota state. The process integration test exercises invalid challenge binding, forged proof rejection, successful authorization, replay rejection and scope rejection. Revocation, distributed replay protection, unlinkability analysis and independent cryptographic review remain pending.
 
 ### Separate-process demo
 
@@ -127,7 +127,7 @@ For a reproducible full flow, run `npm test --prefix packages/anoncreds-agent-de
 
 ### Security behavior and limitations
 
-Nonce handling is synchronous in the verifier process: check pending/context/expiry, run native AnonCreds verification against the verifier-stored request, then mark consumed. A failed verification or thrown native error is rejected and does not consume the challenge. This in-memory ledger is single-process demo state; production requires durable, atomic storage (for example a transactional database with a compare-and-set/unique-consumption constraint), authentication, TLS and rate limits.
+The verifier checks the stored challenge and original presentation request, then validates AnonCreds, the revealed key binding, capability signature/scope and Ed25519 proof before consuming authorization quota. Failed checks do not consume the challenge or quota. The demo challenge ledger is in-memory; the SQLite authorization store defaults to `:memory:` unless `AUTHORIZATION_DB` is set. This remains a single-process test harness: production requires durable challenge state, multi-instance atomic replay protection, authenticated transport, TLS, rate limits, key rotation and operational monitoring.
 
 Agent A reveals only `agent_role`; the private subject and `valid_until` remain hidden, with validity enforced by an AnonCreds predicate. This is not a claim of absolute unlinkability or a full privacy-preserving revocation system.
 
@@ -163,8 +163,8 @@ Delegated capability verification and the preliminary NEAR issuer/status registr
 |---|---|
 | AnonCreds issuer-holder-verifier demo | Implemented as separate local Node processes; Linux CI tests pass |
 | Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
-| Ed25519 challenge-response | Prototype with CI tests; ordinary key-based authentication, not anonymous |
-| Delegated capability chain | Prototype verifier with CI tests; not yet enforced by a live agent runtime |
+| Ed25519 proof-of-possession | Integrated into local verifier decision path; ordinary key-based authentication, not anonymous |
+| Delegated capability + PoP | Integrated into the local verifier decision path; one root capability in demo, not production delegation |
 | NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
 | Unlinkable presentations | Not demonstrated |
 | Privacy-preserving revocation | Not implemented |
