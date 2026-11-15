@@ -89,10 +89,10 @@ export function createAgentRequestProof({ challenge, capabilityChain, privateKey
 }
 
 /**
- * In-process authorization gate for the demo runtime.
- * Signature/scope/replay/quota checks are synchronous, so state mutation is
- * atomic within one Node.js event loop. State is intentionally in-memory:
- * it is not durable or safe across multiple verifier processes.
+ * Authorization gate for the demo runtime.
+ * The default store is in-memory. Inject a durable transactional store when
+ * restart persistence is required; multi-process safety depends on that
+ * store's cross-connection transaction guarantees.
  */
 export class AgentAuthorizationRuntime {
   #store;
