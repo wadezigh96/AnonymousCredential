@@ -124,7 +124,7 @@ test("capability delegate must equal issuer-attested credential key", () => {
   const attackerKey = attacker.publicKey.export({ format: "jwk" }).x;
   const f = fixture({ capabilityDelegateKeyPair: attacker });
   const rejected = verifyAndAuthorizeAgentRequest({ ...f.args, runtime: f.runtime });
-  assert.deepEqual(rejected, { authorized: false, code: "DELEGATE_KEY_MISMATCH" });
+  assert.deepEqual(rejected, { authorized: false, code: "CREDENTIAL_CAPABILITY_KEY_MISMATCH" });
   assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
 });
 

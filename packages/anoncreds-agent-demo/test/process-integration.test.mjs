@@ -143,7 +143,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(validAttempt.body.authorized, true);
     assert.equal(validAttempt.body.action, policy.action);
     assert.equal(validAttempt.body.resource, policy.resource);
-    assert.equal(validAttempt.body.remainingQuota, policy.quota - 1);
+    // Delegation attenuates the root quota to one unit; consuming it leaves zero.
+    assert.equal(validAttempt.body.remainingQuota, 0);
 
     // Replaying the same challenge is denied.
     const replayAttempt = await post(verifierUrl + "/verify", {
