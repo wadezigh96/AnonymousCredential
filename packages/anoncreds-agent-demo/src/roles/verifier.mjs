@@ -3,11 +3,11 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
-  ChallengeLedger,
   makePresentationRequest,
 } from "../index.mjs";
 import { AgentAuthorizationRuntime } from "../agent-runtime.mjs";
 import { SqliteAuthorizationStore } from "../authorization-store.mjs";
+import { SqliteChallengeLedger } from "../sqlite-challenge-ledger.mjs";
 import { capabilityDigest } from "../capability.mjs";
 import { verifyAndAuthorizeAgentRequest } from "../paai-verifier.mjs";
 import { readJson, routeError, sendJson } from "./http.mjs";
@@ -15,12 +15,14 @@ import { readJson, routeError, sendJson } from "./http.mjs";
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
 const port = Number(process.env.PORT ?? 4313);
 const host = process.env.HOST ?? "127.0.0.1";
-const ledger = new ChallengeLedger();
-const resourceByNonce = new Map();
+
 const defaultAuthorizationDb = join(homedir(), ".local", "state", "anonymesh", "authorization.sqlite");
 const authorizationDb = process.env.AUTHORIZATION_DB ?? defaultAuthorizationDb;
+const challengeDb = process.env.CHALLENGE_DB ?? join(dirname(defaultAuthorizationDb), "challenges.sqlite");
 mkdirSync(dirname(authorizationDb), { recursive: true });
+mkdirSync(dirname(challengeDb), { recursive: true });
 const authorizationStore = new SqliteAuthorizationStore({ filename: authorizationDb });
+const ledger = new SqliteChallengeLedger({ filename: challengeDb });
 const runtime = new AgentAuthorizationRuntime({ store: authorizationStore });
 
 const publicResponse = await fetch(issuerUrl + "/public");
@@ -49,11 +51,11 @@ const server = createServer(async (request, response) => {
         audience: body.audience,
         task: body.task,
         capabilityDigest: digest,
+        resource: body.resource,
         ttlSeconds: body.ttlSeconds ?? 60,
       });
       const presentationRequest = makePresentationRequest(challenge).toJson();
       ledger.attachPresentationRequest(challenge.nonce, presentationRequest);
-      resourceByNonce.set(challenge.nonce, body.resource);
       return sendJson(response, 200, { ...challenge, presentationRequest });
     }
     if (request.method === "POST" && url.pathname === "/verify") {
@@ -64,8 +66,7 @@ const server = createServer(async (request, response) => {
       }
       const challenge = ledger.get(body.nonce);
       if (!challenge) return sendJson(response, 401, { authorized: false, code: "UNKNOWN_CHALLENGE" });
-      const resource = resourceByNonce.get(body.nonce);
-      if (!resource) return sendJson(response, 401, { authorized: false, code: "UNKNOWN_CHALLENGE_SCOPE" });
+      const resource = challenge.resource;
 
       const result = verifyAndAuthorizeAgentRequest({
         nonce: body.nonce,
@@ -83,7 +84,6 @@ const server = createServer(async (request, response) => {
         verifierCredentialDefinition: publicConfig.credentialDefinition,
         runtime,
       });
-      if (result.authorized) resourceByNonce.delete(body.nonce);
       return sendJson(response, result.authorized ? 200 : 401, result);
     }
     return sendJson(response, 404, { error: "Not found" });
@@ -93,3 +93,13 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => process.stdout.write(JSON.stringify({ role: "verifier", host, port }) + "\n"));
+
+function shutdown() {
+  server.close(() => {
+    ledger.close();
+    authorizationStore.close();
+    process.exit(0);
+  });
+}
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);
