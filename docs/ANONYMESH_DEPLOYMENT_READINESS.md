@@ -3,28 +3,28 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited HEAD:** `5aec6de6cb2766bd99f7f1f8177f5bf2b8bd6549`
-**Branch HEAD checked against GitHub:** no; local implementation commits are ahead of origin
+**Audited HEAD:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
+**Branch HEAD checked against GitHub:** exact match after push
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-Historical CI evidence on the prior audited commit includes six successful GitHub Actions workflow runs. Those runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build; they do not validate the two new local commits.
+The final branch head has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
 
 This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-The six historical runs below completed with conclusion `success` and exact `head_sha` `702731d3c3aa34b00048321c001fe4272fa9a1d7`.
+All six final runs below completed with conclusion `success` on the audited branch head.
 
 | Workflow | Result | Evidence |
 |---|---:|---|
-| ANONYMESH AnonCreds integration | PASS — 70 tests, 0 failures | [Run 43727035793](https://github.com/wadezigh96/anonymesh/actions/runs/43727035793) |
-| ANONYMESH AnonCreds process integration | PASS — 11 tests, 0 failures | [Run 43727035813](https://github.com/wadezigh96/anonymesh/actions/runs/43727035813) |
-| ANONYMESH agent authentication | PASS — 21 Rust tests, 0 failures | [Run 43727313583](https://github.com/wadezigh96/anonymesh/actions/runs/43727313583) |
-| ANONYMESH Linux ARM64 benchmark | PASS — native ARM64 runner and benchmark artifact uploaded | [Run 43727035797](https://github.com/wadezigh96/anonymesh/actions/runs/43727035797) |
-| ANONYMESH Android native proof smoke test | PASS — Gradle release build, embedded JS bundle verification, APK upload | [Run 43727318942](https://github.com/wadezigh96/anonymesh/actions/runs/43727318942) |
-| ANONYMESH NEAR contract | PASS — 21 Rust tests, Wasm release build | [Run 43727324756](https://github.com/wadezigh96/anonymesh/actions/runs/43727324756) |
+| ANONYMESH AnonCreds integration | PASS — native demo, adversarial tests, ARM64 benchmark job | [Run 43734056349](https://github.com/wadezigh96/anonymesh/actions/runs/43734056349) |
+| ANONYMESH AnonCreds process integration | PASS — SQLite rollback and multi-process authorization | [Run 43734056402](https://github.com/wadezigh96/anonymesh/actions/runs/43734056402) |
+| ANONYMESH agent authentication | PASS — Rust test job | [Run 43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180) |
+| ANONYMESH Linux ARM64 benchmark | PASS — native ARM64 runner and artifact upload | [Run 43734056425](https://github.com/wadezigh96/anonymesh/actions/runs/43734056425) |
+| ANONYMESH Android native proof smoke test | PASS — release APK, embedded JS verification, artifact upload | [Run 43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260) |
+| ANONYMESH NEAR contract | PASS — locked Rust tests and Wasm release build | [Run 43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625) |
 
 ### Android artifact
 
@@ -53,12 +53,12 @@ The six historical runs below completed with conclusion `success` and exact `hea
 
 | Component | Implemented evidence | Current status | Remaining gate |
 |---|---|---|---|
-| Node AnonCreds issuer/holder/verifier demo | Native Node wrapper, 70-test CI suite, separate-process integration suite | Demo CI PASS | Does not equal production service deployment |
+| Node AnonCreds issuer/holder/verifier demo | Native Node wrapper, final CI integration and separate-process workflow | Demo CI PASS | Does not equal production service deployment |
 | HTTP authentication and abuse controls | Bearer authentication, dedicated authentication-failure limiter, endpoint rate limits, body bounds, timeouts, sanitized errors | CI PASS | TLS, service identity, shared/distributed rate limiting, operational monitoring |
 | SQLite verifier state | Persistent challenge and authorization stores; owner-only DB file mode; restart/concurrency tests | CI PASS | Backups, retention/cleanup, crash recovery, multi-host/distributed DB validation |
 | Agent authentication | Rust Ed25519 challenge-response tests | CI PASS | Key lifecycle, integration with production agent runtime |
 | Delegated capabilities | Signature/scope/quota verification code and tests | Prototype / demo integration | Production policy engine, action receipts, retry/idempotency and external tool enforcement |
-| NEAR issuer registry + Node read path | Contract metadata plus strict Node `ed25519:` conversion, bounded read-only RPC client, credential-bound issuer key/version/schema checks, mocked-RPC process integration | Node integration PASS; chain not deployed; Rust rerun blocked locally by missing cargo | Pinned Rust/NEAR rerun, contract review, storage/governance review, testnet deployment approval |
+| NEAR issuer registry + Node read path | Contract metadata plus strict Node `ed25519:` conversion, bounded read-only RPC client, credential-bound issuer key/version/schema checks, mocked-RPC process integration | Node and NEAR CI PASS; chain not deployed | Contract review, storage/governance review, testnet deployment approval |
 | Android app | Expo compatibility, native prebuild, release APK and embedded JS bundle | Build PASS | Physical-device test of this exact APK, plus multi-role protocol and secure persistent wallet integration |
 | Privacy and revocation | Selective disclosure and hidden expiry predicate in demo | Partial demo | Unlinkability study, credential-to-agent-key binding, privacy-preserving revocation and non-revocation proof |
 
@@ -107,10 +107,10 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 
 ## 5. Safe next steps before a testnet deployment request
 
-1. Publish the two local commits and rerun CI on the final branch head, then reconcile any new workflow results with this evidence report.
+1. Preserve the final branch evidence and rerun CI after any future code change.
 2. Review contract storage economics, account funding, initialization arguments, owner account, gas/deposit requirements and emergency disable procedure.
-3. Rerun the pinned Rust agent-auth, NEAR contract, and WASM checks on an environment with cargo/rustup.
-4. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow; the local verifier path is integrated, but live RPC/deployed-contract evidence is still absent.
+3. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow; the verifier path is integrated, but live RPC/deployed-contract evidence is still absent.
+4. Re-run the final branch CI after any further code change; do not treat this evidence as immutable after new commits.
 5. Verify the exact APK on a physical Android device and capture the full APK SHA-256, device ABI and runtime output.
 6. Complete an independent security review of the remaining rate-limiter, storage, privacy and authorization boundaries.
 7. Prepare a transaction preflight containing network, signer, receiver, method, arguments, deposit, gas, expected state change and rollback/disable plan. Show it to the owner and wait for explicit approval.

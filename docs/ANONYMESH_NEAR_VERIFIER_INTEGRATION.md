@@ -67,7 +67,7 @@ From `packages/anoncreds-agent-demo`:
 - `node --test test/process-integration.test.mjs`: **1 passed, 0 failed**; registry required, local RPC mock, persisted issuer key, restart/replay/concurrency checks.
 - `npm test`: **80 passed, 0 failed, 0 skipped**.
 
-The Rust commands were attempted but could not execute in this sandbox because neither `cargo` nor `rustup` is installed. Android Gradle/ADB tooling is also not installed here, so no new Android build or device validation is claimed. Existing GitHub workflow links in prior readiness documentation are historical evidence and must not be treated as evidence for this final implementation until a workflow runs on the final commit.
+Rust/Cargo and Android Gradle/ADB were unavailable in this sandbox, but the final branch's manually dispatched GitHub workflows passed: agent-auth [43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180), Android [43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260), and NEAR contract/WASM [43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625). These are build/test results, not live-chain or physical-device protocol evidence.
 
 ## Security limitations and remaining blockers
 
@@ -75,4 +75,4 @@ The registry is a public metadata trust anchor, not an on-chain proof verifier. 
 
 No testnet or mainnet contract was deployed. No chain transaction or mutation was sent. No pull request or merge was created. Deployment readiness is **NOT READY** until the pinned Rust/NEAR and Android checks are rerun on the final commit, the contract/client compatibility is reviewed in the target environment, and an explicit testnet preflight is approved separately.
 
-**Final implementation commit SHA:** `5aec6de6cb2766bd99f7f1f8177f5bf2b8bd6549`. Documentation changes are committed separately after this implementation commit.
+**Final branch commit SHA:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`.
