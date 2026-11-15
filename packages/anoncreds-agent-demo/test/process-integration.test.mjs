@@ -62,9 +62,11 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const issuerPort = await freePort();
   const holderPort = await freePort();
   const verifierPort = await freePort();
+  const verifierTwoPort = await freePort();
   const issuerUrl = "http://127.0.0.1:" + issuerPort;
   const holderUrl = "http://127.0.0.1:" + holderPort;
   const verifierUrl = "http://127.0.0.1:" + verifierPort;
+  const verifierTwoUrl = "http://127.0.0.1:" + verifierTwoPort;
   const children = [];
   const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
   const authorizationDb = join(stateDirectory, "authorization.sqlite");
@@ -83,6 +85,9 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
+    const verifierTwo = start("verifier", verifierTwoPort, verifierEnvironment);
+    children.push(verifierTwo);
+    await waitHealthy(verifierTwoUrl, verifierTwo);
 
     const enrollment = await post(holderUrl + "/enroll", {});
     assert.equal(enrollment.status, 200, JSON.stringify(enrollment.body));
@@ -188,6 +193,34 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(replayAfterRestart.status, 401);
     assert.equal(replayAfterRestart.body.authorized, false);
     assert.equal(replayAfterRestart.body.code, "CHALLENGE_EXPIRED_OR_CONSUMED");
+
+    // Two independent verifier processes share the same SQLite files.
+    // Simultaneous submissions of one fresh challenge must authorize exactly once.
+    const secondDelegation = await post(holderUrl + "/delegate", {});
+    assert.equal(secondDelegation.status, 200, JSON.stringify(secondDelegation.body));
+    const concurrentChain = secondDelegation.body.capabilityChain;
+    const concurrentChallenge = await post(verifierUrl + "/challenge", {
+      ...challengeInput,
+      capabilityChain: concurrentChain,
+    });
+    assert.equal(concurrentChallenge.status, 200, JSON.stringify(concurrentChallenge.body));
+    const concurrentPresentation = await post(holderUrl + "/present", {
+      challenge: concurrentChallenge.body,
+      presentationRequest: concurrentChallenge.body.presentationRequest,
+    });
+    assert.equal(concurrentPresentation.status, 200, JSON.stringify(concurrentPresentation.body));
+    const concurrentBody = {
+      nonce: concurrentChallenge.body.nonce,
+      ...concurrentPresentation.body,
+    };
+    const concurrentResults = await Promise.all([
+      post(verifierUrl + "/verify", concurrentBody),
+      post(verifierTwoUrl + "/verify", concurrentBody),
+    ]);
+    assert.equal(concurrentResults.filter(result => result.status === 200 && result.body.authorized).length, 1,
+      JSON.stringify(concurrentResults));
+    assert.equal(concurrentResults.filter(result => result.status === 401 && !result.body.authorized).length, 1,
+      JSON.stringify(concurrentResults));
 
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
