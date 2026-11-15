@@ -31,6 +31,7 @@ export class SqliteAuthorizationStore {
     this.#db.exec(`
       PRAGMA journal_mode = WAL;
       PRAGMA synchronous = FULL;
+      PRAGMA busy_timeout = 5000;
       CREATE TABLE IF NOT EXISTS consumed_nonces (
         nonce TEXT PRIMARY KEY, capability_digest TEXT NOT NULL, consumed_at INTEGER NOT NULL
       );
