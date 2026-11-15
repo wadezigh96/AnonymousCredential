@@ -34,7 +34,7 @@ export class SqliteChallengeLedger {
   }
 
   issue({ audience, task, capabilityDigest, resource, now = Math.floor(Date.now() / 1000), ttlSeconds = 60 }) {
-    if (!audience || !task || !capabilityDigest || typeof resource !== "string" || resource.length === 0 || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
+    if (!audience || !task || !capabilityDigest || typeof resource !== "string" || resource.length === 0 || !Number.isInteger(ttlSeconds) || ttlSeconds < 1 || ttlSeconds > 300) {
       throw new Error("Invalid challenge parameters");
     }
     const nonce = Nonce.generate();
