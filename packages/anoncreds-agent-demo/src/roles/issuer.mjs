@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { generateKeyPairSync } from "node:crypto";
 import { createIssuerSetup, issueCredentialForRequest } from "../index.mjs";
 import { signCapability } from "../capability.mjs";
-import { configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
+import { configureHttpServer, configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 
 const config = createIssuerSetup();
 const authorizationRoot = generateKeyPairSync("ed25519");
@@ -24,7 +24,7 @@ const DEMO_POLICY = Object.freeze({
   quota: 2,
 });
 
-const server = createServer(async (request, response) => {
+const server = configureHttpServer(createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
@@ -67,6 +67,6 @@ const server = createServer(async (request, response) => {
   } catch (error) {
     return routeError(response, error);
   }
-});
+}));
 
 server.listen(port, host, () => process.stdout.write(JSON.stringify({ role: "issuer", host, port }) + "\n"));

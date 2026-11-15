@@ -64,16 +64,29 @@ export function configuredRateLimit(name, fallback = 60) {
   return value;
 }
 
+export class HttpRequestError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = "HttpRequestError";
+    this.statusCode = statusCode;
+  }
+}
+
 export async function readJson(request, maxBytes = 1024 * 1024) {
+  const contentType = request.headers?.["content-type"];
+  if (typeof contentType !== "string" || !/^application\\/json(?:\\s*;|$)/i.test(contentType)) {
+    throw new HttpRequestError(415, "Content-Type must be application/json");
+  }
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > maxBytes) throw new Error("Request body too large");
+    if (size > maxBytes) throw new HttpRequestError(413, "Request body too large");
     chunks.push(chunk);
   }
   if (size === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+  catch { throw new HttpRequestError(400, "Invalid JSON request body"); }
 }
 
 export function sendJson(response, status, value) {

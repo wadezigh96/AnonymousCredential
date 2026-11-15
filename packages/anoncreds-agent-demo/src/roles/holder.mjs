@@ -7,7 +7,7 @@ import {
 } from "../index.mjs";
 import { createAgentRequestProof } from "../agent-runtime.mjs";
 import { capabilityDigest, signCapability } from "../capability.mjs";
-import { configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
+import { configureHttpServer, configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 
 const issuerUrl = process.env.ISSUER_URL ?? "http://127.0.0.1:4311";
 const port = Number(process.env.PORT ?? 4312);
@@ -59,7 +59,7 @@ async function enroll() {
   };
 }
 
-const server = createServer(async (request, response) => {
+const server = configureHttpServer(createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://localhost");
     if (request.method === "GET" && url.pathname === "/health") {
@@ -127,6 +127,6 @@ const server = createServer(async (request, response) => {
   } catch (error) {
     return routeError(response, error);
   }
-});
+}));
 
 server.listen(port, host, () => process.stdout.write(JSON.stringify({ role: "holder", host, port }) + "\n"));

@@ -9,7 +9,7 @@ import {SqliteAuthorizationStore} from "../authorization-store.mjs";
 import {SqliteChallengeLedger} from "../sqlite-challenge-ledger.mjs";
 import {capabilityDigest} from "../capability.mjs";
 import {verifyAndAuthorizeAgentRequest} from "../paai-verifier.mjs";
-import {configuredRateLimit,createRateLimiter,readJson,requireApiToken,requireBearerToken,routeError,sendJson} from "./http.mjs";
+import { configureHttpServer,configuredRateLimit,createRateLimiter,readJson,requireApiToken,requireBearerToken,routeError,sendJson} from "./http.mjs";
 const issuerUrl=process.env.ISSUER_URL??"http://127.0.0.1:4311",port=Number(process.env.PORT??4313),host=process.env.HOST??"127.0.0.1";
 const defaultStateDb=join(homedir(),".local","state","anonymesh","authorization.sqlite");
 const stateDb=process.env.STATE_DB??process.env.AUTHORIZATION_DB??defaultStateDb;
@@ -24,7 +24,7 @@ const ledger=new SqliteChallengeLedger({database});
 const runtime=new AgentAuthorizationRuntime({store:authorizationStore});
 const publicResponse=await fetch(issuerUrl+"/public");if(!publicResponse.ok)throw new Error("Issuer public configuration unavailable");
 const publicConfig=await publicResponse.json();
-const server=createServer(async(request,response)=>{
+const server=configureHttpServer(createServer(async(request,response)=>{
  try{
   const url=new URL(request.url,"http://localhost");
   if(request.method==="GET"&&url.pathname==="/health")return sendJson(response,200,{role:"verifier",ready:true});
@@ -52,7 +52,7 @@ const server=createServer(async(request,response)=>{
   }
   return sendJson(response,404,{error:"Not found"});
  }catch(error){return routeError(response,error);}
-});
+}));
 server.listen(port,host,()=>process.stdout.write(JSON.stringify({role:"verifier",host,port})+"\n"));
 function shutdown(){server.close(()=>{ledger.close();authorizationStore.close();database.close();process.exit(0);});}
 process.once("SIGTERM",shutdown);process.once("SIGINT",shutdown);
