@@ -20,18 +20,17 @@ Do not put names, emails, raw credential claims, holder secrets, credential IDs,
 From this directory:
 
 ```sh
-cargo test
+cargo test --locked
 ```
 
 Build instructions for a compatible Rust toolchain:
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install --locked cargo-near
-cargo near build
+cargo build --locked --target wasm32-unknown-unknown --release
 ```
 
-NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. Fourteen unit tests are included. GitHub Actions run #13 at commit `c4f4f821` passed all 14 tests and the WASM release build using a generated lockfile with `--locked` commands. This is CI evidence, not an independent security review. The generated Cargo.lock is not committed; review and commit it before treating dependency resolution as reproducible.
+NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. Fourteen unit tests are included. The committed `Cargo.lock` pins the resolved dependency graph, and the GitHub Actions workflow runs both `cargo test --locked` and the WASM release build with `--locked`. The recorded NEAR contract workflow run [#13](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085) passed all 14 tests and the WASM release build. This is CI evidence, not an independent security review.
 
 ## Testnet deployment
 
