@@ -134,6 +134,19 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(forgedAttempt.status, 401);
     assert.equal(forgedAttempt.body.code, "INVALID_REQUEST_SIGNATURE");
 
+    // A tampered delegated capability is rejected, and the same challenge
+    // remains usable with the authentic chain and proof.
+    const tamperedChain = structuredClone(capabilityChain);
+    tamperedChain[1].action = "transfer:funds";
+    const tamperedAttempt = await post(verifierUrl + "/verify", {
+      nonce: challengeResult.body.nonce,
+      ...proofBundle,
+      capabilityChain: tamperedChain,
+    });
+    assert.equal(tamperedAttempt.status, 401);
+    assert.equal(tamperedAttempt.body.authorized, false);
+    assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
+
     // The genuine AnonCreds proof + credential-bound PoP + capability is accepted once.
     const validAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,
@@ -153,19 +166,6 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     });
     assert.equal(replayAttempt.status, 401);
     assert.equal(replayAttempt.body.authorized, false);
-
-    // A tampered delegated capability is rejected, and the same challenge
-    // remains usable with the authentic chain and proof.
-    const tamperedChain = structuredClone(capabilityChain);
-    tamperedChain[1].action = "transfer:funds";
-    const tamperedAttempt = await post(verifierUrl + "/verify", {
-      nonce: challengeResult.body.nonce,
-      ...proofBundle,
-      capabilityChain: tamperedChain,
-    });
-    assert.equal(tamperedAttempt.status, 401);
-    assert.equal(tamperedAttempt.body.authorized, false);
-    assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
 
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
