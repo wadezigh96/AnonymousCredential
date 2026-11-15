@@ -74,7 +74,7 @@ export class HttpRequestError extends Error {
 
 export async function readJson(request, maxBytes = 1024 * 1024) {
   const contentType = request.headers?.["content-type"];
-  if (typeof contentType !== "string" || !/^application\\/json(?:\\s*;|$)/i.test(contentType)) {
+  if (typeof contentType !== "string" || !/^application\/json(?:\s*;|$)/i.test(contentType)) {
     throw new HttpRequestError(415, "Content-Type must be application/json");
   }
   const chunks = [];
