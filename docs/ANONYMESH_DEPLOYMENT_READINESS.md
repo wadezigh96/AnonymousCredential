@@ -4,18 +4,18 @@
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
 **Audited HEAD:** `5aec6de6cb2766bd99f7f1f8177f5bf2b8bd6549`
-**Branch HEAD checked against GitHub:** exact match  
+**Branch HEAD checked against GitHub:** no; local implementation commits are ahead of origin  
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-The audited feature-branch HEAD has six successful GitHub Actions workflow runs, all attached to the same commit SHA. The CI evidence covers the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
+Historical CI evidence on the prior audited commit includes six successful GitHub Actions workflow runs. Those runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build; they do not validate the two new local commits.
 
 This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-All six runs below completed with conclusion `success` and exact `head_sha` `702731d3c3aa34b00048321c001fe4272fa9a1d7`.
+The six historical runs below completed with conclusion `success` and exact `head_sha` `702731d3c3aa34b00048321c001fe4272fa9a1d7`.
 
 | Workflow | Result | Evidence |
 |---|---:|---|
@@ -107,7 +107,7 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 
 ## 5. Safe next steps before a testnet deployment request
 
-1. Reconcile the stale documentation with the current source and this evidence report.
+1. Publish the two local commits and rerun CI on the final branch head, then reconcile any new workflow results with this evidence report.
 2. Review contract storage economics, account funding, initialization arguments, owner account, gas/deposit requirements and emergency disable procedure.
 3. Rerun the pinned Rust agent-auth, NEAR contract, and WASM checks on an environment with cargo/rustup.
 4. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow; the local verifier path is integrated, but live RPC/deployed-contract evidence is still absent.
