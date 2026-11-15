@@ -3,50 +3,37 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited CI evidence HEAD:** `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`
+**Audited CI evidence HEAD:** `8857ba2e91a781efe3792ef17230b4ee4ad6c31c`
+**Canonical commit:** https://github.com/wadezigh96/anonymesh/commit/8857ba2e91a781efe3792ef17230b4ee4ad6c31c
+**Deployment decision:** **TESTNET NOT READY**
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-The audited final branch head has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
+Six GitHub Actions workflow runs are recorded as completed successfully on the exact audited final branch HEAD. Their names identify the AnonCreds integration, process integration, Linux ARM64 benchmark, Android native proof smoke test, agent authentication, and NEAR contract workflows. Run metadata alone does not attest to every job detail or artifact, and none of these runs is live-chain evidence.
 
-This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
+The decision remains **TESTNET NOT READY**. Successful CI does not establish testnet readiness, production readiness, or live-chain correctness. The Node verifier has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-All six runs below completed with conclusion `success` on the audited final branch HEAD.
+All six run records below were independently checked through GitHub run metadata. For every run: `head_branch = feat/anonymesh-private-agent-identity`, `head_sha = 8857ba2e91a781efe3792ef17230b4ee4ad6c31c`, `status = completed`, `conclusion = success`, and `event = workflow_dispatch`. These were not triggered by a push or pull request.
 
-| Workflow | Result | Evidence |
+| Workflow | Metadata result | Evidence |
 |---|---:|---|
-| ANONYMESH AnonCreds integration | PASS — native demo, adversarial tests, ARM64 benchmark job | [Run 43736039368](https://github.com/wadezigh96/anonymesh/actions/runs/43736039368) |
-| ANONYMESH AnonCreds process integration | PASS — SQLite rollback and multi-process authorization | [Run 43736039006](https://github.com/wadezigh96/anonymesh/actions/runs/43736039006) |
-| ANONYMESH agent authentication | PASS — Rust test job | [Run 43737487949](https://github.com/wadezigh96/anonymesh/actions/runs/43737487949) |
-| ANONYMESH Linux ARM64 benchmark | PASS — native ARM64 runner and artifact upload | [Run 43736039070](https://github.com/wadezigh96/anonymesh/actions/runs/43736039070) |
-| ANONYMESH Android native proof smoke test | PASS — release APK, embedded JS verification, artifact upload | [Run 43736039084](https://github.com/wadezigh96/anonymesh/actions/runs/43736039084) |
-| ANONYMESH NEAR contract | PASS — locked Rust tests and Wasm release build | [Run 43737492296](https://github.com/wadezigh96/anonymesh/actions/runs/43737492296) |
+| ANONYMESH AnonCreds integration | `completed` / `success` | [Run 43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575) |
+| ANONYMESH AnonCreds process integration | `completed` / `success` | [Run 43737647157](https://github.com/wadezigh96/anonymesh/actions/runs/43737647157) |
+| ANONYMESH Linux ARM64 benchmark | `completed` / `success` | [Run 43737649929](https://github.com/wadezigh96/anonymesh/actions/runs/43737649929) |
+| ANONYMESH Android native proof smoke test | `completed` / `success` | [Run 43737652777](https://github.com/wadezigh96/anonymesh/actions/runs/43737652777) |
+| ANONYMESH agent authentication | `completed` / `success` | [Run 43737655482](https://github.com/wadezigh96/anonymesh/actions/runs/43737655482) |
+| ANONYMESH NEAR contract | `completed` / `success` | [Run 43737658221](https://github.com/wadezigh96/anonymesh/actions/runs/43737658221) |
 
-### Android artifact
+**Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test` from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and the local execution was not rerun here.
 
-- Artifact: `anonymesh-android-standalone-release`
-- GitHub artifact ID: `14167650395`
-- Uploaded archive size: `40,103,932` bytes
-- Artifact was present and not expired when checked.
-- The workflow log confirms `BUILD SUCCESSFUL`, a non-empty `index.android.bundle`, and successful artifact upload.
-- Manus reported downloading an APK of `97,338,555` bytes and a SHA-256 beginning `a2f4` and ending `74e2`. The full digest was not included in the Manus handoff and has not been independently recomputed here. Treat that abbreviated digest as unverified.
+Separately, the inspected GitHub Actions log for [run 43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575), job `anoncreds-native-demo`, step `Run issuer-holder-verifier and adversarial tests`, records `npm test --prefix packages/anoncreds-agent-demo` and reports `# tests 81`, `# pass 81`, `# fail 0`, `# skipped 0`, and `# todo 0`. This specific count is supported by inspected job output, not inferred from the run metadata.
 
-### Linux ARM64 benchmark artifact
+### Artifact and live-chain evidence limits
 
-- Artifact: `anonymesh-linux-arm64-benchmark`
-- GitHub artifact ID: `14166882278`
-- Uploaded archive size: `510` bytes
-- The workflow explicitly checks that the runner architecture is ARM64/aarch64. This is Linux ARM64 evidence, not Android performance evidence.
-
-### NEAR contract CI
-
-- The latest workflow ran `cargo test --locked`: 21 passed, 0 failed.
-- The locked Wasm release build completed successfully.
-- No Wasm artifact was retained by this workflow; the successful build is evidenced by the completed job log.
-- This is source/build evidence only. No testnet contract deployment or on-chain method invocation was performed.
+This reconciliation verified the six run metadata records and inspected the Node job log noted above. It did not independently inspect Android, ARM64, agent-auth, or NEAR job logs or artifacts. Artifact IDs, sizes, APK digests, physical-device behavior, and detailed Rust/WASM outcomes are not asserted here as evidence for the final SHA based on metadata alone. No testnet contract deployment or on-chain method invocation was performed.
 
 ## 2. Component readiness matrix
 
@@ -58,7 +45,7 @@ All six runs below completed with conclusion `success` on the audited final bran
 | Agent authentication | Rust Ed25519 challenge-response tests | CI PASS | Key lifecycle, integration with production agent runtime |
 | Delegated capabilities | Signature/scope/quota verification code and tests | Prototype / demo integration | Production policy engine, action receipts, retry/idempotency and external tool enforcement |
 | NEAR issuer registry + Node read path | Contract metadata plus strict Node `ed25519:` conversion, bounded read-only RPC client, credential-bound issuer key/version/schema checks, mocked-RPC process integration | Node and NEAR CI PASS; chain not deployed | Contract review, storage/governance review, testnet deployment approval |
-| Android app | Expo compatibility, native prebuild, release APK and embedded JS bundle | Build PASS | Physical-device test of this exact APK, plus multi-role protocol and secure persistent wallet integration |
+| Android app | Single-process native proof smoke test | Workflow metadata success; current job log/artifact not inspected | Physical-device test of an APK built from this exact SHA, plus multi-role protocol and secure persistent wallet integration |
 | Privacy and revocation | Selective disclosure and hidden expiry predicate in demo | Partial demo | Unlinkability study, credential-to-agent-key binding, privacy-preserving revocation and non-revocation proof |
 
 ## 3. Security and architecture findings
@@ -92,7 +79,7 @@ The Node verifier now enforces a registry record when `NEAR_REQUIRED=true`; the 
 
 The current `apps/android/App.tsx` explicitly describes a local single-process proof demonstration. It creates a demo credential, keeps the link secret in memory, reveals a role and checks a hidden expiry predicate. It explicitly warns that issuer, holder and verifier are not separate security domains.
 
-The CI workflow proves a standalone APK can be built and contains a non-empty JavaScript bundle. It does not prove the full issuer-holder-verifier protocol, durable secure wallet storage, registry access or physical-device behavior for this exact newly built artifact.
+The Android workflow run metadata reports success, but its current job log and artifacts were not inspected in this reconciliation. It does not establish the full issuer-holder-verifier protocol, durable secure wallet storage, registry access or physical-device behavior for an APK built from this exact SHA.
 
 ### Privacy and authorization limits
 
@@ -116,8 +103,8 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 
 ## 6. Explicit deployment boundary
 
-**No deployment was performed. No NEAR testnet or mainnet transaction was sent. No contract was initialized. No production secret or private key was used. No merge or pull request was created.**
+**No deployment was performed. No NEAR testnet or mainnet transaction was sent. No contract was initialized. No production secret or private key was used. No merge or pull request was created. The deployment decision remains TESTNET NOT READY.**
 
-The evidence supports: **implementation commit CI green and NEAR Wasm build successful; the later reconciliation commit is ready for CI validation and final integration review.**
+The evidence supports: **the six named GitHub Actions runs have completed successfully on the exact audited final SHA; the Node job log reports 81 tests passed.** The run metadata does not prove live-chain behavior, artifact contents, or production readiness.
 
 It does not support: **production-ready, fully integrated, anonymous/unlinkable identity, revocation-complete, or mainnet-ready.**

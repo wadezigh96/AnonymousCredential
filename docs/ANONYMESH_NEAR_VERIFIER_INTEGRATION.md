@@ -57,22 +57,29 @@ The client enforces a timeout and response-size limit, validates account IDs and
 
 The registry `status_root` remains an opaque commitment. This integration does not verify revocation or non-revocation witnesses and makes no revocation-complete claim.
 
-## Test commands and actual results
+## Test and CI evidence
 
-From `packages/anoncreds-agent-demo`:
+**Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test`, run from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and the local execution was not rerun here.
 
-- `node --test test/near-key-format.test.mjs test/near-issuer-registry.test.mjs`: **7 passed, 0 failed**.
-- `node --test test/issuer-key-store.test.mjs`: **2 passed, 0 failed**.
-- `node --test test/paai-verifier.test.mjs`: **11 passed, 0 failed**.
-- `node --test test/process-integration.test.mjs`: **1 passed, 0 failed**; registry required, local RPC mock, persisted issuer key, restart/replay/concurrency checks.
-- `npm test`: **81 passed, 0 failed, 0 skipped**.
+The inspected GitHub Actions log for [run 43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575), job `anoncreds-native-demo`, step `Run issuer-holder-verifier and adversarial tests`, records the CI command `npm test --prefix packages/anoncreds-agent-demo` and reports `# tests 81`, `# pass 81`, `# fail 0`, `# skipped 0`, and `# todo 0`. This is separate GitHub-hosted CI evidence; the count is not inferred from run metadata alone.
 
-Rust/Cargo and Android Gradle/ADB were unavailable in this sandbox. On the audited SHA `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`, GitHub Actions passed: AnonCreds [43736039368](https://github.com/wadezigh96/anonymesh/actions/runs/43736039368), process integration [43736039006](https://github.com/wadezigh96/anonymesh/actions/runs/43736039006), Linux ARM64 [43736039070](https://github.com/wadezigh96/anonymesh/actions/runs/43736039070), Android [43736039084](https://github.com/wadezigh96/anonymesh/actions/runs/43736039084), agent-auth [43737487949](https://github.com/wadezigh96/anonymesh/actions/runs/43737487949), and NEAR contract/WASM [43737492296](https://github.com/wadezigh96/anonymesh/actions/runs/43737492296). These are CI/build results, not live-chain or physical-device protocol evidence.
+The six verified GitHub Actions runs are:
+
+| Workflow | Run |
+|---|---|
+| ANONYMESH AnonCreds integration | [43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575) |
+| ANONYMESH AnonCreds process integration | [43737647157](https://github.com/wadezigh96/anonymesh/actions/runs/43737647157) |
+| ANONYMESH Linux ARM64 benchmark | [43737649929](https://github.com/wadezigh96/anonymesh/actions/runs/43737649929) |
+| ANONYMESH Android native proof smoke test | [43737652777](https://github.com/wadezigh96/anonymesh/actions/runs/43737652777) |
+| ANONYMESH agent authentication | [43737655482](https://github.com/wadezigh96/anonymesh/actions/runs/43737655482) |
+| ANONYMESH NEAR contract | [43737658221](https://github.com/wadezigh96/anonymesh/actions/runs/43737658221) |
+
+GitHub run metadata confirms all six completed successfully on branch `feat/anonymesh-private-agent-identity` at SHA `8857ba2e91a781efe3792ef17230b4ee4ad6c31c`, each with event `workflow_dispatch`. Rust/WASM and Android evidence is GitHub-hosted, not local Cargo/Gradle/ADB execution. These runs are CI/build evidence only; they do not establish testnet/mainnet deployment, live RPC or live-chain correctness, physical-device protocol behavior, or production readiness.
 
 ## Security limitations and remaining blockers
 
 The registry is a public metadata trust anchor, not an on-chain proof verifier. Governance remains owner-controlled in the contract. TLS, distributed rate limiting/replay storage, production key custody, production transport identity, revocation witnesses, unlinkability analysis, and production tool-policy enforcement remain incomplete. Android remains a single-process proof demonstration and has no registry-backed wallet integration in this change.
 
-No testnet or mainnet contract was deployed. No chain transaction or mutation was sent. No pull request or merge was created. Deployment readiness is **NOT READY** until the pinned Rust/NEAR and Android checks are rerun on the final commit, the contract/client compatibility is reviewed in the target environment, and an explicit testnet preflight is approved separately.
+No testnet or mainnet contract was deployed. No chain transaction or mutation was sent. No pull request or merge was created. Deployment readiness remains **TESTNET NOT READY**. CI success does not establish production readiness or live-chain correctness; contract/client compatibility review and a separately approved testnet preflight remain outstanding.
 
-**Audited final SHA:** `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`.
+**Audited final SHA:** `8857ba2e91a781efe3792ef17230b4ee4ad6c31c` ([canonical commit](https://github.com/wadezigh96/anonymesh/commit/8857ba2e91a781efe3792ef17230b4ee4ad6c31c)).

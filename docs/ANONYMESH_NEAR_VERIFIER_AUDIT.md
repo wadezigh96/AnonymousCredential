@@ -3,7 +3,8 @@
 **Audit date:** 2026-11-15
 **Repository:** `wadezigh96/anonymesh`
 **Branch:** `feat/anonymesh-private-agent-identity`
-**Audited HEAD:** `428f1c6a65902b1c92abfe5a3c7e80d9a6750a59`
+**Audited HEAD:** `8857ba2e91a781efe3792ef17230b4ee4ad6c31c`
+**Canonical commit:** https://github.com/wadezigh96/anonymesh/commit/8857ba2e91a781efe3792ef17230b4ee4ad6c31c
 
 ## Scope and safety boundary
 
@@ -24,14 +25,26 @@ The Android app is explicitly a single-process native AnonCreds proof smoke test
 3. The issuer capability-root key remains an in-memory demo key; only the registry-bound issuer Ed25519 key has the persisted lifecycle needed by registry mode.
 4. Historical documentation and workflow evidence must remain tied to their exact commit and must not be presented as evidence for later changes.
 
-## Test baseline
+## Test and CI evidence
 
-- Command: `npm install --no-audit --no-fund --package-lock=false --ignore-scripts=false && npm test` from `packages/anoncreds-agent-demo`
-- Result: **PASS — 81 passed, 0 failed, 0 skipped**
-- Duration: 58.675 seconds
-- Command: `cargo test --manifest-path crates/agent-auth/Cargo.toml --locked` and `cargo test --manifest-path contracts/near/issuer-registry/Cargo.toml --locked`
-- Result: **NOT EXECUTED — `cargo: command not found`**
-- GitHub Actions evidence for the audited HEAD is recorded in runs 43736039368, 43736039006, 43736039070, 43736039084, 43737487949, and 43737492296. Local Cargo/Android tools remain unavailable in this sandbox; the Rust/WASM and Android results are GitHub-hosted evidence.
+**Node test result reported by the final verification execution: 81 passed, 0 failed, 0 skipped, 0 todo.** The command was `npm test`, run from `packages/anoncreds-agent-demo`. The original local terminal output was not available in this documentation-only reconciliation, and that local execution was not rerun here.
+
+Separate GitHub-hosted corroboration is available in [run 43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575), job `anoncreds-native-demo`, step `Run issuer-holder-verifier and adversarial tests` (`npm test --prefix packages/anoncreds-agent-demo`). The inspected job log reports `# tests 81`, `# pass 81`, `# fail 0`, `# skipped 0`, and `# todo 0`; the test count is therefore supported by inspected job output, not inferred from workflow metadata alone.
+
+The six verified GitHub Actions runs are:
+
+| Workflow | Run |
+|---|---|
+| ANONYMESH AnonCreds integration | [43737644575](https://github.com/wadezigh96/anonymesh/actions/runs/43737644575) |
+| ANONYMESH AnonCreds process integration | [43737647157](https://github.com/wadezigh96/anonymesh/actions/runs/43737647157) |
+| ANONYMESH Linux ARM64 benchmark | [43737649929](https://github.com/wadezigh96/anonymesh/actions/runs/43737649929) |
+| ANONYMESH Android native proof smoke test | [43737652777](https://github.com/wadezigh96/anonymesh/actions/runs/43737652777) |
+| ANONYMESH agent authentication | [43737655482](https://github.com/wadezigh96/anonymesh/actions/runs/43737655482) |
+| ANONYMESH NEAR contract | [43737658221](https://github.com/wadezigh96/anonymesh/actions/runs/43737658221) |
+
+GitHub run metadata independently confirms for all six: `head_branch = feat/anonymesh-private-agent-identity`, `head_sha = 8857ba2e91a781efe3792ef17230b4ee4ad6c31c`, `status = completed`, `conclusion = success`, and `event = workflow_dispatch`. These Rust/WASM and Android checks are GitHub-hosted evidence, not local test executions. Workflow success does not establish live-chain correctness or production readiness.
+
+Local Cargo/Android commands were not run in this documentation-only task; no local Cargo or Android result is represented as a pass.
 
 ## Files expected to change
 
