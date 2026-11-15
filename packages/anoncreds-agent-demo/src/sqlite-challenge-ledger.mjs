@@ -7,6 +7,8 @@ import { Nonce } from "@hyperledger/anoncreds-nodejs";
  * state across restarts. Authorization-store nonce/quota writes remain the
  * cross-process atomic replay barrier.
  */
+const MAX_PENDING_CHALLENGES = 10_000;
+
 export class SqliteChallengeLedger {
   #db;
 
@@ -30,6 +32,7 @@ export class SqliteChallengeLedger {
         consumed INTEGER NOT NULL DEFAULT 0 CHECK (consumed IN (0, 1)),
         presentation_request TEXT
       );
+      CREATE INDEX IF NOT EXISTS challenges_expiry_idx ON challenges(expires_at);
     `);
   }
 
@@ -42,11 +45,27 @@ export class SqliteChallengeLedger {
       nonce, audience, task, capabilityDigest, resource,
       issuedAt: now, expiresAt: now + ttlSeconds,
     };
-    this.#db.prepare(`
-      INSERT INTO challenges (nonce, audience, task, capability_digest, resource, issued_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(nonce, audience, task, capabilityDigest, resource, challenge.issuedAt, challenge.expiresAt);
-    return Object.freeze(challenge);
+    this.#db.exec("BEGIN IMMEDIATE");
+    try {
+      // Expired rows no longer need to remain available to reject replays:
+      // unknown nonces are rejected just as firmly. Keep the active ledger bounded.
+      this.#db.prepare("DELETE FROM challenges WHERE expires_at <= ?").run(now);
+      const pending = this.#db.prepare(
+        "SELECT COUNT(*) AS count FROM challenges WHERE consumed = 0"
+      ).get().count;
+      if (pending >= MAX_PENDING_CHALLENGES) {
+        throw new Error("Challenge capacity reached");
+      }
+      this.#db.prepare(`
+        INSERT INTO challenges (nonce, audience, task, capability_digest, resource, issued_at, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(nonce, audience, task, capabilityDigest, resource, challenge.issuedAt, challenge.expiresAt);
+      this.#db.exec("COMMIT");
+      return Object.freeze(challenge);
+    } catch (error) {
+      try { this.#db.exec("ROLLBACK"); } catch {}
+      throw error;
+    }
   }
 
   attachPresentationRequest(nonce, presentationRequest) {
