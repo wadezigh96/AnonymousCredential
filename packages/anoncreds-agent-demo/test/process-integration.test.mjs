@@ -20,31 +20,18 @@ async function freePort() {
 
 async function waitHealthy(url, child) {
   const startupDeadline = Date.now() + 20_000;
-  const requestTimeoutMs = 500;
   while (Date.now() < startupDeadline) {
     if (child.exitCode !== null) throw new Error("Service exited before becoming healthy");
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), Math.min(
-      requestTimeoutMs,
-      Math.max(1, startupDeadline - Date.now()),
-    ));
+    const timeout = setTimeout(() => controller.abort(), 500);
     try {
       const response = await fetch(url + "/health", { signal: controller.signal });
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload?.ready === true && child.exitCode === null) return;
-      }
+      if (response.ok && (await response.json()).ready === true && child.exitCode === null) return;
     } catch {}
-    finally {
-      clearTimeout(timeout);
-    }
-    const delay = Math.min(100, Math.max(0, startupDeadline - Date.now()));
-    if (delay > 0) await new Promise(done => setTimeout(done, delay));
+    finally { clearTimeout(timeout); }
+    await new Promise(done => setTimeout(done, 100));
   }
-  throw new Error(
-    "Service did not become healthy: " + url + "\nService logs:\n" +
-    (child.diagnosticOutput?.() ?? "(no diagnostics)"),
-  );
+  throw new Error("Service did not become healthy: " + url + "\n" + child.diagnosticOutput());
 }
 
 function start(name, port, extra = {}) {
@@ -68,7 +55,7 @@ async function post(url, body) {
   return { status: response.status, body: await response.json() };
 }
 
-test("issuer, holder and verifier run as separate processes; invalid proof does not burn nonce", async () => {
+test("separate issuer, holder and verifier processes enforce the complete PAII authorization flow", async () => {
   const issuerPort = await freePort();
   const holderPort = await freePort();
   const verifierPort = await freePort();
@@ -92,56 +79,80 @@ test("issuer, holder and verifier run as separate processes; invalid proof does 
 
     const enrollment = await post(holderUrl + "/enroll", {});
     assert.equal(enrollment.status, 200, JSON.stringify(enrollment.body));
+    const { capabilityChain, policy } = enrollment.body;
+    assert.equal(capabilityChain.length, 1);
 
-    const challengeResult = await post(verifierUrl + "/challenge", {
-      audience: "agent-b.anonymesh.integration",
-      task: "read:weather",
-      capabilityDigest: "sha256:integration-capability",
+    const challengeInput = {
+      audience: policy.audience,
+      task: policy.action,
+      resource: policy.resource,
+      capabilityChain,
       ttlSeconds: 90,
-    });
+    };
+    const challengeResult = await post(verifierUrl + "/challenge", challengeInput);
     assert.equal(challengeResult.status, 200, JSON.stringify(challengeResult.body));
 
     const presentationResult = await post(holderUrl + "/present", {
+      challenge: challengeResult.body,
       presentationRequest: challengeResult.body.presentationRequest,
     });
     assert.equal(presentationResult.status, 200, JSON.stringify(presentationResult.body));
-    const presentation = presentationResult.body.presentation;
-    assert.equal(JSON.stringify(presentation).includes("agent-a-private-subject-7f3a"), false);
+    const proofBundle = presentationResult.body;
+    assert.equal(JSON.stringify(proofBundle.presentation).includes("agent-a-private-subject-7f3a"), false);
 
-    // A proof made for a different verifier nonce must fail against the first
-    // challenge's server-stored request, without consuming the first challenge.
-    const secondChallenge = await post(verifierUrl + "/challenge", {
-      audience: "agent-b.anonymesh.integration",
-      task: "read:weather",
-      capabilityDigest: "sha256:integration-capability",
-      ttlSeconds: 90,
-    });
+    // A presentation and PoP generated for another challenge cannot authorize this nonce.
+    const secondChallenge = await post(verifierUrl + "/challenge", challengeInput);
     assert.equal(secondChallenge.status, 200);
-    const wrongNoncePresentation = await post(holderUrl + "/present", {
+    const wrongChallengeBundle = await post(holderUrl + "/present", {
+      challenge: secondChallenge.body,
       presentationRequest: secondChallenge.body.presentationRequest,
     });
-    assert.equal(wrongNoncePresentation.status, 200);
-    const invalidAttempt = await post(verifierUrl + "/verify", {
+    assert.equal(wrongChallengeBundle.status, 200);
+    const wrongChallengeAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,
-      presentation: wrongNoncePresentation.body.presentation,
+      ...wrongChallengeBundle.body,
     });
-    assert.equal(invalidAttempt.status, 401);
-    assert.equal(invalidAttempt.body.valid, false);
+    assert.equal(wrongChallengeAttempt.status, 401);
+    assert.equal(wrongChallengeAttempt.body.authorized, false);
 
-    // The exact same still-pending challenge accepts the authentic proof once.
+    // A forged PoP is rejected and does not burn the original challenge or quota.
+    const forgedProof = {
+      ...proofBundle.requestProof,
+      signature: Buffer.alloc(64).toString("base64url"),
+    };
+    const forgedAttempt = await post(verifierUrl + "/verify", {
+      nonce: challengeResult.body.nonce,
+      ...proofBundle,
+      requestProof: forgedProof,
+    });
+    assert.equal(forgedAttempt.status, 401);
+    assert.equal(forgedAttempt.body.code, "INVALID_REQUEST_SIGNATURE");
+
+    // The genuine AnonCreds proof + credential-bound PoP + capability is accepted once.
     const validAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,
-      presentation,
+      ...proofBundle,
     });
     assert.equal(validAttempt.status, 200, JSON.stringify(validAttempt.body));
-    assert.equal(validAttempt.body.valid, true);
+    assert.equal(validAttempt.body.authorized, true);
+    assert.equal(validAttempt.body.action, policy.action);
+    assert.equal(validAttempt.body.resource, policy.resource);
+    assert.equal(validAttempt.body.remainingQuota, policy.quota - 1);
 
+    // Replaying the same challenge is denied.
     const replayAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,
-      presentation,
+      ...proofBundle,
     });
     assert.equal(replayAttempt.status, 401);
-    assert.equal(replayAttempt.body.valid, false);
+    assert.equal(replayAttempt.body.authorized, false);
+
+    // The fixed issuer policy rejects a capability for an unapproved resource.
+    const escalationAttempt = await post(verifierUrl + "/challenge", {
+      ...challengeInput,
+      resource: "weather:all",
+    });
+    assert.equal(escalationAttempt.status, 403);
   } catch (error) {
     const diagnostics = children.map(child => child.diagnosticOutput()).join("\n");
     throw new Error(String(error) + "\nService logs:\n" + diagnostics);
