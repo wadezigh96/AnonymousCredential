@@ -68,6 +68,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const children = [];
   const stateDirectory = mkdtempSync(join(tmpdir(), "anonymesh-verifier-restart-"));
   const authorizationDb = join(stateDirectory, "authorization.sqlite");
+  const challengeDb = join(stateDirectory, "challenges.sqlite");
 
   try {
     const issuer = start("issuer", issuerPort);
@@ -78,7 +79,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holder);
     await waitHealthy(holderUrl, holder);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, AUTHORIZATION_DB: authorizationDb, CHALLENGE_DB: challengeDb };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
@@ -172,6 +173,21 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     });
     assert.equal(replayAttempt.status, 401);
     assert.equal(replayAttempt.body.authorized, false);
+
+    // Stop and restart the verifier with the same SQLite files. The consumed
+    // challenge must remain known and rejected instead of becoming UNKNOWN_CHALLENGE.
+    verifier.kill("SIGTERM");
+    await once(verifier, "exit");
+    const restartedVerifier = start("verifier", verifierPort, verifierEnvironment);
+    children.push(restartedVerifier);
+    await waitHealthy(verifierUrl, restartedVerifier);
+    const replayAfterRestart = await post(verifierUrl + "/verify", {
+      nonce: challengeResult.body.nonce,
+      ...proofBundle,
+    });
+    assert.equal(replayAfterRestart.status, 401);
+    assert.equal(replayAfterRestart.body.authorized, false);
+    assert.equal(replayAfterRestart.body.code, "CHALLENGE_EXPIRED_OR_CONSUMED");
 
     // The fixed issuer policy rejects an unapproved resource, action, or audience.
     for (const override of [
