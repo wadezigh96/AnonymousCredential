@@ -46,8 +46,8 @@ async function connectWallet() {
     features: { testnet: true, signAndSendTransaction: true },
   });
   await connector.whenManifestLoaded;
-  connector.on("wallet:signIn", async ({ wallet: connectedWallet, accounts }) => {
-    wallet = connectedWallet;
+  connector.on("wallet:signIn", async ({ accounts }) => {
+    wallet = await connector.wallet();
     connectedAccount = accounts?.find((account) => account.accountId === EXPECTED_ACCOUNT_ID);
     if (!connectedAccount) {
       setStatus("Wallet connected, but selected account is not wkams.testnet. Deployment blocked.", "warning");
@@ -56,7 +56,7 @@ async function connectWallet() {
       return;
     }
     if (!connectedAccount.publicKey) {
-      const refreshed = await wallet.getAccounts({ network: "testnet" });
+      const refreshed = await wallet.getAccounts();
       connectedAccount = refreshed.find((account) => account.accountId === EXPECTED_ACCOUNT_ID) ?? connectedAccount;
     }
     accountNode.textContent = connectedAccount.accountId;
