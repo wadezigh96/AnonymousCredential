@@ -1,3 +1,5 @@
+> **Superseded deployment decision (2026-11-16):** The NEAR issuer registry has since been deployed and initialized at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` was verified. Deployment transaction: [NEAR Explorer](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). This historical readiness assessment remains useful for its source/CI findings, but its pre-deployment verdict is no longer current. Issuer registration and live verifier acceptance remain pending; see [current project status](PROJECT_STATUS.md).
+
 # ANONYMESH Deployment Readiness Evidence
 
 **Audit date:** 2026-11-15  
