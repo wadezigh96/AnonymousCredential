@@ -1,6 +1,6 @@
 # ANONYMESH — Private Agentic Identity Infrastructure (PAII)
 
-> **Project status (2026-11-16):** local Issuer–Holder–Verifier prototype and NEAR registry adapter are implemented with Linux CI evidence. The NEAR issuer registry is deployed and initialized on Testnet at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. See [canonical project status](docs/PROJECT_STATUS.md) and [deployment record](docs/NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+> **Project status (2026-11-17):** ANONYMESH remains a prototype, not production-ready. The NEAR issuer registry is deployed and initialized on Testnet at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. On PR head `175c5b731593c99e6cdb3e70b1ac842bd9a2b59a`, the AnonCreds suite passed **101/101 tests**, and the AnonCreds integration, separate-process integration, NEAR contract, NEAR wallet bridge, agent-auth and Linux ARM64 workflows succeeded. The Android release build was still running when checked. See the [NEAR Judge Guide](docs/NEAR_JUDGE_GUIDE.md), [canonical project status](docs/PROJECT_STATUS.md), and [deployment record](docs/NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 **ANONYMESH** is a platform-independent protocol project exploring **Private Agentic Identity Infrastructure (PAII)**: privacy-preserving identity, trust and authorization for humans and autonomous AI agents.
 
@@ -255,3 +255,8 @@ flowchart TB
 `packages/anoncreds-agent-demo` is the current runnable multi-process demonstration. `crates/agent-auth` and `contracts/near/issuer-registry` contain prototype components; their presence in the tree does not imply a production deployment.
 
 For implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).
+
+
+## License
+
+ANONYMESH is distributed under the [MIT License](LICENSE). See the license file for the exact permissions, conditions and warranty disclaimer.
