@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
+import { nearEd25519PublicKeyToNode, nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
 import { AnoncredsError } from "@hyperledger/anoncreds-nodejs";
 import { ChallengeLedger, createAgentPresentation, issueAgentCredential, makePresentationRequest } from "../src/index.mjs";
 import { signCapability, capabilityDigest } from "../src/capability.mjs";
@@ -164,8 +164,8 @@ test("registry-backed verifier requires the credential-bound issuer key and meta
   const schemaHash = createHash("sha256").update(JSON.stringify(f.holder.schema.toJson())).digest("hex");
   const issuerRecord = {
     active: true,
-    publicKey: nodeEd25519PublicKeyToNear(f.holder.issuerRegistryPublicKey),
-    nodePublicKey: f.holder.issuerRegistryPublicKey,
+    publicKey: f.holder.issuerRegistryPublicKey,
+    nodePublicKey: nearEd25519PublicKeyToNode(f.holder.issuerRegistryPublicKey),
     keyVersion: 1,
     schemaHash,
     statusEpoch: 0,
@@ -200,14 +200,15 @@ test("registry-backed verifier requires the credential-bound issuer key and meta
 test("registry verifier rejects inconsistent public and Node issuer keys before consuming challenge", () => {
   const f = fixture();
   const schemaHash = createHash("sha256").update(JSON.stringify(f.holder.schema.toJson())).digest("hex");
-  const validNodeKey = f.holder.issuerRegistryPublicKey;
+  const validNearKey = f.holder.issuerRegistryPublicKey;
+  const validNodeKey = nearEd25519PublicKeyToNode(validNearKey);
   const otherNodeKey = generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
 
   const rejected = verifyAndAuthorizeAgentRequest({
     ...f.args,
     issuerRecord: {
       active: true,
-      publicKey: nodeEd25519PublicKeyToNear(validNodeKey),
+      publicKey: validNearKey,
       nodePublicKey: otherNodeKey,
       keyVersion: 1,
       schemaHash,
