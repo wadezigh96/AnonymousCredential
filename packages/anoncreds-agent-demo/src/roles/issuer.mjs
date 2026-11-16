@@ -11,16 +11,17 @@ const issuerKeyVersion = Number(process.env.NEAR_EXPECTED_KEY_VERSION ?? 1);
 const issuerKeyFile = process.env.ISSUER_KEY_FILE;
 const issuerStateFile = process.env.ISSUER_STATE_FILE;
 const nearRequired = process.env.NEAR_REQUIRED === "true";
+const production = process.env.NODE_ENV === "production";
 
 if (!Number.isSafeInteger(issuerKeyVersion) || issuerKeyVersion < 1) {
   throw new Error("INVALID_ISSUER_KEY_VERSION");
 }
 
-if (nearRequired && !issuerKeyFile) {
+if ((nearRequired || production) && !issuerKeyFile) {
   throw new Error("ISSUER_KEY_FILE_REQUIRED_WHEN_NEAR_REQUIRED");
 }
 
-if (nearRequired && !issuerStateFile) {
+if ((nearRequired || production) && !issuerStateFile) {
   throw new Error("ISSUER_STATE_FILE_REQUIRED_WHEN_NEAR_REQUIRED");
 }
 
@@ -33,7 +34,7 @@ const issuerKey = issuerKeyFile
       file: issuerKeyFile,
       expectedKeyVersion: issuerKeyVersion,
       strictPermissions: process.env.NODE_ENV !== "test",
-      allowCreate: process.env.ANONYMESH_DEVELOPMENT_MODE === "true",
+      allowCreate: !production && process.env.ANONYMESH_DEVELOPMENT_MODE === "true",
     })
   : (() => {
       const pair = generateKeyPairSync("ed25519");
@@ -55,6 +56,7 @@ const issuerState = issuerStateFile
         }),
       allowCreate:
         !nearRequired &&
+        !production &&
         process.env.ISSUER_STATE_ALLOW_CREATE === "true",
       strictPermissions: process.env.NODE_ENV !== "test",
     })
