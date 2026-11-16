@@ -161,13 +161,13 @@ The following roadmap defines the intended development direction. A roadmap item
 
 ## NEAR integration
 
-NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is not deployed and does not provide on-chain AnonCreds or revocation-proof verification.
+NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is deployed and initialized on NEAR Testnet at `registry.wkams.testnet`; `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. The contract does not provide on-chain AnonCreds or revocation-proof verification.
 
 For a judge-facing, step-by-step explanation of the NEAR contract, RPC request, verifier gate, reproducible local checks, and missing live-Testnet evidence, see [NEAR Judge Guide](docs/NEAR_JUDGE_GUIDE.md).
 
 ## Other components and status at a glance
 
-Delegated capability verification and the NEAR issuer/status registry are integrated local/preflight components. NEAR Testnet deployment and end-to-end validation are the next implementation stage. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime, and production-grade rate limits remain incomplete. The project owner reports that the hackathon form and public X demo post were submitted before the deadline; this repository audit does not independently verify the form receipt. NEAR Testnet deployment has not yet been completed.
+Delegated capability verification and the NEAR issuer/status registry are integrated prototype components. NEAR Testnet contract deployment is complete; issuer registration and live verifier acceptance are the next implementation stage. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime, and production-grade rate limits remain incomplete. The project owner reports that the hackathon form and public X demo post were submitted before the deadline; this repository audit does not independently verify the form receipt.
 
 | Component | Current status |
 |---|---|
@@ -175,7 +175,7 @@ Delegated capability verification and the NEAR issuer/status registry are integr
 | Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
 | Ed25519 proof-of-possession | Integrated into local verifier decision path; ordinary key-based authentication, not anonymous |
 | Delegated capability + PoP | Integrated into the local verifier decision path; one root capability in demo, not production delegation |
-| NEAR issuer/status registry | Contract plus strict Node read adapter and mocked-RPC verifier integration; not deployed |
+| NEAR issuer/status registry | Contract deployed on Testnet; strict Node read adapter and mocked-RPC verifier integration; issuer registration/live verifier acceptance pending |
 | Unlinkable presentations | Not demonstrated |
 | Privacy-preserving revocation | Not implemented |
 | Local-first agent runtime and durable wallet | Not implemented |
@@ -221,7 +221,7 @@ flowchart TB
 
 - **Runnable demo:** separate local Node.js Issuer, Holder and Verifier processes in `packages/anoncreds-agent-demo`; Linux CI exercises proof verification and nonce replay behavior.
 - **Authorization:** the local verifier path checks the credential-bound issuer key, agent key proof-of-possession, capability chain, challenge binding, replay and quota. Production tool enforcement remains out of scope.
-- **NEAR:** the issuer/status registry is consumed through a strict read-only adapter in required mode, but the contract is not deployed and live testnet evidence is absent.
+- **NEAR:** the issuer/status registry is consumed through a strict read-only adapter in required mode, and the contract is deployed on Testnet; issuer registration and live verifier acceptance remain unverified.
 - **Not claimed:** complete unlinkability, production authorization runtime, privacy-preserving revocation or production readiness.
 
 ### Repository structure
