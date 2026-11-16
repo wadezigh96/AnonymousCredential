@@ -2,6 +2,8 @@
 
 **Purpose:** a reproducible explanation of the NEAR integration and its exact maturity.
 **Network status:** source + local/mock-RPC integration only. No live NEAR Testnet deployment or on-chain transaction is claimed.
+**Canonical project status:** [PROJECT_STATUS.md](PROJECT_STATUS.md).
+**Operator preflight (2026-11-16):** `wkams.testnet` was read successfully with 18.9 NEAR, one Full Access key and no contract code. The Termux Rust CLI works, but its local legacy credentials file is empty and a supported Meteor Wallet signer has not yet been connected. Account balance and on-chain key presence do not mean this device can sign.
 **Privacy boundary:** the registry is a public metadata anchor. It is not a private chain, private storage, an AnonCreds verifier, or a payment rail.
 
 ## 1. What works today
