@@ -24,11 +24,11 @@ Pada branch default `feat/anonymesh-private-agent-identity` (`a55cda5`), `regist
 
 Runtime NEAR menolak attached deposit pada method yang tidak payable. Unit test yang memanggil fungsi Rust langsung tidak menjalankan pemeriksaan entrypoint payable runtime; jadi hasil tes pada branch default tidak cukup untuk menutup gap tersebut. Deploy hanya dari readiness branch. Jangan ubah default branch, merge, atau buat PR tanpa persetujuan terpisah.
 
-### P1 — Signer dan live acceptance masih menjadi gate
+### P1 — Issuer registration dan live verifier acceptance masih menjadi gate
 
-Tidak ada signer NEAR yang terhubung/terbukti dapat digunakan dalam sesi ini. Saldo dan code hash akun bukan otorisasi transaksi. Belum ada deployment, initialization, pendaftaran test issuer, maupun verifier acceptance terhadap kontrak live.
+Kontrak telah di-deploy dan `get_owner()` sudah diverifikasi. `get_issuer({"issuer_id":"wkams.testnet"})` mengembalikan `null`, sehingga belum ada issuer record yang terdaftar. Siapkan persistent issuer Ed25519 key dan state file secara lokal; public key yang didaftarkan harus berasal dari issuer key tersebut, bukan NEAR account access key.
 
-Untuk melanjutkan, hubungkan signer Testnet melalui alur wallet/integrasi yang disetujui; jangan mengirim seed phrase atau private key melalui chat. Sebelum signing, tampilkan dan minta persetujuan eksplisit untuk network, receiver, method/arguments, deposit, gas, estimasi biaya, expected state change, dan recovery plan. Setelah deploy, baca `get_owner`/`get_issuer` dan jalankan kasus valid serta negatif dengan verifier pada Testnet.
+Sebelum registrasi, tampilkan dan minta persetujuan eksplisit untuk signer, receiver, method/arguments, storage deposit, gas, estimasi biaya, expected state change dan recovery plan. Setelah transaksi disetujui, baca kembali record dan jalankan verifier acceptance live untuk issuer valid, unknown/inactive, key/schema mismatch, RPC outage dan data malformed. Jangan kirim seed phrase atau private key melalui chat.
 
 ### P1 — Full test suite tidak menjadi PR gate pada branch readiness
 
@@ -73,13 +73,13 @@ Ketidakselarasan paling penting adalah antar-branch: branch default tertinggal d
 
 ## Sisa definition of done Testnet
 
-1. Hubungkan signer Testnet melalui integrasi/wallet yang disetujui.
-2. Review dan setujui payload deployment lengkap untuk artifact SHA `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9`, target `wkams.testnet`, dan initialization `new({"owner_id":"wkams.testnet"})`; gas, deposit dan estimasi biaya perlu dihitung dari signer/tooling sebelum approval.
-3. Deploy dan catat transaction hash, receipt, explorer link, account ID, source SHA serta checksum.
-4. Daftarkan disposable public test issuer dengan storage deposit dan catat transaksi.
-5. Verifikasi `get_owner`/`get_issuer` pada Testnet dan jalankan acceptance tests terhadap issuer valid, issuer unknown/inactive, mismatch key/schema, RPC outage dan data malformed.
+1. Siapkan persistent issuer Ed25519 key dan state file dengan permission ketat; jangan commit private JWK.
+2. Daftarkan public issuer record yang cocok dengan key version dan schema hash melalui owner `wkams.testnet`, setelah review eksplisit method/arguments, storage deposit, gas dan estimasi biaya.
+3. Catat transaction hash dan baca kembali `get_issuer` dari Testnet.
+4. Jalankan verifier acceptance live: valid issuer diterima; unknown/inactive issuer, key/schema mismatch, RPC outage dan malformed data ditolak (fail closed).
+5. Rekam bukti acceptance dan perbarui status proyek.
 
-**Belum ada transaksi yang dilakukan. Jangan menandatangani atau mengirim transaksi tanpa approval eksplisit atas exact payload dan biaya.**
+Deployment transaction sudah dilakukan dan dicatat di [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md). Jangan melakukan transaksi lanjutan tanpa approval eksplisit atas payload dan biaya.
 
 ## Referensi
 
