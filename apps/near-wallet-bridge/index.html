@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101827" />
+    <meta name="description" content="ANONYMESH read-only NEAR Testnet wallet connection preflight." />
+    <title>ANONYMESH · NEAR Testnet Wallet Preflight</title>
+  </head>
+  <body>
+    <main id="app">
+      <section class="shell">
+        <p class="eyebrow">PRIVATE AGENTIC IDENTITY</p>
+        <h1>ANONYMESH</h1>
+        <p class="lead">NEAR Testnet wallet connection preflight</p>
+        <div class="notice">
+          <strong>Read-only connection stage</strong>
+          <p>This page can connect a wallet and inspect its selected account. It contains no deploy, function-call, transfer, or transaction-signing action.</p>
+        </div>
+        <dl class="details">
+          <div><dt>Network</dt><dd>NEAR Testnet</dd></div>
+          <div><dt>Expected account</dt><dd><code>wkams.testnet</code></dd></div>
+          <div><dt>Connector</dt><dd>NEAR Connect · <code>@hot-labs/near-connect</code></dd></div>
+        </dl>
+        <div class="actions">
+          <button id="connect" type="button">Connect NEAR wallet</button>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite">Not connected. No transaction has been requested.</p>
+        <section id="account-panel" class="account-panel" hidden>
+          <h2>Wallet account</h2>
+          <p id="account"></p>
+          <p id="match" class="match"></p>
+        </section>
+        <p class="footnote">Never enter or share a seed phrase, private key, recovery phrase, or CLI credential file. Review the wallet origin and account before approving a connection.</p>
+        <p class="footnote">A successful connection is not deployment approval. This bridge intentionally cannot send transactions.</p>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
