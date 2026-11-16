@@ -46,7 +46,21 @@ cargo build --manifest-path contracts/near/issuer-registry/Cargo.toml --locked -
 
 A successful local test or WASM build is not proof of deployment. A deployed contract requires a real testnet account, contract account, transaction receipt and explorer-verifiable state.
 
-## 4. Live Testnet acceptance evidence still required
+## 4. CI evidence that can be independently checked
+
+The following GitHub Actions runs completed successfully. The relevant source files in the current readiness branch were checked against the tested commit and have identical Git blob SHAs:
+
+- **NEAR Rust unit tests + WASM build:** [run 43805451359](https://github.com/wadezigh96/anonymesh/actions/runs/43805451359), commit `a5754245fd017eb00440f8799bd793eed64b648d`. All job steps succeeded, including `cargo test --locked`, release WASM build, checksum generation and artifact upload. The contract source blob at that tested commit is identical to the current readiness branch (`d300c984479718ffe970ad776944f9f6096fa4b1`).
+- **AnonCreds integration:** [run 43806163768](https://github.com/wadezigh96/anonymesh/actions/runs/43806163768), commit `c0ce2f921299054d564a4d7fa9b397ada198cb25`, success.
+- **Separate-process integration (including required registry mode):** [run 43806163795](https://github.com/wadezigh96/anonymesh/actions/runs/43806163795), same commit, success. The process integration test file and NEAR adapter test file in the current readiness branch have identical blob SHAs to that tested commit.
+- **Linux ARM64 benchmark:** [run 43806163774](https://github.com/wadezigh96/anonymesh/actions/runs/43806163774), same commit, success.
+
+The NEAR workflow uploaded artifact `anonymesh-issuer-registry-wasm-a5754245fd017eb00440f8799bd793eed64b648d` (artifact ID `14198086567`). Its SHA-256 digest reported by GitHub for the artifact archive is `9a58bd9aeccc0ccdec264d18a9e079a90ad79dd60827e90b4e75e05994c20cbf`. This is the archive digest, not the WASM file checksum.
+
+These are source/build/test CI results, not evidence that the WASM was deployed or that a live Testnet contract was queried. The latest commits after these runs are documentation-only; the CI results above are not being represented as a fresh run on the documentation HEAD.
+
+## 5. Live Testnet acceptance evidence still required
+
 
 Do not mark any item complete until the evidence exists:
 
@@ -61,7 +75,7 @@ Do not mark any item complete until the evidence exists:
 
 Deployment and registry writes are external blockchain transactions. They are intentionally not performed by this documentation/audit change; they require the owner's explicit approval and a reviewed transaction payload.
 
-## 5. Security and product limitations
+## 6. Security and product limitations
 
 - NEAR Testnet is public. Never put private identity attributes, link secrets, credential contents, proof witnesses, personal identifiers or per-presentation events on-chain.
 - The registry is a trust anchor for public issuer metadata, not a private identity database and not an on-chain ZK/AnonCreds verifier.
@@ -71,6 +85,6 @@ Deployment and registry writes are external blockchain transactions. They are in
 - Full unlinkability, distributed replay protection, production key custody, independent cryptographic review and production deployment are not demonstrated.
 - This NEAR Testnet prototype is not the user's intended final permissioned/private network architecture.
 
-## 6. Accurate judge-facing summary
+## 7. Accurate judge-facing summary
 
 > ANONYMESH demonstrates a local Issuer–Holder–Verifier flow using AnonCreds selective disclosure and a separate authorization gate. Its NEAR component is a Rust issuer/status registry plus a strict read-only RPC adapter. In required mode, the verifier checks the registry record before authorizing and fails closed when the record is invalid or unavailable. The repository includes a deterministic mock-RPC integration test and contract unit tests. The contract has not yet been deployed to NEAR Testnet; live-chain transaction and state evidence is therefore not claimed. Private claims and holder secrets remain off-chain.
