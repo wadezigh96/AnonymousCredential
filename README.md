@@ -52,6 +52,12 @@ The intended authorization flow is:
 
 A credential proof is **not by itself proof that a particular action is authorized**. The authorization and policy-enforcement layer is a distinct part of the design and remains under development.
 
+## ZK proof requirement and implementation boundary
+
+**Zero-knowledge proof is a core ANONYMESH requirement.** The current executable proof engine is Hyperledger AnonCreds CL presentations: the holder proves credential validity and requested predicates while selectively disclosing only the claims the verifier requested. The holder's link secret and hidden subject attributes stay holder-side. This is a credential-based zero-knowledge presentation, not a claim that ANONYMESH already implements a general-purpose zk-SNARK, zk-STARK, or on-chain proof verifier.
+
+The Ed25519 proof-of-possession is a separate signature check that binds the request to the credential-bound agent key; it is **not itself a zero-knowledge proof**. Likewise, a valid AnonCreds proof does not automatically grant permission: the verifier must separately enforce issuer trust, challenge freshness, capability scope, expiry, replay protection and quota. The current implemented subject is an agent demo; human credential issuance, privacy-preserving revocation and unlinkable presentations remain incomplete.
+
 ## Integrated local authorization demo (prototype; not production)
 
 The local three-process demo now connects AnonCreds verification, issuer-attested agent-key binding, Ed25519 proof-of-possession, a signed capability, verifier challenge binding, replay checks and quota consumption. This is an executable integration prototype, **not a production-ready authorization service**.
