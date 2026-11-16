@@ -32,6 +32,12 @@ async function freePort() {
 async function startMockRegistry(recordHolder) {
   const server = createServer(async (request, response) => {
     for await (const _chunk of request) {}
+    if (recordHolder.available === false) {
+      const payload = JSON.stringify({ error: "registry unavailable in integration test" });
+      response.writeHead(503, { "content-type": "application/json", "content-length": Buffer.byteLength(payload) });
+      response.end(payload);
+      return;
+    }
     const result = Array.from(Buffer.from(JSON.stringify(recordHolder.record), "utf8"));
     const payload = JSON.stringify({ jsonrpc: "2.0", id: "anonymesh-registry", result: { result } });
     response.writeHead(200, { "content-type": "application/json", "content-length": Buffer.byteLength(payload) });
@@ -118,7 +124,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const stateDb = join(stateDirectory, "verifier-state.sqlite");
   const issuerKeyFile = join(stateDirectory, "issuer-key.json");
   generateIssuerKeyFile({ file: issuerKeyFile, keyVersion: 1 });
-  const registryState = { record: null };
+  const registryState = { record: null, available: true };
   const mockRegistry = await startMockRegistry(registryState);
 
   try {
@@ -135,7 +141,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holderTwo);
     await waitHealthy(holderTwoUrl, holderTwo);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0" };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "0", NEAR_MAX_STALE_AGE_MS: "0" };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
@@ -256,6 +262,17 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(tamperedAttempt.status, 401);
     assert.equal(tamperedAttempt.body.authorized, false);
     assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
+
+    // A transient registry failure must not consume the challenge or capability quota.
+    registryState.available = false;
+    const registryUnavailableAttempt = await post(verifierUrl + "/verify", {
+      nonce: challengeResult.body.nonce,
+      ...proofBundle,
+    });
+    assert.equal(registryUnavailableAttempt.status, 401);
+    assert.equal(registryUnavailableAttempt.body.authorized, false);
+    assert.equal(registryUnavailableAttempt.body.code, "RPC_HTTP_UNAVAILABLE");
+    registryState.available = true;
 
     // The genuine AnonCreds proof + credential-bound PoP + capability is accepted once.
     const validAttempt = await post(verifierUrl + "/verify", {
