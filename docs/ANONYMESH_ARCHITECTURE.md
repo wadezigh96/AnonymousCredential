@@ -61,15 +61,15 @@ Credential schemas must distinguish `human` and `agent` subjects. Agent credenti
 
 See [docs/CRYPTO_SELECTION.md](CRYPTO_SELECTION.md) for the source-backed candidate comparison and version-security gate.
 
-Preferred protocol candidate: AnonCreds v1, behind an adapter, but **Rust dependency integration is currently blocked**. Upstream `anoncreds-rs` v0.2.3 is the patched release for GHSA-89r4-4c4j-7wx9 (affected 0.2.2, patched 0.2.3; advisory page lists no CVE ID), but its `anoncreds-clsignatures 0.3.2` dependency path reaches `glass_pumpkin 1.6.x` and yanked `core2 0.4.0`; upstream issue #372 remains open and docs.rs reports a failed build. The advisory fix and build blocker are separate. Do not add the dependency until a reproducible supported build exists.
+**Current ZK proof engine:** the runnable Node.js Issuer–Holder–Verifier demo uses the Hyperledger AnonCreds CL credential and presentation implementation. A holder creates a presentation against the verifier's original request, selectively discloses only requested claims, and proves hidden predicates such as expiry without returning the holder's link secret or hidden subject attribute. This is the project's implemented credential-based zero-knowledge presentation path.
 
-AnonCreds v2 remains the leading next-generation research candidate because it supports BBS and PS suites, additional ZK presentation capabilities and ALLOSAUR revocation. Its own repository says a comprehensive interoperable specification is still future work, so it is not the first integration dependency.
+Keep the cryptographic roles distinct: AnonCreds presentation verification is the ZK credential proof; Ed25519 proof-of-possession is a conventional signature proving control of the credential-bound agent key; capability verification is an authorization check. None substitutes for the others. The current flow does not claim general-purpose zk-SNARK/zk-STARK support or on-chain proof verification.
 
-W3C BBS remains an interoperability candidate. Its 2026 specification is a Candidate Recommendation Draft and its interoperability report describes experimental implementations with pending/skipped and failed cases. BBS derived proofs provide selective disclosure and unlinkability, but the BBS cryptosuite alone does not supply the full predicate and revocation requirements.
+**Rust integration status:** the separate `anoncreds-rs` integration remains blocked. Upstream `anoncreds-rs` v0.2.3 is the patched release for GHSA-89r4-4c4j-7wx9 (affected 0.2.2, patched 0.2.3; advisory page lists no CVE ID), but its `anoncreds-clsignatures 0.3.2` dependency path reaches `glass_pumpkin 1.6.x` and yanked `core2 0.4.0`; upstream issue #372 remains open and docs.rs reports a failed build. The advisory fix and build blocker are separate. Do not add this Rust dependency until a reproducible supported build exists.
 
-SD-JWT VC is not sufficient as the primary privacy engine because ordinary selective disclosure is not by itself an unlinkable zero-knowledge derived proof.
+AnonCreds v2 remains a next-generation research candidate because it supports BBS and PS suites, additional ZK presentation capabilities and ALLOSAUR revocation. Its own repository says a comprehensive interoperable specification is still future work. W3C BBS remains an interoperability candidate; derived proofs offer selective disclosure and unlinkability, but the cryptosuite alone does not supply the full predicate and revocation requirements. Ordinary SD-JWT VC disclosure is not a replacement for an unlinkable zero-knowledge derived proof.
 
-No cryptographic dependency is added yet. Exact source versions, lockfile, platform build, upstream tests, regression tests and independent review are required before implementation is accepted.
+The existing Node AnonCreds dependency is implemented and tested in the demo; no additional cryptographic dependency is added by this design update. Exact source versions, lockfiles, platform builds, upstream tests, regression tests and independent review remain required for any new cryptographic integration.
 
 ## 5. Challenge-response and unlinkability
 
