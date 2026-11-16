@@ -43,7 +43,7 @@ function updateDeployEnabled() {
 async function connectWallet() {
   connector = new NearConnector({
     network: "testnet",
-    features: { testnet: true, signAndSendTransaction: true },
+    features: { testnet: true, signAndSendTransaction: true, signMessage: true },
   });
   await connector.whenManifestLoaded;
   connector.on("wallet:signIn", async ({ accounts }) => {
@@ -59,10 +59,27 @@ async function connectWallet() {
 
       const refreshed = await wallet.getAccounts();
       const walletAccount = refreshed.find((account) => account.accountId === EXPECTED_ACCOUNT_ID);
-      const walletPublicKey = walletAccount?.publicKey ?? connectedAccount.publicKey;
+      let walletPublicKey = walletAccount?.publicKey ?? connectedAccount.publicKey;
 
-      // The wallet may omit publicKey. Resolve it from the account's on-chain
-      // access-key list, without exposing or asking the user to paste any key.
+      // If the wallet omits publicKey, request a NEP-413 proof-of-control.
+      // Never guess the signer from the chain's access-key list.
+      if (!walletPublicKey) {
+        if (typeof wallet.signMessage !== "function") {
+          throw new Error("This wallet does not expose safe message signing. Reconnect with a compatible Meteor Wallet.");
+        }
+        const nonce = crypto.getRandomValues(new Uint8Array(32));
+        const signed = await wallet.signMessage({
+          message: "ANONYMESH Testnet deployer signer-key verification. This signs no transaction and spends no funds.",
+          recipient: window.location.hostname,
+          nonce,
+          network: "testnet",
+        });
+        if (signed?.accountId !== EXPECTED_ACCOUNT_ID || typeof signed?.publicKey !== "string") {
+          throw new Error("Wallet did not return a signer identity proof for wkams.testnet.");
+        }
+        walletPublicKey = signed.publicKey;
+      }
+
       const response = await fetch("https://rpc.testnet.near.org", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -71,32 +88,21 @@ async function connectWallet() {
           id: "anonymesh-readonly-key-check",
           method: "query",
           params: {
-            request_type: "view_access_key_list",
+            request_type: "view_access_key",
             finality: "final",
             account_id: EXPECTED_ACCOUNT_ID,
+            public_key: walletPublicKey,
           },
         }),
       });
       if (!response.ok) throw new Error("NEAR Testnet RPC could not be reached.");
       const rpc = await response.json();
-      if (rpc.error) throw new Error("NEAR Testnet could not verify the account access keys.");
-      const keys = rpc.result?.keys;
-      if (!Array.isArray(keys)) throw new Error("NEAR Testnet returned an invalid access-key list.");
-
-      const fullAccessKeys = keys.filter((item) => item.access_key?.permission === "FullAccess");
-      let verifiedPublicKey;
-      if (walletPublicKey) {
-        const match = fullAccessKeys.find((item) => item.public_key === walletPublicKey);
-        if (!match) throw new Error("The wallet key does not match a FullAccess key on wkams.testnet.");
-        verifiedPublicKey = match.public_key;
-      } else {
-        if (fullAccessKeys.length !== 1) {
-          throw new Error("Wallet omitted its public key and the account does not have exactly one FullAccess key. Deployment remains blocked.");
-        }
-        verifiedPublicKey = fullAccessKeys[0].public_key;
+      if (rpc.error || rpc.result?.permission !== "FullAccess") {
+        throw new Error("The wallet signer key is not a verified FullAccess key on wkams.testnet.");
       }
 
-      connectedAccount = { ...connectedAccount, publicKey: verifiedPublicKey };
+      const verifiedPublicKey = walletPublicKey;
+
       accountNode.textContent = connectedAccount.accountId;
       setStatus(
         "Correct Testnet account and signer key verified. Review all five actions and approve only in Meteor Wallet.",
