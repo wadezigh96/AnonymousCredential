@@ -54,16 +54,18 @@ A successful local test or WASM build is not proof of deployment. A deployed con
 
 ## 4. CI evidence that can be independently checked
 
-The following GitHub Actions runs completed successfully. The relevant source files in the current readiness branch were checked against the tested commit and have identical Git blob SHAs:
+The following GitHub Actions runs were triggered for PR head commit `175c5b731593c99e6cdb3e70b1ac842bd9a2b59a`. The six completed workflows below succeeded:
 
-- **NEAR Rust unit tests + WASM build:** [run 43805451359](https://github.com/wadezigh96/anonymesh/actions/runs/43805451359), commit `a5754245fd017eb00440f8799bd793eed64b648d`. All job steps succeeded, including `cargo test --locked`, release WASM build, checksum generation and artifact upload. The contract source blob at that tested commit is identical to the current readiness branch (`d300c984479718ffe970ad776944f9f6096fa4b1`).
-- **AnonCreds integration:** [run 43806163768](https://github.com/wadezigh96/anonymesh/actions/runs/43806163768), commit `c0ce2f921299054d564a4d7fa9b397ada198cb25`, success.
-- **Separate-process integration (including required registry mode):** [run 43806163795](https://github.com/wadezigh96/anonymesh/actions/runs/43806163795), same commit, success. The process integration test file and NEAR adapter test file in the current readiness branch have identical blob SHAs to that tested commit.
-- **Linux ARM64 benchmark:** [run 43806163774](https://github.com/wadezigh96/anonymesh/actions/runs/43806163774), same commit, success.
+- **AnonCreds integration:** [run 43956869318](https://github.com/wadezigh96/anonymesh/actions/runs/43956869318), success. The native-demo job ran the complete Node test suite: **101 passed, 0 failed**. Both registry-key fixture tests (tests 95 and 96) passed after correcting the test data to use canonical NEAR public-key format and its Node representation. The ARM64 benchmark job in this workflow also succeeded.
+- **Separate-process integration:** [run 43956869259](https://github.com/wadezigh96/anonymesh/actions/runs/43956869259), success.
+- **NEAR contract unit tests and WASM build:** [run 43956869298](https://github.com/wadezigh96/anonymesh/actions/runs/43956869298), success. This is build/test evidence only; the workflow does not deploy or submit a blockchain transaction.
+- **NEAR wallet bridge:** [run 43956869272](https://github.com/wadezigh96/anonymesh/actions/runs/43956869272), success.
+- **Agent authentication:** [run 43956869308](https://github.com/wadezigh96/anonymesh/actions/runs/43956869308), success.
+- **Linux ARM64 benchmark:** [run 43956869337](https://github.com/wadezigh96/anonymesh/actions/runs/43956869337), success.
 
-The NEAR workflow uploaded artifact `anonymesh-issuer-registry-wasm-a5754245fd017eb00440f8799bd793eed64b648d` (artifact ID `14198086567`). Its SHA-256 digest reported by GitHub for the artifact archive is `9a58bd9aeccc0ccdec264d18a9e079a90ad79dd60827e90b4e75e05994c20cbf`. This is the archive digest, not the WASM file checksum.
+**Android workflow status:** [run 43956869252](https://github.com/wadezigh96/anonymesh/actions/runs/43956869252) was still in progress at the time this guide was updated. Its result is deliberately not described as passed here.
 
-These are source/build/test CI results, not evidence that the WASM was deployed or that a live Testnet contract was queried. The latest commits after these runs are documentation-only; the CI results above are not being represented as a fresh run on the documentation HEAD.
+These CI results apply to the listed commit and workflows only. A successful build or test does not establish production readiness, issuer registration, live verifier acceptance, or any additional on-chain state. The Testnet deployment and owner read-back are separate live evidence described above; issuer registration and live verifier acceptance remain pending.
 
 ## 5. Live Testnet acceptance evidence still required
 
