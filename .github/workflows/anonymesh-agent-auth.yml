@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/anonymesh-private-agent-identity
+      - fix/anonymesh-testnet-readiness
     paths:
       - 'crates/agent-auth/**'
       - '.github/workflows/anonymesh-agent-auth.yml'
