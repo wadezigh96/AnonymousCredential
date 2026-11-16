@@ -1,33 +1,31 @@
-# ANONYMESH NEAR Testnet deployer
+# ANONYMESH NEAR Registry Status
 
-This branch adds an explicit Meteor Wallet deployment flow to the existing read-only wallet bridge.
+This page is a **read-only status inspector** for the already deployed NEAR Testnet contract.
 
-## Exact scope
+## Fixed target
 
 - Network: NEAR Testnet only.
-- Signer: `wkams.testnet`.
-- New contract account: `registry.wkams.testnet`.
-- Initial transfer: 3 NEAR from the signer to the new contract account.
-- Access key: the connected wallet's public key is added as FullAccess to the new contract account.
-- Contract: the issuer-registry WASM from CI run [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123).
-- Required WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9`.
-- Initialization: `new({ owner_id: "wkams.testnet" })`.
+- Contract account: `registry.wkams.testnet`.
+- Expected owner: `wkams.testnet`.
+- Issuer ID checked: `wkams.testnet`.
 
-The page does not store, request, or transmit private keys, seed phrases, or recovery phrases. It requires a wallet connection, a selected WASM file whose digest matches the pinned CI digest, and a separate checkbox before the deploy button is enabled. The transaction is only requested from the wallet after the user presses Deploy.
+## What the page does
 
-## Wallet transaction actions
+1. Reads the contract account with NEAR RPC `view_account`.
+2. Rejects an account with the empty-code hash.
+3. Calls read-only `get_owner()` and checks the expected owner.
+4. Calls read-only `get_issuer({ issuer_id: "wkams.testnet" })`.
+5. Displays the result and final block height.
 
-1. `CreateAccount`
-2. `Transfer` (3 NEAR)
-3. `AddKey` (connected public key, FullAccess)
-4. `DeployContract` (verified WASM bytes)
-5. `FunctionCall` (`new`, 30 Tgas, zero deposit)
+## Explicitly disabled
 
-The user must inspect the five actions and the final fee in Meteor Wallet and reject any unexpected request. The 3 NEAR funding is separate from gas and storage costs. The deployed WASM occupies approximately 1.97728 NEAR of storage at the currently observed Testnet storage price; actual fees and required balance can change.
+- No wallet connector.
+- No private-key or seed-phrase input.
+- No transaction signing or broadcast.
+- No `CreateAccount`, `Transfer`, `AddKey`, `DeployContract`, or initialization call.
+- No issuer registration or other state mutation.
 
-## Verification after deployment
-
-A wallet result alone is not sufficient. Read back the account code hash, call `get_owner`, and verify it equals `wkams.testnet`. Then perform the remaining issuer registry smoke tests with a disposable issuer. Do not register a production issuer or claim end-to-end verifier acceptance based only on deployment.
+The issuer lookup currently returns `null` until the owner separately registers an issuer. This UI does not perform that transaction.
 
 ## Local checks
 
@@ -35,5 +33,3 @@ A wallet result alone is not sufficient. Read back the account code hash, call `
 npm test
 npm run build
 ```
-
-This deployer is a Testnet-only tool. It must not be reused for Mainnet without a separate review and explicit approval.
