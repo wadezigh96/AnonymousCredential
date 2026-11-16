@@ -47,25 +47,67 @@ async function connectWallet() {
   });
   await connector.whenManifestLoaded;
   connector.on("wallet:signIn", async ({ accounts }) => {
-    wallet = await connector.wallet();
-    connectedAccount = accounts?.find((account) => account.accountId === EXPECTED_ACCOUNT_ID);
-    if (!connectedAccount) {
-      setStatus("Wallet connected, but selected account is not wkams.testnet. Deployment blocked.", "warning");
-      accountNode.textContent = accounts?.map((item) => item.accountId).join(", ") || "No account returned";
-      updateDeployEnabled();
-      return;
-    }
-    if (!connectedAccount.publicKey) {
+    try {
+      wallet = await connector.wallet();
+      connectedAccount = accounts?.find((account) => account.accountId === EXPECTED_ACCOUNT_ID);
+      if (!connectedAccount) {
+        setStatus("Wallet connected, but selected account is not wkams.testnet. Deployment blocked.", "warning");
+        accountNode.textContent = accounts?.map((item) => item.accountId).join(", ") || "No account returned";
+        updateDeployEnabled();
+        return;
+      }
+
       const refreshed = await wallet.getAccounts();
-      connectedAccount = refreshed.find((account) => account.accountId === EXPECTED_ACCOUNT_ID) ?? connectedAccount;
+      const walletAccount = refreshed.find((account) => account.accountId === EXPECTED_ACCOUNT_ID);
+      const walletPublicKey = walletAccount?.publicKey ?? connectedAccount.publicKey;
+
+      // The wallet may omit publicKey. Resolve it from the account's on-chain
+      // access-key list, without exposing or asking the user to paste any key.
+      const response = await fetch("https://rpc.testnet.near.org", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "anonymesh-readonly-key-check",
+          method: "query",
+          params: {
+            request_type: "view_access_key_list",
+            finality: "final",
+            account_id: EXPECTED_ACCOUNT_ID,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error("NEAR Testnet RPC could not be reached.");
+      const rpc = await response.json();
+      if (rpc.error) throw new Error("NEAR Testnet could not verify the account access keys.");
+      const keys = rpc.result?.keys;
+      if (!Array.isArray(keys)) throw new Error("NEAR Testnet returned an invalid access-key list.");
+
+      const fullAccessKeys = keys.filter((item) => item.access_key?.permission === "FullAccess");
+      let verifiedPublicKey;
+      if (walletPublicKey) {
+        const match = fullAccessKeys.find((item) => item.public_key === walletPublicKey);
+        if (!match) throw new Error("The wallet key does not match a FullAccess key on wkams.testnet.");
+        verifiedPublicKey = match.public_key;
+      } else {
+        if (fullAccessKeys.length !== 1) {
+          throw new Error("Wallet omitted its public key and the account does not have exactly one FullAccess key. Deployment remains blocked.");
+        }
+        verifiedPublicKey = fullAccessKeys[0].public_key;
+      }
+
+      connectedAccount = { ...connectedAccount, publicKey: verifiedPublicKey };
+      accountNode.textContent = connectedAccount.accountId;
+      setStatus(
+        "Correct Testnet account and signer key verified. Review all five actions and approve only in Meteor Wallet.",
+        "success",
+      );
+    } catch (error) {
+      wallet = undefined;
+      connectedAccount = undefined;
+      accountNode.textContent = "Account key could not be verified";
+      setStatus(`Wallet connected, but deployment is blocked: ${error instanceof Error ? error.message : "key verification failed"}`, "warning");
     }
-    accountNode.textContent = connectedAccount.accountId;
-    setStatus(
-      connectedAccount.publicKey
-        ? "Correct Testnet account connected. Review the deployment details and approve only in Meteor Wallet."
-        : "Wallet did not expose the account public key. Deployment is blocked; no key should be pasted here.",
-      connectedAccount.publicKey ? "success" : "warning",
-    );
     updateDeployEnabled();
   });
   connector.on("wallet:signOut", () => {
