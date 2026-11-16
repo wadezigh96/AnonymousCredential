@@ -21,7 +21,7 @@ ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate 
 | Agent-key binding and Ed25519 PoP | Integrated in the local verifier path | Conventional signature/key-possession check; not itself a ZK proof or anonymity guarantee |
 | Delegated capability checks | Signed capability chain and verifier policy checks in the local prototype | One root capability in the demo; no production multi-domain delegation or external tool execution |
 | Replay and quota state | SQLite persistence and same-host concurrent verifier integration | Same-host/local-file evidence only; not a distributed database guarantee |
-| NEAR issuer registry | Rust contract source with owner-only issuer/status mutation and storage-deposit accounting | Rust/WASM CI run [43805451359](https://github.com/wadezigh96/anonymesh/actions/runs/43805451359) succeeded for source commit `a5754245fd017eb00440f8799bd793eed64b648d`; a later mock-test-only adjustment exists at `a55cda5c8c2cc95511cf2b18ad01a4a618c74023` and still needs a fresh contract workflow run |
+| NEAR issuer registry | Rust contract source with owner-only issuer/status mutation and storage-deposit accounting | Rust/WASM CI run [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123) succeeded for the exact readiness ref `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; tests, WASM build, metadata/checksum and artifact upload passed. Verified WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9` |
 | NEAR read adapter | Read-only `get_issuer` RPC adapter with strict validation and fail-closed required mode | Deterministic local mock-RPC and separate-process CI passed; not live-chain evidence |
 | Android | Single-process native AnonCreds smoke app | Reported physical-device smoke test is not the full three-role protocol or wallet/contract integration |
 | Unlinkability / revocation | Not implemented or demonstrated | Selective disclosure must not be described as full anonymity, unlinkability, or revocation |
@@ -32,9 +32,10 @@ ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate 
 The operator has verified through NEAR Testnet RPC/CLI:
 
 - Account: `wkams.testnet`
-- Observed balance: 18.9 NEAR at the inspected block
-- One on-chain Full Access key exists
-- The account had **no contract code** at the time of inspection
+- Latest read-only `view_account` query in this audit: block height `277937423`, hash `4Qta8z5jfnZdUFa5gN3YS9qx9XbEsQyfmxqEpcz4217H`
+- Observed balance: 18.9 NEAR at that block
+- Account code hash: `11111111111111111111111111111111` (no contract code at that block)
+- A previous access-key inspection found one on-chain Full Access key; the audit did not expose or reuse its private material
 - The Rust `near-cli-rs 0.30.1` binary runs in Termux
 - The local `accounts.json` file is empty; a usable local signer has not been established
 - Meteor Wallet browser integration has not yet been successfully connected
@@ -95,7 +96,7 @@ The native AnonCreds Node package does not support running its Linux native bina
 
 ## Remaining release gates — in order
 
-1. **Re-run contract CI against the latest contract source**, including the mock-runtime storage/refund tests. Do not treat the earlier CI run as testing the later `a55cda5` change.
+1. **Contract CI for the audited source is complete:** run `43846695123` succeeded at `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; the uploaded WASM source SHA and checksum were verified. Re-run only if contract source or its build workflow changes.
 2. **Choose and verify the Testnet signer path.** Use the existing Meteor Wallet only if a supported signing integration is confirmed. Do not generate or install an unrelated key and do not expose recovery material.
 3. **Finalize contract account strategy.** Decide whether to deploy to `wkams.testnet` or a dedicated subaccount; verify deployer authority, storage, gas and recovery plan.
 4. **Review the exact deployment + initialization payload** for `new({"owner_id":"wkams.testnet"})`, WASM checksum and expected fees. Obtain explicit owner approval before signing.

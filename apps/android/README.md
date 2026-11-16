@@ -45,7 +45,12 @@ The standalone release APK is written to
 checks that a non-empty `index.android.bundle` was generated before uploading
 the APK artifact. This avoids requiring a Metro server on the phone.
 
-Install `android/app/build/outputs/apk/debug/app-debug.apk` on an ARM64
-Android device and tap **Run native proof test**. A successful CI APK build is
-not proof that the native module runs on a physical phone; record device
-runtime evidence separately.
+From the repository root, install the release APK on an ARM64 Android device:
+
+```sh
+adb install -r apps/android/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Then tap **Run native proof test**. A successful CI APK build is not proof that
+the native module runs on a physical phone; record device runtime evidence
+separately.
