@@ -6,6 +6,8 @@ import { ChallengeLedger, createAgentPresentation, issueAgentCredential, makePre
 import { signCapability, capabilityDigest } from "../src/capability.mjs";
 import { AgentAuthorizationRuntime, createAgentRequestProof } from "../src/agent-runtime.mjs";
 import { classifyVerificationError, verifyAndAuthorizeAgentRequest } from "../src/paai-verifier.mjs";
+import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
+import { createNearIssuerRegistryClient } from "../src/near-issuer-registry.mjs";
 
 const now = 1_800_000_000;
 const audience = "agent-b.anonymesh.test";
@@ -171,6 +173,71 @@ test("registry-backed verifier requires the credential-bound issuer key and meta
   assert.equal(second.ledger.get(second.challenge.nonce).consumed, false);
 });
 
+
+test("registry-backed verifier rejects issuer key version mismatch without consuming challenge", () => {
+  const f = fixture();
+  const schemaHash = createHash("sha256")
+    .update(JSON.stringify(f.holder.schema.toJson()))
+    .digest("hex");
+  const issuerRecord = {
+    active: true,
+    nodePublicKey: f.holder.issuerRegistryPublicKey,
+    keyVersion: 2,
+    schemaHash,
+    statusEpoch: 0,
+  };
+
+  const rejected = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    issuerRecord,
+    registryRequired: true,
+    expected: {
+      ...f.args.expected,
+      issuerKeyVersion: 1,
+      schemaHash,
+    },
+    runtime: f.runtime,
+  });
+
+  assert.deepEqual(rejected, {
+    authorized: false,
+    code: "ISSUER_KEY_VERSION_MISMATCH",
+  });
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
+});
+
+test("registry-backed verifier rejects issuer schema mismatch without consuming challenge", () => {
+  const f = fixture();
+  const schemaHash = createHash("sha256")
+    .update(JSON.stringify(f.holder.schema.toJson()))
+    .digest("hex");
+  const issuerRecord = {
+    active: true,
+    nodePublicKey: f.holder.issuerRegistryPublicKey,
+    keyVersion: 1,
+    schemaHash: "f".repeat(64),
+    statusEpoch: 0,
+  };
+
+  const rejected = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    issuerRecord,
+    registryRequired: true,
+    expected: {
+      ...f.args.expected,
+      issuerKeyVersion: 1,
+      schemaHash,
+    },
+    runtime: f.runtime,
+  });
+
+  assert.deepEqual(rejected, {
+    authorized: false,
+    code: "ISSUER_SCHEMA_MISMATCH",
+  });
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
+});
+
 test("required registry mode fails closed before consuming challenge state", () => {
   for (const issuerRecord of [null, { active: false, nodePublicKey: "ignored", keyVersion: 1, schemaHash: "a".repeat(64) }]) {
     const f = fixture();
@@ -183,4 +250,77 @@ test("required registry mode fails closed before consuming challenge state", () 
     assert.deepEqual(rejected, { authorized: false, code: "REGISTRY_UNAVAILABLE" });
     assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
   }
+});
+
+
+test("NEAR RPC registry record is connected to the verifier authorization gate", async () => {
+  const f = fixture();
+  const schemaHash = createHash("sha256")
+    .update(JSON.stringify(f.holder.schema.toJson()), "utf8")
+    .digest("hex");
+  const registryRecord = {
+    public_key: nodeEd25519PublicKeyToNear(f.holder.issuerRegistryPublicKey),
+    key_version: 1,
+    schema_hash: schemaHash,
+    active: true,
+    status_epoch: 0,
+    status_root: "0".repeat(64),
+  };
+
+  const fetchImpl = async (url, options) => {
+    assert.equal(url, "http://127.0.0.1:3030");
+    assert.equal(options.method, "POST");
+    const rpcRequest = JSON.parse(options.body);
+    assert.equal(rpcRequest.method, "query");
+    assert.equal(rpcRequest.params.request_type, "call_function");
+    assert.equal(rpcRequest.params.finality, "final");
+    assert.equal(rpcRequest.params.account_id, "registry.testnet");
+    assert.equal(rpcRequest.params.method_name, "get_issuer");
+    assert.deepEqual(
+      JSON.parse(Buffer.from(rpcRequest.params.args_base64, "base64").toString("utf8")),
+      { issuer_id: "issuer.testnet" },
+    );
+    return new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      id: rpcRequest.id,
+      result: {
+        result: Array.from(Buffer.from(JSON.stringify(registryRecord), "utf8")),
+      },
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const registryClient = createNearIssuerRegistryClient({
+    network: "local",
+    contractAccount: "registry.testnet",
+    rpcUrl: "http://127.0.0.1:3030",
+    issuerAccount: "issuer.testnet",
+    expectedKeyVersion: 1,
+    expectedSchemaHash: schemaHash,
+    minimumStatusEpoch: 0,
+    fetchImpl,
+  });
+
+  const issuerRecord = await registryClient.getIssuerRecord();
+  assert.equal(issuerRecord.active, true);
+  assert.equal(issuerRecord.keyVersion, 1);
+  assert.equal(issuerRecord.schemaHash, schemaHash);
+  assert.equal(issuerRecord.nodePublicKey, f.holder.issuerRegistryPublicKey);
+
+  const result = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    issuerRecord,
+    registryRequired: true,
+    expected: {
+      ...f.args.expected,
+      issuerKeyVersion: 1,
+      schemaHash,
+    },
+    runtime: f.runtime,
+  });
+
+  assert.equal(result.authorized, true);
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, true);
 });
