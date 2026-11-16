@@ -1,6 +1,6 @@
 # ANONYMESH — Private Agentic Identity Infrastructure (PAII)
 
-> **Project status (2026-11-16):** local Issuer–Holder–Verifier prototype and NEAR registry adapter are implemented with Linux CI evidence. The registry adapter has deterministic mock-RPC integration tests. **The NEAR Testnet contract is not deployed yet.** See [canonical project status and release gates](docs/PROJECT_STATUS.md) for exact evidence, architecture boundaries and the remaining live-Testnet steps.
+> **Project status (2026-11-16):** local Issuer–Holder–Verifier prototype and NEAR registry adapter are implemented with Linux CI evidence. The NEAR issuer registry is deployed and initialized on Testnet at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. See [canonical project status](docs/PROJECT_STATUS.md) and [deployment record](docs/NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 **ANONYMESH** is a platform-independent protocol project exploring **Private Agentic Identity Infrastructure (PAII)**: privacy-preserving identity, trust and authorization for humans and autonomous AI agents.
 
