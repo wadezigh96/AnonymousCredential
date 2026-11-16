@@ -12,8 +12,11 @@ function encodeArgs(args) {
 }
 
 function decodeResult(bytes) {
-  const binary = atob(bytes);
-  const data = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const data = Array.isArray(bytes)
+    ? Uint8Array.from(bytes)
+    : bytes instanceof Uint8Array
+      ? bytes
+      : Uint8Array.from(atob(bytes), (char) => char.charCodeAt(0));
   return JSON.parse(new TextDecoder().decode(data));
 }
 
