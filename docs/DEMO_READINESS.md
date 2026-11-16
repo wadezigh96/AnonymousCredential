@@ -1,3 +1,5 @@
+> **Superseded deployment status (2026-11-16):** The registry is deployed and initialized at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` was verified. Issuer registration and live verifier acceptance remain pending. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md) and [project status](PROJECT_STATUS.md).
+
 # ANONYMESH — Demo Readiness
 
 **Repository:** `wadezigh96/anonymesh`  
@@ -9,7 +11,7 @@
 
 <ins>Ready for a local prototype demonstration with clearly stated limitations.</ins>
 
-**Not ready to claim a live NEAR Testnet integration.** The registry contract and verifier adapter are implemented and have local/mock-RPC evidence, but there is no deployment transaction, live contract account, live issuer record or live verifier acceptance result.
+**Partial live Testnet integration only.** Contract deployment and owner read-back are verified; there is not yet a live issuer record or live verifier acceptance result.
 
 ## Evidence
 
@@ -59,4 +61,4 @@ No wallet import, key generation, deployment, registry write, payment or mainnet
 
 ## Judge-facing one-sentence description
 
-ANONYMESH is a local Issuer–Holder–Verifier prototype using AnonCreds selective disclosure and a separate authorization gate, with a Rust NEAR public issuer registry and a fail-closed read-only verifier adapter tested against deterministic mock RPC; live Testnet deployment remains an explicit acceptance gate.
+ANONYMESH is a local Issuer–Holder–Verifier prototype using AnonCreds selective disclosure and a separate authorization gate, with a Rust NEAR public issuer registry and a fail-closed read-only verifier adapter tested against deterministic mock RPC; contract deployment is complete; live issuer registration and verifier acceptance remain explicit acceptance gates.
