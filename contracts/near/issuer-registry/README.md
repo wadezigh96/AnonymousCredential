@@ -30,8 +30,8 @@ rustup target add wasm32-unknown-unknown
 cargo build --locked --target wasm32-unknown-unknown --release
 ```
 
-NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. Fourteen unit tests are included. The committed `Cargo.lock` pins the resolved dependency graph, and the GitHub Actions workflow runs both `cargo test --locked` and the WASM release build with `--locked`. The recorded NEAR contract workflow run [#13](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085) passed all 14 tests and the WASM release build. This is CI evidence, not an independent security review.
+NEAR SDK 5.30.1 requires Rust 1.95 or later. Check the installed compiler before attempting a build. The committed `Cargo.lock` pins the resolved dependency graph, and the GitHub Actions workflow runs both `cargo test --locked` and the WASM release build with `--locked`. The final branch workflow [43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625) passed the locked unit-test job and WASM release build. This is CI evidence, not an independent security review.
 
 ## Testnet deployment
 
-Do not deploy automatically. First pass local tests, reproducible WASM build, contract review and testnet configuration review. Deployment requires explicit approval.
+Do not deploy automatically. First pass local tests, reproducible WASM build, contract review, storage/deposit review and testnet configuration review. Deployment requires an available testnet signer, funded deployer and explicit approval. The Node verifier's registry integration is tested locally with a deterministic RPC mock; it is not live-chain evidence.

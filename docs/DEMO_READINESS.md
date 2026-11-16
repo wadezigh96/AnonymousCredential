@@ -26,7 +26,7 @@ The local Node package implements an issuer, holder, and verifier flow using the
 
 The verifier stores the presentation request associated with a challenge and checks the presentation against that request. A proof made for another nonce is rejected. A tampered proof is rejected without consuming the challenge. A valid proof is accepted once, and replay is rejected. The verifier health check requires an HTTP success response with a JSON `ready: true` payload before considering a role ready.
 
-The separate Node authorization-runtime prototype covers signed capability chains, key-bound Ed25519 proof-of-possession, audience/action/resource binding, expiry, replay, quota, and guarded action callbacks. This runtime is tested independently; it is **not integrated into the HTTP issuer-holder-verifier demo**.
+The Node HTTP verifier integrates signed capability-chain validation, key-bound Ed25519 proof-of-possession, audience/action/resource binding, expiry, replay, quota, and the AnonCreds presentation path. The guarded action callback remains a separate runtime API and is not a production tool host.
 
 The Rust agent-auth prototype and the NEAR issuer/status registry scaffold are verified by GitHub Actions. The NEAR workflow builds the contract to WASM and runs unit tests. These checks do not deploy the contract or submit a transaction.
 
@@ -34,9 +34,9 @@ The Rust agent-auth prototype and the NEAR issuer/status registry scaffold are v
 
 The following claims must not be made during a demo:
 
-- The HTTP role servers are not production-authenticated services. They use unauthenticated loopback HTTP and do not provide TLS, rate limiting, or distributed service identity.
-- The default verifier and authorization state are in-memory. SQLite replay/quota persistence is tested as a component, but it is not wired into the HTTP verifier or deployed across multiple instances.
-- The capability runtime is not joined cryptographically to the AnonCreds presentation flow. The challenge capability digest is not proven inside the AnonCreds proof.
+- The HTTP role servers use bearer authentication and endpoint/authentication-failure rate limits for the demo, but use loopback HTTP without TLS or distributed service identity.
+- The HTTP verifier persists challenge and authorization state in local SQLite files; this is same-host evidence, not a distributed database guarantee.
+- The AnonCreds presentation reveals the issuer registry key and agent key, while capability and challenge binding are checked by the verifier path; the capability digest is not itself a selectively disclosed AnonCreds attribute.
 - AnonCreds revocation and privacy-preserving non-revocation witnesses are not implemented.
 - Selective disclosure is not the same as complete anonymity or unlinkability. Public keys, disclosed attributes, timing, network metadata, issuer records, verifier logs, and colluding verifiers can still create correlation.
 - The sample `agent_subject` is not a human identity binding and does not prove that an agent is benign or controlled by one person.

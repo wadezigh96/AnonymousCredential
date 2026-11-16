@@ -3,19 +3,19 @@
 **Audit date:** 2026-11-15  
 **Repository:** `wadezigh96/anonymesh`  
 **Branch:** `feat/anonymesh-private-agent-identity`  
-**Audited HEAD:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
-**Branch HEAD checked against GitHub:** exact match after push
+**CI-tested implementation commit:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
+**Evidence documentation commit:** follows the CI-tested implementation and contains documentation-only changes
 **Scope:** Evidence review only. No deployment, NEAR transaction, merge, pull request, or mainnet action was performed.
 
 ## Executive summary
 
-The final branch head has six successful GitHub Actions workflow runs. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
+The CI-tested implementation commit has six successful GitHub Actions workflow runs. A later documentation-only commit records those results. The runs cover the Node AnonCreds suite, process integration, Rust agent-auth tests, Linux ARM64 benchmark, Android release APK build, and NEAR contract unit tests plus Wasm release build.
 
 This is **local integration evidence for a testnet preflight**, not production readiness. The Node verifier now has an explicit registry-backed mode that reads a finality view through a narrow read-only RPC client and fails closed on trust or freshness errors. The NEAR contract remains a preliminary public-metadata registry, and the Android app remains a single-process native proof smoke test. Production governance, transport security, distributed state, privacy-preserving revocation, and action execution controls remain incomplete.
 
 ## 1. Git and CI evidence
 
-All six final runs below completed with conclusion `success` on the audited branch head.
+All six final runs below completed with conclusion `success` on the CI-tested implementation commit.
 
 | Workflow | Result | Evidence |
 |---|---:|---|
@@ -110,7 +110,7 @@ Do not remove the documented limitations about TLS, distributed rate limiting, r
 1. Preserve the final branch evidence and rerun CI after any future code change.
 2. Review contract storage economics, account funding, initialization arguments, owner account, gas/deposit requirements and emergency disable procedure.
 3. Decide whether the first testnet deployment is only a registry smoke test or part of an actual end-to-end verifier flow; the verifier path is integrated, but live RPC/deployed-contract evidence is still absent.
-4. Re-run the final branch CI after any further code change; do not treat this evidence as immutable after new commits.
+4. Re-run CI after any further code change; do not treat this evidence as immutable after new commits.
 5. Verify the exact APK on a physical Android device and capture the full APK SHA-256, device ABI and runtime output.
 6. Complete an independent security review of the remaining rate-limiter, storage, privacy and authorization boundaries.
 7. Prepare a transaction preflight containing network, signer, receiver, method, arguments, deposit, gas, expected state change and rollback/disable plan. Show it to the owner and wait for explicit approval.

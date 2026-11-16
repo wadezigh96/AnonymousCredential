@@ -137,7 +137,7 @@ Agent A reveals only `agent_role`; the private subject and `valid_until` remain 
 - `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
 - `npm run benchmark --prefix packages/anoncreds-agent-demo`
 
-The verified feature branch completed 42/42 Node tests on Linux x64, including the separate-process integration test. The standalone smoke demo reported `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. A 20-iteration Linux x64 benchmark reported proof-generation p50/p95 79.888/88.619 ms, verification p50/p95 77.318/119.527 ms, proof JSON p50/p95 18,119/18,142 bytes, and process RSS high-water 66.89 MiB. These measurements are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
+The current CI-tested implementation commit completed the Node integration and separate-process workflows; the local suite reports 80/80 tests passing. The registry-backed process test uses `NEAR_REQUIRED=true`, a persisted issuer key, and a deterministic local JSON-RPC mock. The standalone smoke demo reports `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. Benchmark values are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
 
 Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo. A physical Android 15 native-proof smoke test was reported successful on 15 November 2026: `PROOF VERIFIED`, role `weather_reader` disclosed, private subject not disclosed, and proof JSON length 18,117 characters (AnonCreds wrapper 0.5.0). This is a single-process local proof demonstration, not full Android Issuer–Holder–Verifier integration or Android performance evidence.
 
@@ -153,11 +153,11 @@ The following roadmap defines the intended development direction. A roadmap item
 
 ## NEAR integration
 
-NEAR is a planned coordination and public-registry layer for information such as issuer metadata and status commitments. Private identity attributes, holder secrets and private credential contents should not be placed on-chain. The current NEAR issuer/status registry is a preliminary contract scaffold; it is not deployed and does not yet provide end-to-end on-chain revocation verification.
+NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is not deployed and does not provide on-chain AnonCreds or revocation-proof verification.
 
 ## Other components and status at a glance
 
-Delegated capability verification and the preliminary NEAR issuer/status registry remain prototypes. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment, merge, or external submission is authorized by this work.
+Delegated capability verification and the NEAR issuer/status registry are integrated local/testnet-preflight slices, not production services. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment or external submission has been performed.
 
 | Component | Current status |
 |---|---|
@@ -165,7 +165,7 @@ Delegated capability verification and the preliminary NEAR issuer/status registr
 | Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
 | Ed25519 proof-of-possession | Integrated into local verifier decision path; ordinary key-based authentication, not anonymous |
 | Delegated capability + PoP | Integrated into the local verifier decision path; one root capability in demo, not production delegation |
-| NEAR issuer/status registry | Preliminary contract scaffold with unit tests; not deployed |
+| NEAR issuer/status registry | Contract plus strict Node read adapter and mocked-RPC verifier integration; not deployed |
 | Unlinkable presentations | Not demonstrated |
 | Privacy-preserving revocation | Not implemented |
 | Local-first agent runtime and durable wallet | Not implemented |
@@ -173,7 +173,7 @@ Delegated capability verification and the preliminary NEAR issuer/status registr
 
 ## Architecture overview
 
-ANONYMESH separates credential issuance, private presentation, verification, authorization policy and public registry coordination. The diagram distinguishes the runnable Issuer–Holder–Verifier demo from authorization and NEAR components that remain prototypes or planned integration.
+ANONYMESH separates credential issuance, private presentation, verification, authorization policy and public registry coordination. The diagram shows the runnable local Issuer–Holder–Verifier flow and the optional mandatory registry gate used when `NEAR_REQUIRED=true`.
 
 ```mermaid
 flowchart TB
@@ -185,7 +185,7 @@ flowchart TB
         HOLDER -->|"Presentation + Proof"| VERIFIER
     end
 
-    subgraph AUTH["AGENT AUTHORIZATION — PROTOTYPE / INTEGRATION IN PROGRESS"]
+    subgraph AUTH["AGENT AUTHORIZATION — LOCAL INTEGRATION"]
         POP["Ed25519<br/>Proof of Possession"]
         CAP["Delegated Capability<br/>Chain Verification"]
         POLICY["Authorization Runtime<br/>Audience · Action · Resource · Expiry"]
@@ -200,18 +200,18 @@ flowchart TB
     DECISION -->|"Allow"| ALLOW["Permit requested action"]
     DECISION -->|"Deny"| DENY["Reject request"]
 
-    subgraph COORD["NEAR COORDINATION — PRELIMINARY SCAFFOLD"]
+    subgraph COORD["NEAR COORDINATION — READ-ONLY REGISTRY GATE"]
         REG["Issuer / Status Registry<br/>Public metadata only"]
     end
-    ISSUER -.->|"Planned public metadata"| REG
-    REG -.->|"Future status lookup"| VERIFIER
+    ISSUER -->|"Public key · version · schema hash"| REG
+    REG -->|"Read-only lookup; fail closed"| VERIFIER
 ```
 
 **Current boundaries**
 
 - **Runnable demo:** separate local Node.js Issuer, Holder and Verifier processes in `packages/anoncreds-agent-demo`; Linux CI exercises proof verification and nonce replay behavior.
-- **Authorization:** Ed25519 and delegated-capability components are prototype slices. The complete credential-to-key-to-capability-to-action path is not yet demonstrated end-to-end.
-- **NEAR:** issuer/status registry is a preliminary contract scaffold and is not deployed. Only public issuer metadata/status commitments are intended for this layer.
+- **Authorization:** the local verifier path checks the credential-bound issuer key, agent key proof-of-possession, capability chain, challenge binding, replay and quota. Production tool enforcement remains out of scope.
+- **NEAR:** the issuer/status registry is consumed through a strict read-only adapter in required mode, but the contract is not deployed and live testnet evidence is absent.
 - **Not claimed:** complete unlinkability, production authorization runtime, privacy-preserving revocation or production readiness.
 
 ### Repository structure
