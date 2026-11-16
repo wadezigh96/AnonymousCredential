@@ -4,35 +4,55 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#101827" />
-    <meta name="description" content="ANONYMESH read-only NEAR Testnet wallet connection preflight." />
-    <title>ANONYMESH · NEAR Testnet Wallet Preflight</title>
+    <meta name="description" content="ANONYMESH NEAR Testnet contract deployment with explicit wallet approval." />
+    <title>ANONYMESH · NEAR Testnet Deployment</title>
   </head>
   <body>
     <main id="app">
       <section class="shell">
         <p class="eyebrow">PRIVATE AGENTIC IDENTITY</p>
         <h1>ANONYMESH</h1>
-        <p class="lead">NEAR Testnet wallet connection preflight</p>
+        <p class="lead">NEAR Testnet contract deployment</p>
         <div class="notice">
-          <strong>Read-only connection stage</strong>
-          <p>This page can connect a wallet and inspect its selected account. It contains no deploy, function-call, transfer, or transaction-signing action.</p>
+          <strong>Testnet only · one wallet-approved transaction</strong>
+          <p>This page creates <code>registry.wkams.testnet</code>, funds it, adds the connected wallet public key as FullAccess, deploys the checksum-pinned WASM, and calls <code>new</code>. Nothing is sent until you press Deploy and approve in Meteor Wallet.</p>
         </div>
         <dl class="details">
           <div><dt>Network</dt><dd>NEAR Testnet</dd></div>
-          <div><dt>Expected account</dt><dd><code>wkams.testnet</code></dd></div>
-          <div><dt>Connector</dt><dd>NEAR Connect · <code>@hot-labs/near-connect</code></dd></div>
+          <div><dt>Signer</dt><dd><code>wkams.testnet</code></dd></div>
+          <div><dt>Contract</dt><dd id="contract"><code>registry.wkams.testnet</code></dd></div>
+          <div><dt>Initial funding</dt><dd id="initial-funding">3 NEAR</dd></div>
+          <div><dt>Owner at initialization</dt><dd><code>wkams.testnet</code></dd></div>
         </dl>
-        <div class="actions">
-          <button id="connect" type="button">Connect NEAR wallet</button>
-        </div>
-        <p id="status" class="status" role="status" aria-live="polite">Not connected. No transaction has been requested.</p>
-        <section id="account-panel" class="account-panel" hidden>
-          <h2>Wallet account</h2>
-          <p id="account"></p>
-          <p id="match" class="match"></p>
+        <section class="step">
+          <h2>1. Connect wallet</h2>
+          <button id="connect" type="button">Connect NEAR Testnet wallet</button>
+          <p>Connected account: <strong id="account">Not connected</strong></p>
         </section>
-        <p class="footnote">Never enter or share a seed phrase, private key, recovery phrase, or CLI credential file. Review the wallet origin and account before approving a connection.</p>
-        <p class="footnote">A successful connection is not deployment approval. This bridge intentionally cannot send transactions.</p>
+        <section class="step">
+          <h2>2. Select verified contract WASM</h2>
+          <p>Download the CI artifact from the linked GitHub Actions run, extract the ZIP, then select <code>anonymesh_issuer_registry.wasm</code>.</p>
+          <p><a href="https://github.com/wadezigh96/anonymesh/actions/runs/43846695123" target="_blank" rel="noopener noreferrer">Open verified CI artifact run</a></p>
+          <input id="wasm" type="file" accept=".wasm,application/wasm" />
+          <p id="wasm-status" class="status">No WASM selected.</p>
+        </section>
+        <section class="step">
+          <h2>3. Review and approve</h2>
+          <ul>
+            <li>Create account: <code>registry.wkams.testnet</code></li>
+            <li>Transfer 3 NEAR from <code>wkams.testnet</code></li>
+            <li>Add the connected account public key as FullAccess</li>
+            <li>Deploy the checksum-verified issuer-registry WASM</li>
+            <li>Initialize owner as <code>wkams.testnet</code></li>
+          </ul>
+          <p id="funding" class="footnote"></p>
+          <label class="confirm"><input id="confirm" type="checkbox" /> I checked the network, account, 3 NEAR funding, FullAccess key, contract account, and initialization owner.</label>
+          <button id="deploy" type="button" disabled>Deploy to NEAR Testnet</button>
+          <p id="status" class="status" role="status" aria-live="polite">Not connected. No transaction has been requested.</p>
+          <p id="transaction" class="transaction"></p>
+        </section>
+        <p class="footnote">Never enter or share a seed phrase, private key, recovery phrase, or wallet credential. The wallet must show NEAR Testnet and the exact five actions above. Reject the request if any detail differs. The connected public key will receive FullAccess on the new contract account.</p>
+        <p class="footnote">Deployment is not considered successful until final transaction execution and read-back checks confirm the account code, owner, and contract state.</p>
       </section>
     </main>
     <script type="module" src="/src/main.js"></script>

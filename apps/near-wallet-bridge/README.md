@@ -1,34 +1,39 @@
-# ANONYMESH NEAR Wallet Bridge
+# ANONYMESH NEAR Testnet deployer
 
-A deliberately read-only wallet connection preflight for the ANONYMESH NEAR Testnet registry.
+This branch adds an explicit Meteor Wallet deployment flow to the existing read-only wallet bridge.
 
-## Scope
+## Exact scope
 
-- Uses `@hot-labs/near-connect` (NEAR Connect) with `network: "testnet"`.
-- Filters the wallet picker for wallets advertising Testnet support.
-- Displays the selected account and checks for an exact match with `wkams.testnet`.
-- Handles connection and sign-out events.
-- Contains no transaction construction or signing call. It cannot deploy the WASM, initialize the contract, register an issuer, transfer funds, or mutate chain state.
+- Network: NEAR Testnet only.
+- Signer: `wkams.testnet`.
+- New contract account: `registry.wkams.testnet`.
+- Initial transfer: 3 NEAR from the signer to the new contract account.
+- Access key: the connected wallet's public key is added as FullAccess to the new contract account.
+- Contract: the issuer-registry WASM from CI run [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123).
+- Required WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9`.
+- Initialization: `new({ owner_id: "wkams.testnet" })`.
 
-## Run
+The page does not store, request, or transmit private keys, seed phrases, or recovery phrases. It requires a wallet connection, a selected WASM file whose digest matches the pinned CI digest, and a separate checkbox before the deploy button is enabled. The transaction is only requested from the wallet after the user presses Deploy.
 
-Requires Node.js 20.19+.
+## Wallet transaction actions
+
+1. `CreateAccount`
+2. `Transfer` (3 NEAR)
+3. `AddKey` (connected public key, FullAccess)
+4. `DeployContract` (verified WASM bytes)
+5. `FunctionCall` (`new`, 30 Tgas, zero deposit)
+
+The user must inspect the five actions and the final fee in Meteor Wallet and reject any unexpected request. The 3 NEAR funding is separate from gas and storage costs. The deployed WASM occupies approximately 1.97728 NEAR of storage at the currently observed Testnet storage price; actual fees and required balance can change.
+
+## Verification after deployment
+
+A wallet result alone is not sufficient. Read back the account code hash, call `get_owner`, and verify it equals `wkams.testnet`. Then perform the remaining issuer registry smoke tests with a disposable issuer. Do not register a production issuer or claim end-to-end verifier acceptance based only on deployment.
+
+## Local checks
 
 ```sh
-cd apps/near-wallet-bridge
-npm install
 npm test
-npm run dev
+npm run build
 ```
 
-Open the local Vite URL in a browser. On Android, use a browser that can hand off to the installed wallet app. Choose Meteor Wallet if it appears in the NEAR Connect picker, select the Testnet account `wkams.testnet`, and approve only the connection request. If the wallet or account is not offered, stop; do not import keys into an unrelated wallet or change account keys to make the bridge work.
-
-## Security boundary
-
-This app does not request a seed phrase, private key, recovery phrase, or local CLI credential. It does not request a signature or transaction. A successful wallet connection proves only that the connector received the selected account from the wallet; it does not prove that the account has sufficient balance, the expected Full Access key is available, or the contract is deployed.
-
-The expected account comparison is exact. A different account is shown as a mismatch and must not be used for deployment.
-
-## Next gated stage
-
-A separate deployment module must not be added until the wallet connection is tested on the user's device and the WASM artifact is selected and checksum-verified. Any future deployment UI must show the exact target account, verified artifact checksum, DeployContract + `new({ owner_id: "wkams.testnet" })` actions, attached deposit, gas budget, and final wallet fee estimate, then wait for explicit approval in the wallet. This read-only bridge intentionally does not implement that stage.
+This deployer is a Testnet-only tool. It must not be reused for Mainnet without a separate review and explicit approval.
