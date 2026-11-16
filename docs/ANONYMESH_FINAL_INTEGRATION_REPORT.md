@@ -2,14 +2,14 @@
 
 **Repository:** `wadezigh96/anonymesh`
 **Branch:** `feat/anonymesh-private-agent-identity`
-**CI-tested implementation commit:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
-**Latest documentation commit:** `62ed87c9595a6adfeebe6d08813b3feaadc5f7ad`
-**Final branch commit after documentation synchronization:** recorded by Git after this report commit
+**CI-tested baseline commit:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
+**Remote hardening commit integrated:** `5b880f4` (streaming RPC limits, transient-only stale fallback, regression tests)
+**Current local merge commit:** `fd3873c`
 **Network boundary:** NEAR testnet only; no mainnet action.
 
 ## Executive summary
 
-The Node issuer-holder-verifier flow, persistent issuer key lifecycle, credential-bound registry key, read-only NEAR registry adapter, capability/proof-of-possession authorization, replay/quota state, and fail-closed registry gate are implemented and tested. The final implementation was pushed to the feature branch and the relevant GitHub Actions workflows passed.
+The Node issuer-holder-verifier flow, persistent issuer key lifecycle, credential-bound registry key, read-only NEAR registry adapter, capability/proof-of-possession authorization, replay/quota state, and fail-closed registry gate are implemented and tested. Additional hardening now bounds streamed RPC bodies, cancels oversized responses, and permits stale-cache fallback only for transient availability failures. The baseline implementation workflows passed; the hardening merge requires a fresh CI run before it can be treated as CI-verified.
 
 A live NEAR testnet deployment is **BLOCKED**, not complete: no authorized funded testnet deployer, contract account, signer, approved transaction payload, or live registry configuration was available in this execution context. No deployment or transaction was attempted, and no fabricated account, RPC response, transaction hash, or checksum is reported.
 
@@ -33,9 +33,9 @@ When `NEAR_REQUIRED=true`, the verifier reads `get_issuer` through the bounded R
 
 | Area | Status | Evidence / limitation |
 |---|---|---|
-| Node issuer-holder-verifier flow | **PASS** | Local suite 80/80; final Node and process workflows passed. |
+| Node issuer-holder-verifier flow | **PASS** | Local suite 86/86; baseline Node and process workflows passed. Fresh CI for hardening merge remains required. |
 | Persistent issuer key | **PASS** | Versioned JWK file, strict permissions, rotation/version tests. |
-| Registry key conversion and RPC validation | **PASS** | Canonical NEAR key tests, malformed/timeout/cache tests, mocked-RPC process flow. |
+| Registry key conversion and RPC validation | **PASS** | Canonical NEAR key tests, streamed size enforcement, malformed/timeout/cache tests, mocked-RPC process flow. Fresh CI for hardening merge remains required. |
 | Registry-backed authorization gate | **PASS** | Required mode rejects unknown, inactive, mismatched, stale and unavailable records. |
 | Capability, PoP, replay and quota | **PASS** | Integrated verifier path plus restart/concurrency tests. |
 | Rust agent-auth | **PASS** | [Workflow 43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180). |
@@ -97,11 +97,13 @@ Local Node evidence:
 
 ```sh
 cd packages/anoncreds-agent-demo
-npm test                         # 80 passed, 0 failed
+npm test                         # 86 passed, 0 failed
 npm run demo                     # valid: true; privateSubjectDisclosed: false
 npm run benchmark                # host-specific Linux x64 benchmark
 node --test test/process-integration.test.mjs
 ```
+
+The 86-test result is local evidence for merge commit `fd3873c`; the six GitHub workflows linked above ran on the earlier baseline and must be rerun after this hardening merge.
 
 The exact WASM checksum and testnet contract account are **BLOCKED** until a final workflow artifact is retained and an approved testnet deployment exists. No checksum or account is invented here.
 
