@@ -171,3 +171,27 @@ test("cancels the response body immediately when declared Content-Length exceeds
   assert.equal(cancelled, true);
   assert.equal(pulls, 0, "must reject and cancel without reading the body");
 });
+
+
+test("does not reuse cache when TTL is zero, even within the same millisecond", async () => {
+  let calls = 0;
+  const client = createNearIssuerRegistryClient({
+    ...config,
+    cacheTtlMs: 0,
+    maxStaleMs: 0,
+    now: () => 1_000,
+    fetchImpl: async () => {
+      calls += 1;
+      return response({
+        result: {
+          result: Array.from(Buffer.from(JSON.stringify(record), "utf8")),
+        },
+      });
+    },
+  });
+
+  await client.getIssuerRecord();
+  await client.getIssuerRecord();
+
+  assert.equal(calls, 2, "zero TTL must require a fresh RPC read every time");
+});

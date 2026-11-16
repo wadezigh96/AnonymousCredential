@@ -114,7 +114,7 @@ export function createNearIssuerRegistryClient({
   return Object.freeze({
     async getIssuerRecord({ forceRefresh = false } = {}) {
       const timestamp = now();
-      if (!forceRefresh && cache && timestamp - cache.fetchedAt <= cacheTtlMs) return cache.record;
+      if (!forceRefresh && cacheTtlMs > 0 && cache && timestamp - cache.fetchedAt <= cacheTtlMs) return cache.record;
       try { return await fetchRecord(); }
       catch (error) {
         const staleAge = cache ? now() - cache.fetchedAt : Number.POSITIVE_INFINITY;

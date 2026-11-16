@@ -27,7 +27,7 @@ const publicConfig=await publicResponse.json();
 const registryRequired=process.env.NEAR_REQUIRED==="true";
 const expectedKeyVersion=Number(process.env.NEAR_EXPECTED_KEY_VERSION??publicConfig.issuerKeyVersion??1);
 const expectedSchemaHash=process.env.NEAR_EXPECTED_SCHEMA_HASH??publicConfig.schemaHash;
-const registryClient=registryRequired?createNearIssuerRegistryClient({network:process.env.NEAR_NETWORK,contractAccount:process.env.NEAR_REGISTRY_CONTRACT,rpcUrl:process.env.NEAR_RPC_URL,issuerAccount:process.env.NEAR_ISSUER_ACCOUNT_ID??publicConfig.issuerAccountId,expectedKeyVersion,expectedSchemaHash,minimumStatusEpoch:process.env.NEAR_EXPECTED_STATUS_EPOCH===undefined?undefined:Number(process.env.NEAR_EXPECTED_STATUS_EPOCH),cacheTtlMs:Number(process.env.NEAR_CACHE_TTL_MS??0),maxStaleMs:Number(process.env.NEAR_MAX_STALE_AGE_MS??0),timeoutMs:Number(process.env.NEAR_RPC_TIMEOUT_MS??5000)}):null;
+const registryClient=registryRequired?createNearIssuerRegistryClient({network:process.env.NEAR_NETWORK,contractAccount:process.env.NEAR_REGISTRY_CONTRACT,rpcUrl:process.env.NEAR_RPC_URL,issuerAccount:process.env.NEAR_ISSUER_ACCOUNT_ID??publicConfig.issuerAccountId,expectedKeyVersion,expectedSchemaHash,minimumStatusEpoch:process.env.NEAR_EXPECTED_STATUS_EPOCH===undefined?undefined:Number(process.env.NEAR_EXPECTED_STATUS_EPOCH),cacheTtlMs:registryRequired?0:Number(process.env.NEAR_CACHE_TTL_MS??0),maxStaleMs:registryRequired?0:Number(process.env.NEAR_MAX_STALE_AGE_MS??0),timeoutMs:Number(process.env.NEAR_RPC_TIMEOUT_MS??5000)}):null;
 const server=configureHttpServer(createServer(async(request,response)=>{
  try{
   const url=new URL(request.url,"http://localhost");
