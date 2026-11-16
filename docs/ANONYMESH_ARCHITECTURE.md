@@ -45,7 +45,7 @@ Actors:
 | Revocation | Reviewed privacy-preserving revocation with witness/status update model | Not implemented |
 | Blockchain | NEAR issuer registry and versioned public status commitments | Preliminary registry scaffold plus Node read adapter; local mocked-RPC integration passes; no live deployment or on-chain mutation |
 | Private AI | Local-first holder wallet and agent runtime | Not implemented |
-| Security | Anti-replay, rate limits, distributed replay protection and deny-by-default policy engine | AnonCreds role demo uses an in-memory single-process challenge ledger; separate Node runtime has memory/SQLite authorization-store slices; rate limits, distributed service integration and production policy enforcement are not implemented |
+| Security | Anti-replay, rate limits, distributed replay protection and deny-by-default policy engine | The three-process HTTP demo uses a SQLite challenge ledger and SQLite authorization store; CI covers verifier restart and same-host shared-file concurrency. The standalone authorization runtime can use an in-memory store unless a persistent store is injected. Distributed/multi-host replay protection, production service integration and production tool enforcement are not implemented |
 
 ## 3. Credential lifecycle
 
