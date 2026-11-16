@@ -2,6 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import { decodeNearEd25519PublicKey, encodeNearEd25519PublicKey, nearEd25519PublicKeyToNode, nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
+import {
+  encodeAnonCredsAttribute,
+  extractCredentialIssuerRegistryKey,
+  assertCredentialIssuerRegistryKeyMatches,
+} from "../src/agent-key-binding.mjs";
+
 
 test("round-trips Node Ed25519 JWK x through canonical NEAR format", () => {
   const key = generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
@@ -23,4 +29,89 @@ test("rejects invalid, non-canonical, and wrong-length keys", () => {
   }
   assert.throws(() => encodeNearEd25519PublicKey(Buffer.alloc(31)));
   assert.throws(() => nodeEd25519PublicKeyToNear("not-a-key"));
+});
+
+test("credential issuer key accepts legacy Node and canonical NEAR formats", () => {
+  const nodeKey = generateKeyPairSync("ed25519")
+    .publicKey.export({ format: "jwk" }).x;
+  const nearKey = nodeEd25519PublicKeyToNear(nodeKey);
+
+  for (const raw of [nodeKey, nearKey]) {
+    const presentation = {
+      requested_proof: {
+        revealed_attrs: {
+          issuer_key_ref: {
+            raw,
+            encoded: encodeAnonCredsAttribute(raw),
+          },
+        },
+      },
+    };
+
+    assert.equal(
+      extractCredentialIssuerRegistryKey(presentation),
+      nodeKey,
+    );
+  }
+});
+
+test("credential issuer key rejects malformed and incorrectly encoded values", () => {
+  for (const raw of ["invalid-key", "ed25519:invalid"]) {
+    const presentation = {
+      requested_proof: {
+        revealed_attrs: {
+          issuer_key_ref: {
+            raw,
+            encoded: encodeAnonCredsAttribute(raw),
+          },
+        },
+      },
+    };
+
+    assert.throws(() => extractCredentialIssuerRegistryKey(presentation));
+  }
+
+  const raw = generateKeyPairSync("ed25519")
+    .publicKey.export({ format: "jwk" }).x;
+
+  assert.throws(() => extractCredentialIssuerRegistryKey({
+    requested_proof: {
+      revealed_attrs: {
+        issuer_key_ref: {
+          raw,
+          encoded: "incorrect-encoding",
+        },
+      },
+    },
+  }));
+});
+
+test("registry matching accepts equivalent credential key and rejects a different issuer", () => {
+  const nodeKey = generateKeyPairSync("ed25519")
+    .publicKey.export({ format: "jwk" }).x;
+  const otherNodeKey = generateKeyPairSync("ed25519")
+    .publicKey.export({ format: "jwk" }).x;
+
+  for (const raw of [nodeKey, nodeEd25519PublicKeyToNear(nodeKey)]) {
+    const presentation = {
+      requested_proof: {
+        revealed_attrs: {
+          issuer_key_ref: {
+            raw,
+            encoded: encodeAnonCredsAttribute(raw),
+          },
+        },
+      },
+    };
+
+    assert.equal(
+      assertCredentialIssuerRegistryKeyMatches(presentation, nodeKey),
+      true,
+    );
+
+    assert.throws(
+      () => assertCredentialIssuerRegistryKeyMatches(presentation, otherNodeKey),
+      error => error.code === "ISSUER_REGISTRY_KEY_MISMATCH",
+    );
+  }
 });

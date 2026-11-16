@@ -162,14 +162,67 @@ test("unified verifier rejects a capability signed by an untrusted root", () => 
 test("registry-backed verifier requires the credential-bound issuer key and metadata", () => {
   const f = fixture();
   const schemaHash = createHash("sha256").update(JSON.stringify(f.holder.schema.toJson())).digest("hex");
-  const issuerRecord = { active: true, publicKey: f.holder.issuerRegistryPublicKey, nodePublicKey: "unused", keyVersion: 1, schemaHash, statusEpoch: 0 };
-  const accepted = verifyAndAuthorizeAgentRequest({ ...f.args, issuerRecord, registryRequired: true, expected: { ...f.args.expected, issuerKeyVersion: 1, schemaHash }, runtime: f.runtime });
+  const issuerRecord = {
+    active: true,
+    publicKey: nodeEd25519PublicKeyToNear(f.holder.issuerRegistryPublicKey),
+    nodePublicKey: f.holder.issuerRegistryPublicKey,
+    keyVersion: 1,
+    schemaHash,
+    statusEpoch: 0,
+  };
+  const accepted = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    issuerRecord,
+    registryRequired: true,
+    expected: { ...f.args.expected, issuerKeyVersion: 1, schemaHash },
+    runtime: f.runtime,
+  });
   assert.equal(accepted.authorized, true);
+
   const second = fixture();
   const secondSchemaHash = createHash("sha256").update(JSON.stringify(second.holder.schema.toJson())).digest("hex");
-  const rejected = verifyAndAuthorizeAgentRequest({ ...second.args, issuerRecord: { ...issuerRecord, publicKey: nodeEd25519PublicKeyToNear(generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x) }, registryRequired: true, expected: { ...second.args.expected, issuerKeyVersion: 1, schemaHash: secondSchemaHash }, runtime: second.runtime });
+  const otherNodeKey = generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
+  const rejected = verifyAndAuthorizeAgentRequest({
+    ...second.args,
+    issuerRecord: {
+      ...issuerRecord,
+      publicKey: nodeEd25519PublicKeyToNear(otherNodeKey),
+      nodePublicKey: otherNodeKey,
+    },
+    registryRequired: true,
+    expected: { ...second.args.expected, issuerKeyVersion: 1, schemaHash: secondSchemaHash },
+    runtime: second.runtime,
+  });
   assert.deepEqual(rejected, { authorized: false, code: "ISSUER_REGISTRY_KEY_MISMATCH" });
   assert.equal(second.ledger.get(second.challenge.nonce).consumed, false);
+});
+
+test("registry verifier rejects inconsistent public and Node issuer keys before consuming challenge", () => {
+  const f = fixture();
+  const schemaHash = createHash("sha256").update(JSON.stringify(f.holder.schema.toJson())).digest("hex");
+  const validNodeKey = f.holder.issuerRegistryPublicKey;
+  const otherNodeKey = generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
+
+  const rejected = verifyAndAuthorizeAgentRequest({
+    ...f.args,
+    issuerRecord: {
+      active: true,
+      publicKey: nodeEd25519PublicKeyToNear(validNodeKey),
+      nodePublicKey: otherNodeKey,
+      keyVersion: 1,
+      schemaHash,
+      statusEpoch: 0,
+    },
+    registryRequired: true,
+    expected: { ...f.args.expected, issuerKeyVersion: 1, schemaHash },
+    runtime: f.runtime,
+  });
+
+  assert.deepEqual(rejected, {
+    authorized: false,
+    code: "ISSUER_REGISTRY_RECORD_INVALID",
+  });
+  assert.equal(f.ledger.get(f.challenge.nonce).consumed, false);
 });
 
 test("required registry mode fails closed before consuming challenge state", () => {

@@ -11,13 +11,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sign, verify, createPublicKey } from "node:crypto";
+import { sign, verify, createPublicKey, generateKeyPairSync } from "node:crypto";
 
 import {
   loadOrCreateIssuerState,
 } from "../src/issuer-state-store.mjs";
+import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
 
-const registryKey = "test-registry-public-key";
+
+const registryKey = generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
 
 function config() {
   return {
@@ -116,7 +118,7 @@ test("state rejects registry-key and version mismatches", () => {
       () => loadOrCreateIssuerState({
         file,
         issuerKeyVersion: 1,
-        issuerRegistryPublicKey: "different-registry-key",
+        issuerRegistryPublicKey: generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x,
       }),
       error => error.code === "ISSUER_STATE_REGISTRY_KEY_MISMATCH",
     );
@@ -195,6 +197,114 @@ test("failed lock acquisition never removes another process lock", () => {
     );
 
     assert.equal(existsSync(lockFile), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("legacy Node issuer state loads with equivalent NEAR key without rewriting disk", () => {
+  const directory = mkdtempSync(join(tmpdir(), "anonymesh-key-compat-"));
+  const file = join(directory, "issuer-state.json");
+
+  try {
+    const oldNodeKey = generateKeyPairSync("ed25519")
+      .publicKey.export({ format: "jwk" }).x;
+    const equivalentNearKey = nodeEd25519PublicKeyToNear(oldNodeKey);
+
+    loadOrCreateIssuerState({
+      file,
+      issuerKeyVersion: 1,
+      issuerRegistryPublicKey: oldNodeKey,
+      createConfig: () => ({
+        ...config(),
+        issuerRegistryPublicKey: oldNodeKey,
+      }),
+      allowCreate: true,
+    });
+
+    const originalFile = readFileSync(file);
+
+    const loaded = loadOrCreateIssuerState({
+      file,
+      issuerKeyVersion: 1,
+      issuerRegistryPublicKey: equivalentNearKey,
+    });
+
+    assert.equal(
+      loaded.config.issuerRegistryPublicKey,
+      equivalentNearKey,
+    );
+    assert.deepEqual(readFileSync(file), originalFile);
+
+    const differentKey = generateKeyPairSync("ed25519")
+      .publicKey.export({ format: "jwk" }).x;
+
+    assert.throws(
+      () => loadOrCreateIssuerState({
+        file,
+        issuerKeyVersion: 1,
+        issuerRegistryPublicKey: differentKey,
+      }),
+      error => error.code === "ISSUER_STATE_REGISTRY_KEY_MISMATCH",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+
+test("rejects opaque issuer registry keys", () => {
+  const directory = mkdtempSync(join(tmpdir(), "anonymesh-invalid-registry-key-"));
+  const file = join(directory, "issuer-state.json");
+
+  try {
+    assert.throws(
+      () => loadOrCreateIssuerState({
+        file,
+        issuerKeyVersion: 1,
+        issuerRegistryPublicKey: "not-an-ed25519-key",
+        createConfig: () => config(),
+        allowCreate: true,
+      }),
+      error => error.code === "INVALID_ISSUER_STATE_REGISTRY_KEY",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+
+test("rejects persisted issuer state with an opaque registry key", () => {
+  const directory = mkdtempSync(join(tmpdir(), "anonymesh-invalid-state-key-"));
+  const file = join(directory, "issuer-state.json");
+
+  try {
+    const validKey = generateKeyPairSync("ed25519")
+      .publicKey.export({ format: "jwk" }).x;
+
+    loadOrCreateIssuerState({
+      file,
+      issuerKeyVersion: 1,
+      issuerRegistryPublicKey: validKey,
+      createConfig: () => ({
+        ...config(),
+        issuerRegistryPublicKey: validKey,
+      }),
+      allowCreate: true,
+    });
+
+    const saved = JSON.parse(readFileSync(file, "utf8"));
+    saved.issuerRegistryPublicKey = "opaque-invalid-key";
+    writeFileSync(file, JSON.stringify(saved));
+
+    assert.throws(
+      () => loadOrCreateIssuerState({
+        file,
+        issuerKeyVersion: 1,
+        issuerRegistryPublicKey: validKey,
+      }),
+      error => error.code === "ISSUER_STATE_REGISTRY_KEY_MISMATCH",
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

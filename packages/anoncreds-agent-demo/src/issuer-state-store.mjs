@@ -16,6 +16,7 @@ import {
   createPublicKey,
   generateKeyPairSync,
 } from "node:crypto";
+import { nodeEd25519PublicKeyToNear, nearEd25519PublicKeyToNode } from "./near-key-format.mjs";
 
 const MODE = 0o600;
 const FORMAT_VERSION = 1;
@@ -36,6 +37,26 @@ function publicX(privateKey) {
   return createPublicKey(privateKey).export({ format: "jwk" }).x;
 }
 
+function comparableRegistryKey(value) {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    if (value.startsWith("ed25519:")) return nearEd25519PublicKeyToNode(value);
+    if (/^[A-Za-z0-9_-]{43}$/.test(value)) {
+      nodeEd25519PublicKeyToNear(value);
+      return value;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function sameRegistryKey(left, right) {
+  const a = comparableRegistryKey(left);
+  const b = comparableRegistryKey(right);
+  return a !== null && b !== null && a === b;
+}
+
 function validateConfig(config, registryPublicKey) {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
     fail("ISSUER_STATE_CONFIG_INVALID");
@@ -52,7 +73,7 @@ function validateConfig(config, registryPublicKey) {
     }
   }
 
-  if (config.issuerRegistryPublicKey !== registryPublicKey) {
+  if (!sameRegistryKey(config.issuerRegistryPublicKey, registryPublicKey)) {
     fail("ISSUER_STATE_REGISTRY_KEY_MISMATCH");
   }
 }
@@ -104,7 +125,7 @@ function readState({
       fail("ISSUER_STATE_VERSION_MISMATCH");
     }
 
-    if (parsed.issuerRegistryPublicKey !== issuerRegistryPublicKey) {
+    if (!sameRegistryKey(parsed.issuerRegistryPublicKey, issuerRegistryPublicKey)) {
       fail("ISSUER_STATE_REGISTRY_KEY_MISMATCH");
     }
 
@@ -129,7 +150,7 @@ function readState({
     }
 
     return Object.freeze({
-      config: parsed.config,
+      config: Object.freeze({ ...parsed.config, issuerRegistryPublicKey }),
       authorizationRoot: Object.freeze({
         privateKey,
         publicKey: derivedPublicKey,
@@ -162,7 +183,8 @@ export function loadOrCreateIssuerState({
 
   if (
     typeof issuerRegistryPublicKey !== "string" ||
-    !issuerRegistryPublicKey
+    !issuerRegistryPublicKey ||
+    comparableRegistryKey(issuerRegistryPublicKey) === null
   ) {
     fail("INVALID_ISSUER_STATE_REGISTRY_KEY");
   }

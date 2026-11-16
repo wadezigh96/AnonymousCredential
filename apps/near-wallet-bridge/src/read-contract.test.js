@@ -14,7 +14,7 @@ function jsonResponse(result) {
 test("pins the deployed Testnet contract and expected issuer", () => {
   assert.equal(CONTRACT_ACCOUNT_ID, "registry.wkams.testnet");
   assert.equal(EXPECTED_OWNER_ID, "wkams.testnet");
-  assert.equal(ISSUER_ID_TO_CHECK, "wkams.testnet");
+  assert.equal(ISSUER_ID_TO_CHECK, "issuer.testnet");
 });
 
 test("reads account, owner, and issuer record without signing or sending transactions", async () => {

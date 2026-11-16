@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { nearEd25519PublicKeyToNode } from "./near-key-format.mjs";
+import { nodeEd25519PublicKeyToNear, nearEd25519PublicKeyToNode } from "./near-key-format.mjs";
 
 const KEY_BYTES = 32;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -48,8 +48,39 @@ export function extractCredentialIssuerRegistryKey(input) {
   const attr = presentation?.requested_proof?.revealed_attrs?.issuer_key_ref;
   if (!attr || typeof attr.raw !== "string" || typeof attr.encoded !== "string") fail("MISSING_REVEALED_ISSUER_KEY");
   const key = attr.raw;
-  try { nearEd25519PublicKeyToNode(key); }
-  catch (error) { fail(error.code ?? "INVALID_NEAR_PUBLIC_KEY"); }
   if (attr.encoded !== encodeAnonCredsAttribute(key)) fail("ISSUER_KEY_ENCODING_MISMATCH");
-  return key;
+
+  try {
+    // Validate the original raw value, then return its canonical Node
+    // Ed25519 representation for comparison with the NEAR registry record.
+    if (key.startsWith("ed25519:")) return nearEd25519PublicKeyToNode(key);
+    nodeEd25519PublicKeyToNear(key);
+    return key;
+  } catch (error) {
+    fail(error.code ?? "INVALID_ISSUER_PUBLIC_KEY");
+  }
+}
+
+
+/**
+ * Confirms that the credential-bound issuer key matches the
+ * canonical Node Ed25519 key returned by the NEAR registry adapter.
+ */
+export function assertCredentialIssuerRegistryKeyMatches(
+  presentation,
+  registryNodePublicKey,
+) {
+  const credentialKey = extractCredentialIssuerRegistryKey(presentation);
+
+  try {
+    nodeEd25519PublicKeyToNear(registryNodePublicKey);
+  } catch (error) {
+    fail(error.code ?? "INVALID_REGISTRY_ISSUER_PUBLIC_KEY");
+  }
+
+  if (credentialKey !== registryNodePublicKey) {
+    fail("ISSUER_REGISTRY_KEY_MISMATCH");
+  }
+
+  return true;
 }

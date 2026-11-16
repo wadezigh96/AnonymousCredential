@@ -1,6 +1,6 @@
 export const CONTRACT_ACCOUNT_ID = "registry.wkams.testnet";
 export const EXPECTED_OWNER_ID = "wkams.testnet";
-export const ISSUER_ID_TO_CHECK = "wkams.testnet";
+export const ISSUER_ID_TO_CHECK = "issuer.testnet";
 export const NEAR_TESTNET_RPC = "https://rpc.testnet.near.org";
 const EMPTY_CODE_HASH = "11111111111111111111111111111111";
 

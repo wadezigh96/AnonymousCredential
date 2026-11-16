@@ -7,14 +7,14 @@ This page is a **read-only status inspector** for the already deployed NEAR Test
 - Network: NEAR Testnet only.
 - Contract account: `registry.wkams.testnet`.
 - Expected owner: `wkams.testnet`.
-- Issuer ID checked: `wkams.testnet`.
+- Issuer ID checked: `issuer.testnet`.
 
 ## What the page does
 
 1. Reads the contract account with NEAR RPC `view_account`.
 2. Rejects an account with the empty-code hash.
 3. Calls read-only `get_owner()` and checks the expected owner.
-4. Calls read-only `get_issuer({ issuer_id: "wkams.testnet" })`.
+4. Calls read-only `get_issuer({ issuer_id: "issuer.testnet" })`.
 5. Displays the result and final block height.
 
 ## Explicitly disabled
