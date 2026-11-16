@@ -4,17 +4,80 @@ import { createIssuerSetup, issueCredentialForRequest } from "../index.mjs";
 import { signCapability } from "../capability.mjs";
 import { configureHttpServer, configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 import { loadIssuerKey } from "../issuer-key-store.mjs";
+import { loadOrCreateIssuerState } from "../issuer-state-store.mjs";
 
 const issuerAccountId = process.env.NEAR_ISSUER_ACCOUNT_ID ?? "issuer.testnet";
 const issuerKeyVersion = Number(process.env.NEAR_EXPECTED_KEY_VERSION ?? 1);
 const issuerKeyFile = process.env.ISSUER_KEY_FILE;
+const issuerStateFile = process.env.ISSUER_STATE_FILE;
+const nearRequired = process.env.NEAR_REQUIRED === "true";
+
+if (!Number.isSafeInteger(issuerKeyVersion) || issuerKeyVersion < 1) {
+  throw new Error("INVALID_ISSUER_KEY_VERSION");
+}
+
+if (nearRequired && !issuerKeyFile) {
+  throw new Error("ISSUER_KEY_FILE_REQUIRED_WHEN_NEAR_REQUIRED");
+}
+
+if (nearRequired && !issuerStateFile) {
+  throw new Error("ISSUER_STATE_FILE_REQUIRED_WHEN_NEAR_REQUIRED");
+}
+
+if (issuerStateFile && !issuerKeyFile) {
+  throw new Error("ISSUER_KEY_FILE_REQUIRED_WHEN_STATE_PERSISTED");
+}
+
 const issuerKey = issuerKeyFile
-  ? loadIssuerKey({ file: issuerKeyFile, expectedKeyVersion: issuerKeyVersion, strictPermissions: process.env.NODE_ENV !== "test", allowCreate: process.env.ANONYMESH_DEVELOPMENT_MODE === "true" })
-  : (() => { const pair = generateKeyPairSync("ed25519"); return { privateKey: pair.privateKey, publicKey: pair.publicKey.export({ format: "jwk" }).x, keyVersion: issuerKeyVersion }; })();
-const config = createIssuerSetup({ issuerRegistryPublicKey: issuerKey.publicKey });
-const schemaHash = createHash("sha256").update(JSON.stringify(config.schema), "utf8").digest("hex");
-const authorizationRoot = generateKeyPairSync("ed25519");
-const trustedRootIssuer = authorizationRoot.publicKey.export({ format: "jwk" }).x;
+  ? loadIssuerKey({
+      file: issuerKeyFile,
+      expectedKeyVersion: issuerKeyVersion,
+      strictPermissions: process.env.NODE_ENV !== "test",
+      allowCreate: process.env.ANONYMESH_DEVELOPMENT_MODE === "true",
+    })
+  : (() => {
+      const pair = generateKeyPairSync("ed25519");
+      return {
+        privateKey: pair.privateKey,
+        publicKey: pair.publicKey.export({ format: "jwk" }).x,
+        keyVersion: issuerKeyVersion,
+      };
+    })();
+
+const issuerState = issuerStateFile
+  ? loadOrCreateIssuerState({
+      file: issuerStateFile,
+      issuerKeyVersion,
+      issuerRegistryPublicKey: issuerKey.publicKey,
+      createConfig: () =>
+        createIssuerSetup({
+          issuerRegistryPublicKey: issuerKey.publicKey,
+        }),
+      allowCreate:
+        !nearRequired &&
+        process.env.ISSUER_STATE_ALLOW_CREATE === "true",
+      strictPermissions: process.env.NODE_ENV !== "test",
+    })
+  : null;
+
+const config =
+  issuerState?.config ??
+  createIssuerSetup({ issuerRegistryPublicKey: issuerKey.publicKey });
+
+const schemaHash = createHash("sha256")
+  .update(JSON.stringify(config.schema), "utf8")
+  .digest("hex");
+
+const ephemeralAuthorizationRoot = issuerState
+  ? null
+  : generateKeyPairSync("ed25519");
+
+const authorizationRoot = issuerState?.authorizationRoot ?? {
+  privateKey: ephemeralAuthorizationRoot.privateKey,
+  publicKey: ephemeralAuthorizationRoot.publicKey.export({ format: "jwk" }).x,
+};
+
+const trustedRootIssuer = authorizationRoot.publicKey;
 const port = Number(process.env.PORT ?? 4311);
 const host = process.env.HOST ?? "127.0.0.1";
 const issueToken = requireApiToken("ISSUER_API_TOKEN");

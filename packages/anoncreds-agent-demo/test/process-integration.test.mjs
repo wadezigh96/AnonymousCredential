@@ -123,12 +123,13 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   chmodSync(stateDirectory, 0o755);
   const stateDb = join(stateDirectory, "verifier-state.sqlite");
   const issuerKeyFile = join(stateDirectory, "issuer-key.json");
+  const issuerStateFile = join(stateDirectory, "issuer-state.json");
   generateIssuerKeyFile({ file: issuerKeyFile, keyVersion: 1 });
   const registryState = { record: null, available: true };
   const mockRegistry = await startMockRegistry(registryState);
 
   try {
-    const issuer = start("issuer", issuerPort, { ISSUER_API_TOKEN: TEST_TOKENS.issuer, ISSUER_KEY_FILE: issuerKeyFile, NODE_ENV: "test", NEAR_EXPECTED_KEY_VERSION: "1" });
+    let issuer = start("issuer", issuerPort, { ISSUER_API_TOKEN: TEST_TOKENS.issuer, ISSUER_KEY_FILE: issuerKeyFile, ISSUER_STATE_FILE: issuerStateFile, ISSUER_STATE_ALLOW_CREATE: "true", NODE_ENV: "test", NEAR_EXPECTED_KEY_VERSION: "1" });
     children.push(issuer);
     await waitHealthy(issuerUrl, issuer);
     const issuerPublic = await (await fetch(issuerUrl + "/public")).json();
@@ -200,6 +201,53 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(capabilityChain.length, 2);
     assert.notEqual(delegation.body.delegatePublicKey, enrollment.body.agentPublicKey);
     assert.equal(delegation.body.delegationDepth, 1);
+
+
+    // Persisted issuer state must preserve old credentials and capabilities
+    // across a complete issuer process restart.
+    const issuerPublicBeforeRestart = issuerPublic;
+
+    issuer.kill("SIGTERM");
+    await once(issuer, "exit");
+
+    issuer = start("issuer", issuerPort, {
+      ISSUER_API_TOKEN: TEST_TOKENS.issuer,
+      ISSUER_KEY_FILE: issuerKeyFile,
+      ISSUER_STATE_FILE: issuerStateFile,
+      ISSUER_STATE_ALLOW_CREATE: "false",
+      NODE_ENV: "test",
+      NEAR_EXPECTED_KEY_VERSION: "1",
+    });
+    children.push(issuer);
+    await waitHealthy(issuerUrl, issuer);
+
+    const issuerPublicAfterRestartResponse = await fetch(issuerUrl + "/public");
+    assert.equal(issuerPublicAfterRestartResponse.status, 200);
+    const issuerPublicAfterRestart = await issuerPublicAfterRestartResponse.json();
+
+    assert.equal(
+      issuerPublicAfterRestart.schemaHash,
+      issuerPublicBeforeRestart.schemaHash,
+      "schema hash must survive issuer restart",
+    );
+    assert.deepEqual(
+      issuerPublicAfterRestart.credentialDefinition,
+      issuerPublicBeforeRestart.credentialDefinition,
+      "credential definition must survive issuer restart",
+    );
+    assert.equal(
+      issuerPublicAfterRestart.trustedRootIssuer,
+      issuerPublicBeforeRestart.trustedRootIssuer,
+      "authorization root must survive issuer restart",
+    );
+    assert.equal(
+      issuerPublicAfterRestart.issuerRegistryPublicKey,
+      issuerPublicBeforeRestart.issuerRegistryPublicKey,
+      "registry public key must survive issuer restart",
+    );
+
+    // The original holder credential and delegated capability are used below
+    // after restart; successful verification proves continuity end-to-end.
 
     const challengeInput = {
       audience: policy.audience,
