@@ -102,6 +102,7 @@ async function connectWallet() {
       }
 
       const verifiedPublicKey = walletPublicKey;
+      connectedAccount = { ...connectedAccount, publicKey: verifiedPublicKey };
 
       accountNode.textContent = connectedAccount.accountId;
       setStatus(
