@@ -163,7 +163,7 @@ NEAR is a public-registry layer for issuer metadata and opaque status commitment
 
 ## Other components and status at a glance
 
-Delegated capability verification and the NEAR issuer/status registry are integrated local/testnet-preflight slices, not production services. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment or external submission has been performed.
+Delegated capability verification and the NEAR issuer/status registry are integrated local/testnet-preflight slices, not production services. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. The project owner reports that the hackathon form and public X demo post were submitted before the deadline. This repository audit does not independently verify the form receipt. No NEAR testnet contract deployment is claimed.
 
 | Component | Current status |
 |---|---|
