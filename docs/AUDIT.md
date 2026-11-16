@@ -1,3 +1,5 @@
+> **Status update (2026-11-16):** This audit's earlier statement that no deployment had occurred is superseded. The NEAR registry is deployed at `registry.wkams.testnet`, owned by `wkams.testnet`; `get_owner()` was verified. Deployment transaction: [NEAR Explorer](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Issuer registration and live verifier acceptance remain pending. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+
 # ANONYMESH — Repository Audit (Reconciled)
 
 **Date:** 2026-11-16  
@@ -48,7 +50,7 @@ See [SECURITY_LIMITATIONS.md](SECURITY_LIMITATIONS.md) for the full threat bound
 
 At the time of the operator's latest read-only check, `wkams.testnet` had 18.9 NEAR, one Full Access key and no deployed contract code. The CLI configuration pointed to Testnet RPC. The local legacy `accounts.json` file was empty, and the Meteor Wallet browser bridge had not connected. Therefore, no usable CLI signer had been established.
 
-**No deployment or registry transaction has been performed.** A live Testnet account balance and on-chain Full Access key do not prove the local device can sign.
+**Historical pre-deployment finding:** at the time of this audit snapshot, no deployment or registry transaction had been performed. This statement is superseded by the deployment record linked above.
 
 ## 5. Historical findings
 
