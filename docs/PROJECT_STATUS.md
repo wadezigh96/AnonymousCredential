@@ -8,7 +8,7 @@ This is the canonical status page. If an older planning or audit document disagr
 
 ## Executive status
 
-ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. On current PR head `abaed695535f6da1c465f0e3291a4989175fb7ba`, all seven GitHub Actions workflows succeeded: AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This is CI evidence only; issuer registration and live verifier acceptance remain pending.
+ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. On code commit `abaed695535f6da1c465f0e3291a4989175fb7ba` (before the subsequent documentation-only refresh commits), all seven GitHub Actions workflows succeeded: AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This is CI evidence only; issuer registration and live verifier acceptance remain pending.
 
 **The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`, as expected before issuer registration. No issuer-registration transaction or live verifier acceptance is claimed. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
@@ -100,7 +100,7 @@ The native AnonCreds Node package does not support running its Linux native bina
 
 ## Remaining release gates — in order
 
-1. **Current PR-head CI is green:** all seven workflows succeeded on `abaed695535f6da1c465f0e3291a4989175fb7ba`. The NEAR contract unit-test/WASM build run is [43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232); the uploaded artifact evidence remains separately recorded. Re-run contract CI if contract source or its build workflow changes.
+1. **Application-code CI is green:** all seven workflows succeeded on code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`; later commits in this PR only refreshed documentation. The NEAR contract unit-test/WASM build run is [43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232); the uploaded artifact evidence remains separately recorded. Re-run contract CI if contract source or its build workflow changes.
 2. **Prepare persistent issuer identity.** Select/create the issuer Ed25519 key and state files securely; keep private material local and owner-only.
 3. **Register the matching public issuer record** from `wkams.testnet` with reviewed key version, schema hash, storage deposit and gas; obtain explicit approval before signing.
 4. **Read back live issuer state** with `get_issuer` on Testnet.
