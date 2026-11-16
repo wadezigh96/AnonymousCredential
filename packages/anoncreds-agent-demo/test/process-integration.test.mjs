@@ -146,7 +146,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holderThree);
     await waitHealthy(holderThreeUrl, holderThree);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "0", NEAR_MAX_STALE_AGE_MS: "60000" };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "600000", NEAR_MAX_STALE_AGE_MS: "600000" };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
