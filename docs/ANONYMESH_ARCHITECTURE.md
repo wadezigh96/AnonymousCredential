@@ -87,11 +87,22 @@ Delegation must be attenuating: a child capability cannot add actions, widen res
 
 Evaluate established accumulator/status approaches rather than designing a new accumulator. The decision must state whether the holder can prove non-revocation without disclosing a stable credential identifier, how witnesses are updated, whether queries leak membership, how issuers rotate keys, and what happens during stale-root or network failure. Revocation must fail closed for high-risk actions.
 
-## 8. NEAR integration boundary
+## 8. Private-chain integration boundary
 
-NEAR public state may contain issuer public keys and key versions, schema/protocol hashes, governance configuration and batched versioned status/revocation roots. It must not contain raw identity claims, holder secrets, credential IDs, stable secret-derived hashes or per-presentation activity.
+**Network requirement:** ANONYMESH is designed for a private, permissioned network. NEAR Mainnet and NEAR Public Testnet are not the target execution or storage networks for private identities, credentials, proofs, or agent-to-agent payment activity. The previous hackathon testnet deployment profile is superseded by this requirement.
 
-Start with off-chain credential proof verification and on-chain issuer/status anchoring. Only consider on-chain proof verification after proof-system selection, verifier artifact pinning, contract tests and gas benchmarks. Define issuer suspension, key rotation, emergency freeze and root rollback governance.
+The intended deployment is a NEAR-compatible ANONYMESH network whose validator membership, node access, RPC endpoints, contract deployment and participant accounts are governed by an explicit consortium/operator policy. Localnet is suitable for isolated development and reproducible tests; it is not production infrastructure. A production private network requires independently operated permissioned validators, authenticated/private RPC, key management, network monitoring, backup/recovery, governance and documented validator admission/removal.
+
+NEAR's separately operated Private Shard is a possible integration candidate, not an assumed deployment. Its published architecture describes permissioned validators and a bridge to NEAR Mainnet; that does not automatically make it equivalent to an isolated ANONYMESH private chain. Evaluate its access model, bridge disclosure, operational availability, contract compatibility and transaction privacy before selecting it. Do not route ANONYMESH private activity through a public chain merely because a bridge or public settlement path exists.
+
+The private-chain contract may store only the minimum public-to-authorized-network metadata required for operation: issuer public keys and versions, schema/protocol hashes, governance configuration, and batched status/revocation commitments. Raw identity claims, holder secrets, credential IDs, stable secret-derived hashes and per-presentation activity must never be written to contract state or logs. Restrict read access where supported, but do not treat RPC access control as a substitute for cryptographic privacy: validators and authorized infrastructure operators may still observe execution/state unless the selected private execution design prevents it.
+
+**Identity anchor and payments:** a persistent identity NFT or equivalent registry anchor may represent an agent's durable identity handle inside the permissioned network. The token ID and owner mapping must not be exposed as a universal transaction identifier. Routine interactions use domain-separated pairwise pseudonyms and scoped nullifiers; the verifier checks a ZK proof binding the holder's secret/credential to an authorized identity commitment. The current AnonCreds demo does not yet implement this NFT-to-credential binding or prove arbitrary NFT ownership. Do not claim that it does.
+
+Agent A's payment to Agent B is authorized by a proof and an attenuating payment capability (recipient, asset, amount/limit, expiry, nonce and policy scope). Settlement must occur within the permissioned network's payment contract/token system. Public-chain withdrawals, bridges or public token transfers are separate opt-in actions and can reveal amounts, timing, addresses or linkage; they are not private by default. The ZK identity proof does not by itself hide payment metadata.
+
+Start with off-chain credential proof verification and private-chain issuer/status anchoring. Only consider on-chain proof verification after proof-system selection, verifier artifact pinning, contract tests and gas benchmarks. The current NEAR issuer-registry contract is a preliminary scaffold; it has not been deployed to an ANONYMESH private network and does not verify AnonCreds proofs on-chain.
+
 
 ## 9. Local-first runtime
 
@@ -144,6 +155,8 @@ Test at minimum on Android ARM64 and a desktop/server baseline. Evaluate privacy
 No custom cryptographic primitive, no public identity registry, no default remote proving, no public presentation log and no post-quantum claim. A feature is complete only with reproducible positive, negative and adversarial tests plus measured performance and documented privacy limits.
 
 No changes to `main`, merge, deployment, chain transaction or hackathon submission are authorized without explicit user approval.
-## 15. Hackathon deployment profile
+## 15. Private-network deployment profile
 
-For the time-boxed NEAR Hackathon prototype, target **NEAR testnet only**. The detailed scope, Gateway role and privacy boundaries are in [`HACKATHON_MVP.md`](HACKATHON_MVP.md). Testnet is for demonstration and integration testing only; it does not imply production security or authorize mainnet activity.
+Development and CI may use isolated localnet or mocked RPC. Integration acceptance must run against an isolated ANONYMESH private network with permissioned validators and private RPC. Production rollout is blocked until validator governance, network isolation, confidential transaction visibility, key custody, recovery, monitoring and independent security review are documented and tested. NEAR Mainnet and NEAR Public Testnet are explicitly out of scope for private identity and payment data.
+
+No changes to `main`, merge, deployment, chain transaction or external submission are authorized without explicit user approval.
