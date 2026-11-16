@@ -161,6 +161,8 @@ The following roadmap defines the intended development direction. A roadmap item
 
 NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is not deployed and does not provide on-chain AnonCreds or revocation-proof verification.
 
+For a judge-facing, step-by-step explanation of the NEAR contract, RPC request, verifier gate, reproducible local checks, and missing live-Testnet evidence, see [NEAR Judge Guide](docs/NEAR_JUDGE_GUIDE.md).
+
 ## Other components and status at a glance
 
 Delegated capability verification and the NEAR issuer/status registry are integrated local/testnet-preflight slices, not production services. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. The project owner reports that the hackathon form and public X demo post were submitted before the deadline. This repository audit does not independently verify the form receipt. No NEAR testnet contract deployment is claimed.
