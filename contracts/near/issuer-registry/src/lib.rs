@@ -3,7 +3,10 @@ use std::str::FromStr;
 use near_sdk::borsh::{self, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U64;
-use near_sdk::{env, near, AccountId, BorshStorageKey, CurveType, PanicOnDefault, PublicKey};
+use near_sdk::{
+    env, near, AccountId, BorshStorageKey, CurveType, NearToken, PanicOnDefault, Promise,
+    PublicKey,
+};
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
@@ -74,49 +77,55 @@ impl IssuerRegistry {
         key_version: u32,
         schema_hash: String,
     ) {
-        self.assert_owner();
-        assert_valid_ed25519_public_key(&public_key);
-        assert!(key_version > 0, "ERR_INVALID_KEY_VERSION");
-        assert_hash(&schema_hash, "SCHEMA_HASH");
+        self.with_storage_deposit(|this| {
+            this.assert_owner();
+            assert_valid_ed25519_public_key(&public_key);
+            assert!(key_version > 0, "ERR_INVALID_KEY_VERSION");
+            assert_hash(&schema_hash, "SCHEMA_HASH");
 
-        let record = if let Some(existing) = self.issuers.get(&issuer_id) {
-            assert!(key_version > existing.key_version, "ERR_KEY_VERSION_NOT_INCREASED");
-            IssuerRecord {
-                public_key,
-                key_version,
-                schema_hash,
-                active: existing.active,
-                status_epoch: existing.status_epoch,
-                status_root: existing.status_root,
-            }
-        } else {
-            IssuerRecord {
-                public_key,
-                key_version,
-                schema_hash,
-                active: true,
-                status_epoch: 0,
-                status_root: "0".repeat(64),
-            }
-        };
-        self.issuers.insert(&issuer_id, &record);
+            let record = if let Some(existing) = this.issuers.get(&issuer_id) {
+                assert!(key_version > existing.key_version, "ERR_KEY_VERSION_NOT_INCREASED");
+                IssuerRecord {
+                    public_key,
+                    key_version,
+                    schema_hash,
+                    active: existing.active,
+                    status_epoch: existing.status_epoch,
+                    status_root: existing.status_root,
+                }
+            } else {
+                IssuerRecord {
+                    public_key,
+                    key_version,
+                    schema_hash,
+                    active: true,
+                    status_epoch: 0,
+                    status_root: "0".repeat(64),
+                }
+            };
+            this.issuers.insert(&issuer_id, &record);
+        });
     }
 
     pub fn set_issuer_active(&mut self, issuer_id: AccountId, active: bool) {
-        self.assert_owner();
-        let mut record = self.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
-        record.active = active;
-        self.issuers.insert(&issuer_id, &record);
+        self.with_storage_deposit(|this| {
+            this.assert_owner();
+            let mut record = this.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
+            record.active = active;
+            this.issuers.insert(&issuer_id, &record);
+        });
     }
 
     pub fn update_status_root(&mut self, issuer_id: AccountId, epoch: U64, root: String) {
-        self.assert_owner();
-        assert_hash(&root, "STATUS_ROOT");
-        let mut record = self.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
-        assert!(epoch.0 > record.status_epoch, "ERR_STATUS_EPOCH_NOT_INCREASED");
-        record.status_epoch = epoch.0;
-        record.status_root = root;
-        self.issuers.insert(&issuer_id, &record);
+        self.with_storage_deposit(|this| {
+            this.assert_owner();
+            assert_hash(&root, "STATUS_ROOT");
+            let mut record = this.issuers.get(&issuer_id).expect("ERR_ISSUER_NOT_FOUND");
+            assert!(epoch.0 > record.status_epoch, "ERR_STATUS_EPOCH_NOT_INCREASED");
+            record.status_epoch = epoch.0;
+            record.status_root = root;
+            this.issuers.insert(&issuer_id, &record);
+        });
     }
 
     pub fn get_issuer(&self, issuer_id: AccountId) -> Option<IssuerRecord> {
@@ -129,6 +138,34 @@ impl IssuerRegistry {
 
     fn assert_owner(&self) {
         assert_eq!(env::predecessor_account_id(), self.owner_id, "ERR_NOT_OWNER");
+    }
+
+    /// Charges only for positive storage growth and refunds all excess deposit.
+    /// Any underpayment panics after the attempted mutation; NEAR rolls the
+    /// transaction back, so the persistent state remains unchanged.
+    fn with_storage_deposit<F>(&mut self, mutation: F)
+    where
+        F: FnOnce(&mut Self),
+    {
+        let before = env::storage_usage();
+        mutation(self);
+        let after = env::storage_usage();
+        let storage_growth = after.saturating_sub(before);
+        let required = env::storage_byte_cost().saturating_mul(storage_growth.into());
+        let attached = env::attached_deposit();
+        assert!(
+            attached >= required,
+            "ERR_INSUFFICIENT_STORAGE_DEPOSIT: required {} yoctoNEAR, attached {}",
+            required.as_yoctonear(),
+            attached.as_yoctonear()
+        );
+
+        let refund = attached.saturating_sub(required);
+        if refund > NearToken::from_yoctonear(0) {
+            Promise::new(env::predecessor_account_id())
+                .transfer(refund)
+                .detach();
+        }
     }
 }
 
@@ -146,10 +183,15 @@ mod tests {
         value.parse().expect("valid account id")
     }
 
-    fn set_predecessor(value: &str) {
+    fn set_predecessor_with_deposit(value: &str, deposit: NearToken) {
         let mut context = VMContextBuilder::new();
         context.predecessor_account_id(account(value));
+        context.attached_deposit(deposit);
         testing_env!(context.build());
+    }
+
+    fn set_predecessor(value: &str) {
+        set_predecessor_with_deposit(value, NearToken::from_near(100));
     }
 
     fn registry() -> IssuerRegistry {
@@ -412,5 +454,26 @@ mod tests {
         assert_eq!(after.active, before.active);
         assert_eq!(after.status_epoch, before.status_epoch);
         assert_eq!(after.status_root, before.status_root);
+    }
+
+    #[test]
+    fn underpayment_reverts_new_issuer_and_leaves_state_unchanged() {
+        let mut contract = registry();
+        set_predecessor_with_deposit("owner.testnet", NearToken::from_yoctonear(0));
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            register(&mut contract);
+        }));
+
+        assert!(result.is_err());
+        assert!(contract.get_issuer(account("issuer.testnet")).is_none());
+    }
+
+    #[test]
+    fn excess_deposit_is_accepted_for_storage_growth() {
+        let mut contract = registry();
+        register(&mut contract);
+
+        assert!(contract.get_issuer(account("issuer.testnet")).is_some());
     }
 }

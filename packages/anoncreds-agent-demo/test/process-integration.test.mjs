@@ -111,11 +111,13 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
   const issuerPort = await freePort();
   const holderPort = await freePort();
   const holderTwoPort = await freePort();
+  const holderThreePort = await freePort();
   const verifierPort = await freePort();
   const verifierTwoPort = await freePort();
   const issuerUrl = "http://127.0.0.1:" + issuerPort;
   const holderUrl = "http://127.0.0.1:" + holderPort;
   const holderTwoUrl = "http://127.0.0.1:" + holderTwoPort;
+  const holderThreeUrl = "http://127.0.0.1:" + holderThreePort;
   const verifierUrl = "http://127.0.0.1:" + verifierPort;
   const verifierTwoUrl = "http://127.0.0.1:" + verifierTwoPort;
   const children = [];
@@ -140,8 +142,11 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     const holderTwo = start("holder", holderTwoPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holderTwo);
     await waitHealthy(holderTwoUrl, holderTwo);
+    const holderThree = start("holder", holderThreePort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
+    children.push(holderThree);
+    await waitHealthy(holderThreeUrl, holderThree);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "0", NEAR_MAX_STALE_AGE_MS: "0" };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "0", NEAR_MAX_STALE_AGE_MS: "60000" };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
@@ -190,6 +195,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(secondEnrollment.status, 200, JSON.stringify(secondEnrollment.body));
     const secondDelegation = await post(holderTwoUrl + "/delegate", {});
     assert.equal(secondDelegation.status, 200, JSON.stringify(secondDelegation.body));
+    const thirdEnrollment = await post(holderThreeUrl + "/enroll", {});
+    assert.equal(thirdEnrollment.status, 200, JSON.stringify(thirdEnrollment.body));
     const enrollment = await post(holderUrl + "/enroll", {});
     assert.equal(enrollment.status, 200, JSON.stringify(enrollment.body));
     const { policy } = enrollment.body;
@@ -263,7 +270,25 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     assert.equal(tamperedAttempt.body.authorized, false);
     assert.equal(tamperedAttempt.body.code, "INVALID_SIGNATURE");
 
-    // A transient registry failure must not consume the challenge or capability quota.
+    // Warm the verifier's registry cache with a valid, independent authorization.
+    const warmChallenge = await post(verifierUrl + "/challenge", {
+      ...challengeInput,
+      capabilityChain: thirdEnrollment.body.capabilityChain,
+    });
+    assert.equal(warmChallenge.status, 200, JSON.stringify(warmChallenge.body));
+    const warmPresentation = await post(holderThreeUrl + "/present", {
+      challenge: warmChallenge.body,
+      presentationRequest: warmChallenge.body.presentationRequest,
+    });
+    assert.equal(warmPresentation.status, 200, JSON.stringify(warmPresentation.body));
+    const warmAttempt = await post(verifierUrl + "/verify", {
+      nonce: warmChallenge.body.nonce,
+      ...warmPresentation.body,
+    });
+    assert.equal(warmAttempt.status, 200, JSON.stringify(warmAttempt.body));
+
+    // A transient registry failure must not use stale cache, consume the
+    // challenge, or authorize the request even when a stale-cache env value is set.
     registryState.available = false;
     const registryUnavailableAttempt = await post(verifierUrl + "/verify", {
       nonce: challengeResult.body.nonce,

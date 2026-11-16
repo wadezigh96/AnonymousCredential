@@ -35,3 +35,24 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           cargo build --locked --target wasm32-unknown-unknown --release
+      - name: Record reproducible WASM metadata and checksum
+        working-directory: contracts/near/issuer-registry
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          wasm_path="target/wasm32-unknown-unknown/release/anonymesh_issuer_registry.wasm"
+          test -s "$wasm_path"
+          printf '%s\n' "$SOURCE_SHA" > SOURCE_SHA.txt
+          printf '%s\n' 'cargo build --locked --target wasm32-unknown-unknown --release' > BUILD_COMMAND.txt
+          sha256sum "$wasm_path" | tee SHA256SUMS.txt
+      - name: Upload exact release WASM and build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymesh-issuer-registry-wasm-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            contracts/near/issuer-registry/target/wasm32-unknown-unknown/release/anonymesh_issuer_registry.wasm
+            contracts/near/issuer-registry/SOURCE_SHA.txt
+            contracts/near/issuer-registry/BUILD_COMMAND.txt
+            contracts/near/issuer-registry/SHA256SUMS.txt
