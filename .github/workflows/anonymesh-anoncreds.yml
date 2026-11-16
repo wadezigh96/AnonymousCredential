@@ -1,7 +1,7 @@
 name: ANONYMESH AnonCreds integration
 on:
   push:
-    branches: [feat/anonymesh-private-agent-identity]
+    branches: [feat/anonymesh-private-agent-identity, fix/anonymesh-testnet-readiness]
     paths:
       - "packages/anoncreds-agent-demo/**"
       - ".github/workflows/anonymesh-anoncreds.yml"
