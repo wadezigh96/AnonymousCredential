@@ -33,15 +33,16 @@ When `NEAR_REQUIRED=true`, the verifier reads `get_issuer` through the bounded R
 
 | Area | Status | Evidence / limitation |
 |---|---|---|
-| Node issuer-holder-verifier flow | **PASS** | Local suite 86/86; baseline Node and process workflows passed. Fresh CI for hardening merge remains required. |
+| Node issuer-holder-verifier flow | **PASS** | Local suite 86/86; final Node and process workflows passed on the exact final SHA. |
 | Persistent issuer key | **PASS** | Versioned JWK file, strict permissions, rotation/version tests. |
-| Registry key conversion and RPC validation | **PASS** | Canonical NEAR key tests, streamed size enforcement, malformed/timeout/cache tests, mocked-RPC process flow. Fresh CI for hardening merge remains required. |
+| Registry key conversion and RPC validation | **PASS** | Canonical NEAR key tests, streamed size enforcement, malformed/timeout/cache tests, mocked-RPC process flow; final CI passed. |
 | Registry-backed authorization gate | **PASS** | Required mode rejects unknown, inactive, mismatched, stale and unavailable records. |
 | Capability, PoP, replay and quota | **PASS** | Integrated verifier path plus restart/concurrency tests. |
-| Rust agent-auth | **PASS** | [Workflow 43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180). |
-| NEAR contract tests/WASM | **PASS** | [Workflow 43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625); no deployment. |
-| Android release build | **PASS** | [Workflow 43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260); single-process smoke test only. |
-| Linux ARM64 benchmark | **PASS** | [Workflow 43734056425](https://github.com/wadezigh96/anonymesh/actions/runs/43734056425). |
+| Rust agent-auth | **PASS** | [Workflow 43790384303](https://github.com/wadezigh96/anonymesh/actions/runs/43790384303). |
+| NEAR contract tests/WASM | **PASS** | [Workflow 43790399539](https://github.com/wadezigh96/anonymesh/actions/runs/43790399539) passed 21 tests and the locked release build; no deployment. |
+| Contract deployment readiness | **BLOCKED** | Source has no explicit attached-deposit/storage-cost accounting or refund policy; WASM artifact/checksum is not retained; deployer signer is unavailable. |
+| Android release build | **PASS** | [Workflow 43790390847](https://github.com/wadezigh96/anonymesh/actions/runs/43790390847); single-process smoke test only. |
+| Linux ARM64 benchmark | **PASS** | [Workflow 43790376551](https://github.com/wadezigh96/anonymesh/actions/runs/43790376551). |
 | Live NEAR testnet deployment | **BLOCKED** | Requires signer, funded deployer, contract account, approved payload, and live RPC configuration. |
 | Live registry verifier smoke test | **BLOCKED** | Depends on successful approved deployment and registered issuer record. |
 | Privacy-preserving revocation | **NOT IMPLEMENTED** | Status root is an opaque commitment; no witness/accumulator verification. |
@@ -86,12 +87,12 @@ Do not place real values, private keys, tokens or seed phrases in Git, logs or t
 
 Final implementation workflows:
 
-- Node integration: [43734056349](https://github.com/wadezigh96/anonymesh/actions/runs/43734056349)
-- Process integration: [43734056402](https://github.com/wadezigh96/anonymesh/actions/runs/43734056402)
-- ARM64 benchmark: [43734056425](https://github.com/wadezigh96/anonymesh/actions/runs/43734056425)
-- Rust agent-auth: [43734220180](https://github.com/wadezigh96/anonymesh/actions/runs/43734220180)
-- Android release APK: [43734226260](https://github.com/wadezigh96/anonymesh/actions/runs/43734226260)
-- NEAR contract/WASM: [43734232625](https://github.com/wadezigh96/anonymesh/actions/runs/43734232625)
+- Node integration: [43790364195](https://github.com/wadezigh96/anonymesh/actions/runs/43790364195)
+- Process integration: [43790370310](https://github.com/wadezigh96/anonymesh/actions/runs/43790370310)
+- ARM64 benchmark: [43790376551](https://github.com/wadezigh96/anonymesh/actions/runs/43790376551)
+- Rust agent-auth: [43790384303](https://github.com/wadezigh96/anonymesh/actions/runs/43790384303)
+- Android release APK: [43790390847](https://github.com/wadezigh96/anonymesh/actions/runs/43790390847)
+- NEAR contract/WASM: [43790399539](https://github.com/wadezigh96/anonymesh/actions/runs/43790399539)
 
 Local Node evidence:
 
@@ -103,9 +104,17 @@ npm run benchmark                # host-specific Linux x64 benchmark
 node --test test/process-integration.test.mjs
 ```
 
-The 86-test result is local evidence for merge commit `fd3873c`; the six GitHub workflows linked above ran on the earlier baseline and must be rerun after this hardening merge.
+The 86-test result is local evidence for the final implementation line, and all six workflows linked above report `completed` / `success` with `head_sha=3732de2cde174c487465f62944ab21ab690dd8ff`.
 
 The exact WASM checksum and testnet contract account are **BLOCKED** until a final workflow artifact is retained and an approved testnet deployment exists. No checksum or account is invented here.
+
+## Contract deployment preflight result
+
+The candidate account `wkams.testnet` exists on NEAR testnet with approximately 18.9 NEAR, but its `code_hash` is the empty-account hash (`11111111111111111111111111111111`), so no contract is deployed there. This was a read-only RPC query; no transaction was sent.
+
+The contract source passes owner authorization, key validation, key-version monotonicity, status-epoch monotonicity, activation/suspension, unknown-issuer handling, and read-only view tests. However, `IssuerRegistry` currently stores entries in `LookupMap` without an explicit attached-deposit requirement, per-entry storage accounting, refund policy, or owner-funded/unbounded-growth policy. This is a deployment gate because state can grow through owner mutations without a documented on-chain storage-cost mechanism. The CI build proves compilation, not economic safety.
+
+**Deployment verdict: BLOCKED — do not deploy this contract yet.** Implement and test the chosen storage policy, retain the exact WASM artifact with SHA-256, review initialization and owner recovery, and obtain an authorized testnet signer plus explicit transaction approval first.
 
 ## Deployment gate and remaining prerequisites
 
