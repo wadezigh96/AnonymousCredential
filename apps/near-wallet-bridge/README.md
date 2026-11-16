@@ -1,6 +1,6 @@
 # ANONYMESH NEAR Registry Status
 
-This page is a **read-only status inspector** for the already deployed NEAR Testnet contract.
+This page is a **read-only status inspector** for the already deployed NEAR Testnet contract. The wallet signing and deployment actions have been removed.
 
 ## Fixed target
 
