@@ -452,7 +452,7 @@ test("issuer refuses registry-required mode without a persisted issuer key", asy
   try {
     const [code] = await once(child, "exit");
     assert.notEqual(code, 0);
-    assert.match(child.diagnosticOutput(), /ISSUER_KEY_FILE_REQUIRED_FOR_NEAR_REGISTRY/);
+    assert.match(child.diagnosticOutput(), /ISSUER_KEY_FILE_REQUIRED_WHEN_NEAR_REQUIRED/);
   } finally {
     if (child.exitCode === null) child.kill("SIGTERM");
   }
