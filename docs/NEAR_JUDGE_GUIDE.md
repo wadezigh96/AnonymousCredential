@@ -54,16 +54,17 @@ A successful local test or WASM build is not proof of deployment. A deployed con
 
 ## 4. CI evidence that can be independently checked
 
-The following GitHub Actions runs were triggered for PR head commit `175c5b731593c99e6cdb3e70b1ac842bd9a2b59a`. The six completed workflows below succeeded:
+The following GitHub Actions runs were triggered for the current PR head commit `abaed695535f6da1c465f0e3291a4989175fb7ba`. **All seven workflows completed successfully (7/7).** Job-level details were checked for each run.
 
-- **AnonCreds integration:** [run 43956869318](https://github.com/wadezigh96/anonymesh/actions/runs/43956869318), success. The native-demo job ran the complete Node test suite: **101 passed, 0 failed**. Both registry-key fixture tests (tests 95 and 96) passed after correcting the test data to use canonical NEAR public-key format and its Node representation. The ARM64 benchmark job in this workflow also succeeded.
-- **Separate-process integration:** [run 43956869259](https://github.com/wadezigh96/anonymesh/actions/runs/43956869259), success.
-- **NEAR contract unit tests and WASM build:** [run 43956869298](https://github.com/wadezigh96/anonymesh/actions/runs/43956869298), success. This is build/test evidence only; the workflow does not deploy or submit a blockchain transaction.
-- **NEAR wallet bridge:** [run 43956869272](https://github.com/wadezigh96/anonymesh/actions/runs/43956869272), success.
-- **Agent authentication:** [run 43956869308](https://github.com/wadezigh96/anonymesh/actions/runs/43956869308), success.
-- **Linux ARM64 benchmark:** [run 43956869337](https://github.com/wadezigh96/anonymesh/actions/runs/43956869337), success.
+- **AnonCreds integration:** [run 43957294481](https://github.com/wadezigh96/anonymesh/actions/runs/43957294481), success. Both `anoncreds-native-demo` and `anoncreds-linux-arm64-benchmark` jobs succeeded. The native-demo job ran the issuer-holder-verifier and adversarial tests, then the demo/report step.
+- **Separate-process integration:** [run 43957294275](https://github.com/wadezigh96/anonymesh/actions/runs/43957294275), success. SQLite atomic rollback and multi-process authorization integration steps succeeded.
+- **NEAR contract unit tests and WASM build:** [run 43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232), success. Unit tests, locked-dependency WASM build, metadata/checksum recording and artifact upload succeeded. This is build/test evidence only; the workflow does not deploy or submit a blockchain transaction.
+- **NEAR wallet bridge:** [run 43957294524](https://github.com/wadezigh96/anonymesh/actions/runs/43957294524), success. Account preflight tests and read-only wallet bridge build succeeded.
+- **Agent authentication:** [run 43957294270](https://github.com/wadezigh96/anonymesh/actions/runs/43957294270), success.
+- **Linux ARM64 benchmark:** [run 43957294284](https://github.com/wadezigh96/anonymesh/actions/runs/43957294284), success. Native ARM64 runner verification, benchmark and result upload succeeded.
+- **Android native proof smoke / standalone release APK:** [run 43957294273](https://github.com/wadezigh96/anonymesh/actions/runs/43957294273), success. Expo compatibility check, native project generation, standalone release APK build, embedded JavaScript bundle verification and APK artifact upload all succeeded.
 
-**Android workflow status:** [run 43956869252](https://github.com/wadezigh96/anonymesh/actions/runs/43956869252) was still in progress at the time this guide was updated. Its result is deliberately not described as passed here.
+The AnonCreds integration workflow's latest run above is green, but this guide does not infer a new numeric test count from the workflow summary. A prior run recorded 101 passed and 0 failed; that count belongs to its own commit/run and is not presented as a fresh count for this PR head.
 
 These CI results apply to the listed commit and workflows only. A successful build or test does not establish production readiness, issuer registration, live verifier acceptance, or any additional on-chain state. The Testnet deployment and owner read-back are separate live evidence described above; issuer registration and live verifier acceptance remain pending.
 
