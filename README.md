@@ -1,5 +1,7 @@
 # ANONYMESH — Private Agentic Identity Infrastructure (PAII)
 
+> **Project status (2026-11-16):** local Issuer–Holder–Verifier prototype and NEAR registry adapter are implemented with Linux CI evidence. The registry adapter has deterministic mock-RPC integration tests. **The NEAR Testnet contract is not deployed yet.** See [canonical project status and release gates](docs/PROJECT_STATUS.md) for exact evidence, architecture boundaries and the remaining live-Testnet steps.
+
 **ANONYMESH** is a platform-independent protocol project exploring **Private Agentic Identity Infrastructure (PAII)**: privacy-preserving identity, trust and authorization for humans and autonomous AI agents.
 
 **PAII is the innovation category proposed by this project**, not a claim that it is already an established industry standard or an official NEAR Hackathon track. ANONYMESH is the protocol and reference implementation being developed to explore this category.
