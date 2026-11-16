@@ -4,7 +4,7 @@
 
 **Branch `fix/anonymesh-testnet-readiness` kini lulus test/build kontrak pada SHA yang diaudit, tetapi deployment Testnet belum dilakukan dan tidak boleh disebut live.** Tes Node lokal lulus 88/88. Workflow kontrak GitHub Actions [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123) sukses untuk source `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; artifact final, SOURCE_SHA dan checksum diverifikasi.
 
-Langkah selanjutnya tertahan pada signer Testnet yang belum tersedia/terhubung di sesi ini serta persetujuan eksplisit untuk payload transaksi lengkap. Saya tidak mengirim transaksi. **Jangan deploy dari branch default `feat/anonymesh-private-agent-identity`**: branch itu masih berada pada `a55cda5` dan belum memiliki `#[payable]` pada tiga metode mutasi registry, sementara fix sudah ada di branch readiness.
+**Pembaruan status:** kontrak registry kini telah berhasil di-deploy ke Testnet pada `registry.wkams.testnet`; owner read-back berhasil. Transaksi: [NEAR Explorer](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Catatan ini menggantikan temuan pra-deployment di bawah. Issuer registration dan live verifier acceptance masih tertunda.
 
 ## Scope dan bukti
 
