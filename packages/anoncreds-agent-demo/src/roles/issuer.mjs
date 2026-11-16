@@ -8,6 +8,9 @@ import { loadIssuerKey } from "../issuer-key-store.mjs";
 const issuerAccountId = process.env.NEAR_ISSUER_ACCOUNT_ID ?? "issuer.testnet";
 const issuerKeyVersion = Number(process.env.NEAR_EXPECTED_KEY_VERSION ?? 1);
 const issuerKeyFile = process.env.ISSUER_KEY_FILE;
+if (process.env.NEAR_REQUIRED === "true" && !issuerKeyFile) {
+  throw new Error("ISSUER_KEY_FILE_REQUIRED_FOR_NEAR_REGISTRY");
+}
 const issuerKey = issuerKeyFile
   ? loadIssuerKey({ file: issuerKeyFile, expectedKeyVersion: issuerKeyVersion, strictPermissions: process.env.NODE_ENV !== "test", allowCreate: process.env.ANONYMESH_DEVELOPMENT_MODE === "true" })
   : (() => { const pair = generateKeyPairSync("ed25519"); return { privateKey: pair.privateKey, publicKey: pair.publicKey.export({ format: "jwk" }).x, keyVersion: issuerKeyVersion }; })();
