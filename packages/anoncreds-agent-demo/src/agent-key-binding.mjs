@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { nearEd25519PublicKeyToNode } from "./near-key-format.mjs";
 
 const KEY_BYTES = 32;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -46,7 +47,9 @@ export function extractCredentialIssuerRegistryKey(input) {
   }
   const attr = presentation?.requested_proof?.revealed_attrs?.issuer_key_ref;
   if (!attr || typeof attr.raw !== "string" || typeof attr.encoded !== "string") fail("MISSING_REVEALED_ISSUER_KEY");
-  const key = validateAgentPublicKey(attr.raw);
+  const key = attr.raw;
+  try { nearEd25519PublicKeyToNode(key); }
+  catch (error) { fail(error.code ?? "INVALID_NEAR_PUBLIC_KEY"); }
   if (attr.encoded !== encodeAnonCredsAttribute(key)) fail("ISSUER_KEY_ENCODING_MISMATCH");
   return key;
 }

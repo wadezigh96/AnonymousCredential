@@ -13,6 +13,7 @@ import {
   PresentationRequest,
   Schema,
 } from "@hyperledger/anoncreds-nodejs";
+import { nodeEd25519PublicKeyToNear } from "./near-key-format.mjs";
 
 const ISSUER_ID = "did:example:anonymesh:issuer";
 export const SCHEMA_ID = "anonymesh:agent-authorization:1";
@@ -107,7 +108,7 @@ export class ChallengeLedger {
 }
 
 export function createIssuerSetup({ issuerRegistryPublicKey } = {}) {
-  const registryKey = issuerRegistryPublicKey ?? generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x;
+  const registryKey = issuerRegistryPublicKey ?? nodeEd25519PublicKeyToNear(generateKeyPairSync("ed25519").publicKey.export({ format: "jwk" }).x);
   const schema = Schema.create({
     name: "anonymesh-agent-authorization",
     version: "1.0",

@@ -5,6 +5,7 @@ import { signCapability } from "../capability.mjs";
 import { configureHttpServer, configuredRateLimit, createRateLimiter, readJson, requireApiToken, requireBearerToken, routeError, sendJson } from "./http.mjs";
 import { loadIssuerKey } from "../issuer-key-store.mjs";
 import { loadOrCreateIssuerState } from "../issuer-state-store.mjs";
+import { nodeEd25519PublicKeyToNear } from "../near-key-format.mjs";
 
 const issuerAccountId = process.env.NEAR_ISSUER_ACCOUNT_ID ?? "issuer.testnet";
 const issuerKeyVersion = Number(process.env.NEAR_EXPECTED_KEY_VERSION ?? 1);
@@ -45,14 +46,16 @@ const issuerKey = issuerKeyFile
       };
     })();
 
+const issuerRegistryPublicKey = nodeEd25519PublicKeyToNear(issuerKey.publicKey);
+
 const issuerState = issuerStateFile
   ? loadOrCreateIssuerState({
       file: issuerStateFile,
       issuerKeyVersion,
-      issuerRegistryPublicKey: issuerKey.publicKey,
+      issuerRegistryPublicKey,
       createConfig: () =>
         createIssuerSetup({
-          issuerRegistryPublicKey: issuerKey.publicKey,
+          issuerRegistryPublicKey,
         }),
       allowCreate:
         !nearRequired &&
@@ -64,7 +67,7 @@ const issuerState = issuerStateFile
 
 const config =
   issuerState?.config ??
-  createIssuerSetup({ issuerRegistryPublicKey: issuerKey.publicKey });
+  createIssuerSetup({ issuerRegistryPublicKey });
 
 const schemaHash = createHash("sha256")
   .update(JSON.stringify(config.schema), "utf8")

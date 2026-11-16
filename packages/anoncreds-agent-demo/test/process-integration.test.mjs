@@ -5,7 +5,6 @@ import { connect } from "node:net";
 import { createServer } from "node:http";
 import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { generateIssuerKeyFile } from "../src/issuer-key-store.mjs";
-import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
@@ -134,7 +133,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(issuer);
     await waitHealthy(issuerUrl, issuer);
     const issuerPublic = await (await fetch(issuerUrl + "/public")).json();
-    registryState.record = { public_key: nodeEd25519PublicKeyToNear(issuerPublic.issuerRegistryPublicKey), key_version: 1, schema_hash: issuerPublic.schemaHash, active: true, status_epoch: 0, status_root: "0".repeat(64) };
+    assert.match(issuerPublic.issuerRegistryPublicKey, /^ed25519:[1-9A-HJ-NP-Za-km-z]+$/);
+    registryState.record = { public_key: issuerPublic.issuerRegistryPublicKey, key_version: 1, schema_hash: issuerPublic.schemaHash, active: true, status_epoch: 0, status_root: "0".repeat(64) };
 
     const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holder);
@@ -457,4 +457,3 @@ test("issuer refuses registry-required mode without a persisted issuer key", asy
     if (child.exitCode === null) child.kill("SIGTERM");
   }
 });
-

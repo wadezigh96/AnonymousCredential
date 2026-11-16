@@ -33,7 +33,7 @@ export function verifyAndAuthorizeAgentRequest({nonce,presentationJson,capabilit
       let credentialKey;try{credentialKey=extractCredentialAgentPublicKey(presentationJson);}catch(error){failureCode=error.code??"CREDENTIAL_KEY_INVALID";return false;}
       if(registryRequired){
         let registryKey;try{registryKey=extractCredentialIssuerRegistryKey(presentationJson);}catch(error){failureCode=error.code??"ISSUER_KEY_INVALID";return false;}
-        if(registryKey!==issuerRecord.nodePublicKey){failureCode="ISSUER_REGISTRY_KEY_MISMATCH";return false;}
+        if(registryKey!==issuerRecord.publicKey){failureCode="ISSUER_REGISTRY_KEY_MISMATCH";return false;}
         if(expected?.issuerKeyVersion!==undefined&&issuerRecord.keyVersion!==expected.issuerKeyVersion){failureCode="ISSUER_KEY_VERSION_MISMATCH";return false;}
         if(expected?.schemaHash!==undefined&&issuerRecord.schemaHash!==expected.schemaHash){failureCode="ISSUER_SCHEMA_MISMATCH";return false;}
       }
