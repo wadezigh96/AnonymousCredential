@@ -54,7 +54,7 @@ A successful local test or WASM build is not proof of deployment. A deployed con
 
 ## 4. CI evidence that can be independently checked
 
-The following GitHub Actions runs were triggered for the current PR head commit `abaed695535f6da1c465f0e3291a4989175fb7ba`. **All seven workflows completed successfully (7/7).** Job-level details were checked for each run.
+The following GitHub Actions runs were triggered for code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`, before the subsequent documentation-only refresh commits. **All seven workflows completed successfully (7/7).** The tested application code was not changed by those documentation commits. Job-level details were checked for each run.
 
 - **AnonCreds integration:** [run 43957294481](https://github.com/wadezigh96/anonymesh/actions/runs/43957294481), success. Both `anoncreds-native-demo` and `anoncreds-linux-arm64-benchmark` jobs succeeded. The native-demo job ran the issuer-holder-verifier and adversarial tests, then the demo/report step.
 - **Separate-process integration:** [run 43957294275](https://github.com/wadezigh96/anonymesh/actions/runs/43957294275), success. SQLite atomic rollback and multi-process authorization integration steps succeeded.
