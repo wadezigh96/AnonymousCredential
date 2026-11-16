@@ -15,7 +15,7 @@ This crate implements one narrow, real cryptographic slice: Ed25519 proof-of-pos
 - It is **not** an anonymous credential or zero-knowledge proof.
 - It does not hide the signing public key or make presentations unlinkable.
 - It does not implement issuer trust, credential issuance, selective disclosure or revocation.
-- It does not enforce the capability itself; it only binds a supplied capability digest into the signed challenge.
+- `verify_capability_chain` validates a supplied capability chain's trusted root, signatures, parent links and scope attenuation. The crate does not automatically bind that validation result to a challenge or action, enforce the caller's authorization policy, or consume quota atomically; those remain the caller's responsibility.
 - Its replay cache is process-local and not suitable for multi-instance production deployment without shared durable replay state.
 
 The same key used for ordinary Ed25519 authentication is linkable. Do not describe this crate as private identity. It is a testable agent-authentication building block that will later be paired with an anonymous credential presentation.

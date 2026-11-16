@@ -1,5 +1,7 @@
 # ANONYMESH — Private Agentic Identity Infrastructure (PAII)
 
+> **Project status (2026-11-17):** ANONYMESH remains a prototype, not production-ready. The NEAR issuer registry is deployed and initialized on Testnet at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. On code commit `abaed695535f6da1c465f0e3291a4989175fb7ba` (before the documentation-only refresh commits), all **7/7 GitHub Actions workflows** succeeded, including AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This CI evidence does not establish issuer registration, live verifier acceptance, or production readiness. See the [NEAR Judge Guide](docs/NEAR_JUDGE_GUIDE.md), [canonical project status](docs/PROJECT_STATUS.md), and [deployment record](docs/NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+
 **ANONYMESH** is a platform-independent protocol project exploring **Private Agentic Identity Infrastructure (PAII)**: privacy-preserving identity, trust and authorization for humans and autonomous AI agents.
 
 **PAII is the innovation category proposed by this project**, not a claim that it is already an established industry standard or an official NEAR Hackathon track. ANONYMESH is the protocol and reference implementation being developed to explore this category.
@@ -51,6 +53,12 @@ The intended authorization flow is:
 6. The action is allowed only if all required checks pass.
 
 A credential proof is **not by itself proof that a particular action is authorized**. The authorization and policy-enforcement layer is a distinct part of the design and remains under development.
+
+## ZK proof requirement and implementation boundary
+
+**Zero-knowledge proof is a core ANONYMESH requirement.** The current executable proof engine is Hyperledger AnonCreds CL presentations: the holder proves credential validity and requested predicates while selectively disclosing only the claims the verifier requested. The holder's link secret and hidden subject attributes stay holder-side. This is a credential-based zero-knowledge presentation, not a claim that ANONYMESH already implements a general-purpose zk-SNARK, zk-STARK, or on-chain proof verifier.
+
+The Ed25519 proof-of-possession is a separate signature check that binds the request to the credential-bound agent key; it is **not itself a zero-knowledge proof**. Likewise, a valid AnonCreds proof does not automatically grant permission: the verifier must separately enforce issuer trust, challenge freshness, capability scope, expiry, replay protection and quota. The current implemented subject is an agent demo; human credential issuance, privacy-preserving revocation and unlinkable presentations remain incomplete.
 
 ## Integrated local authorization demo (prototype; not production)
 
@@ -137,7 +145,7 @@ Agent A reveals only `agent_role`; the private subject and `valid_until` remain 
 - `npm run demo --prefix packages/anoncreds-agent-demo` (legacy single-process proof smoke test)
 - `npm run benchmark --prefix packages/anoncreds-agent-demo`
 
-The current CI-tested implementation commit completed the Node integration and separate-process workflows; the local suite reports 80/80 tests passing. The registry-backed process test uses `NEAR_REQUIRED=true`, a persisted issuer key, and a deterministic local JSON-RPC mock. The standalone smoke demo reports `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. Benchmark values are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
+The current Node implementation has passing Linux CI evidence for the proof flow and separate-process integration; use the linked workflow runs and current branch CI as the source of truth rather than relying on a hard-coded historical test count. The registry-backed process test uses `NEAR_REQUIRED=true`, a persisted issuer key, and a deterministic local JSON-RPC mock. The standalone smoke demo reports `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`. Benchmark values are host-specific, include native allocations, and are not Android/Bionic results or a benchmark of the user's phone.
 
 Platform-specific smoke tests are documented separately from the protocol architecture. They validate selected library bindings on target devices and are not required to understand or run the platform-independent protocol demo. A physical Android 15 native-proof smoke test was reported successful on 15 November 2026: `PROOF VERIFIED`, role `weather_reader` disclosed, private subject not disclosed, and proof JSON length 18,117 characters (AnonCreds wrapper 0.5.0). This is a single-process local proof demonstration, not full Android Issuer–Holder–Verifier integration or Android performance evidence.
 
@@ -153,11 +161,13 @@ The following roadmap defines the intended development direction. A roadmap item
 
 ## NEAR integration
 
-NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is not deployed and does not provide on-chain AnonCreds or revocation-proof verification.
+NEAR is a public-registry layer for issuer metadata and opaque status commitments. The Node verifier has a mandatory registry-backed mode when `NEAR_REQUIRED=true`; it reads the registry through a bounded, read-only RPC adapter and fails closed on invalid or unavailable records. Private identity attributes, holder secrets, proof witnesses and private credential contents must not be placed on-chain. The contract is deployed and initialized on NEAR Testnet at `registry.wkams.testnet`; `get_owner()` has been verified. Issuer registration and live verifier acceptance remain pending. The contract does not provide on-chain AnonCreds or revocation-proof verification.
+
+For a judge-facing, step-by-step explanation of the NEAR contract, RPC request, verifier gate, reproducible local checks, and missing live-Testnet evidence, see [NEAR Judge Guide](docs/NEAR_JUDGE_GUIDE.md).
 
 ## Other components and status at a glance
 
-Delegated capability verification and the NEAR issuer/status registry are integrated local/testnet-preflight slices, not production services. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime and production-grade rate limits are not complete. No testnet deployment or external submission has been performed.
+Delegated capability verification and the NEAR issuer/status registry are integrated prototype components. NEAR Testnet contract deployment is complete; issuer registration and live verifier acceptance are the next implementation stage. Unlinkable presentations, privacy-preserving revocation, human identity issuance, local-first agent runtime, and production-grade rate limits remain incomplete. The project owner reports that the hackathon form and public X demo post were submitted before the deadline; this repository audit does not independently verify the form receipt.
 
 | Component | Current status |
 |---|---|
@@ -165,7 +175,7 @@ Delegated capability verification and the NEAR issuer/status registry are integr
 | Selective disclosure / hidden expiry predicate | Implemented and exercised in the Node.js demo |
 | Ed25519 proof-of-possession | Integrated into local verifier decision path; ordinary key-based authentication, not anonymous |
 | Delegated capability + PoP | Integrated into the local verifier decision path; one root capability in demo, not production delegation |
-| NEAR issuer/status registry | Contract plus strict Node read adapter and mocked-RPC verifier integration; not deployed |
+| NEAR issuer/status registry | Contract deployed on Testnet; strict Node read adapter and mocked-RPC verifier integration; issuer registration/live verifier acceptance pending |
 | Unlinkable presentations | Not demonstrated |
 | Privacy-preserving revocation | Not implemented |
 | Local-first agent runtime and durable wallet | Not implemented |
@@ -211,7 +221,7 @@ flowchart TB
 
 - **Runnable demo:** separate local Node.js Issuer, Holder and Verifier processes in `packages/anoncreds-agent-demo`; Linux CI exercises proof verification and nonce replay behavior.
 - **Authorization:** the local verifier path checks the credential-bound issuer key, agent key proof-of-possession, capability chain, challenge binding, replay and quota. Production tool enforcement remains out of scope.
-- **NEAR:** the issuer/status registry is consumed through a strict read-only adapter in required mode, but the contract is not deployed and live testnet evidence is absent.
+- **NEAR:** the issuer/status registry is consumed through a strict read-only adapter in required mode, and the contract is deployed on Testnet; issuer registration and live verifier acceptance remain unverified.
 - **Not claimed:** complete unlinkability, production authorization runtime, privacy-preserving revocation or production readiness.
 
 ### Repository structure
@@ -245,3 +255,8 @@ flowchart TB
 `packages/anoncreds-agent-demo` is the current runnable multi-process demonstration. `crates/agent-auth` and `contracts/near/issuer-registry` contain prototype components; their presence in the tree does not imply a production deployment.
 
 For implementation-facing boundaries, read [Architecture](docs/ARCHITECTURE.md). For the full protocol design, actors, credential lifecycle, trust boundaries, security controls, acceptance criteria and release gates, read [ANONYMESH Protocol Architecture](docs/ANONYMESH_ARCHITECTURE.md). The safe testnet procedure is in [TESTNET_DEMO.md](docs/TESTNET_DEMO.md), and unsupported security guarantees are listed in [SECURITY_LIMITATIONS.md](docs/SECURITY_LIMITATIONS.md).
+
+
+## License
+
+ANONYMESH is distributed under the [MIT License](LICENSE). See the license file for the exact permissions, conditions and warranty disclaimer.

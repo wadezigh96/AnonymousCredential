@@ -1,3 +1,5 @@
+> **Status update (2026-11-16):** This integration report's pre-deployment status is historical. The registry has since been deployed at `registry.wkams.testnet` and owner read-back verified. Issuer registration and live verifier acceptance remain pending. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+
 # ANONYMESH NEAR Issuer Registry Verifier Integration
 
 **Status:** baseline integration implemented on `feat/anonymesh-private-agent-identity`; not deployed. Follow-up hardening is a separate code revision from the audited SHA below and is not covered by the six CI runs recorded here.

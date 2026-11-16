@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/anonymesh-private-agent-identity
+      - fix/anonymesh-testnet-readiness
     paths:
       - 'contracts/near/issuer-registry/**'
       - '.github/workflows/anonymesh-near-contract.yml'

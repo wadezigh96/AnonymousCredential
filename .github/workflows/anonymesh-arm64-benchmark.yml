@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/anonymesh-private-agent-identity
+      - fix/anonymesh-testnet-readiness
     paths:
       - 'packages/anoncreds-agent-demo/**'
       - '.github/workflows/anonymesh-arm64-benchmark.yml'

@@ -1,110 +1,81 @@
-# ANONYMESH — NEAR Hackathon MVP Plan
+# ANONYMESH — NEAR Hackathon Technical Scope
 
-Date: 2026-11-14
-Target: NEAR Hackathon public prototype
-Network: **NEAR testnet only**
-Status: scope and acceptance plan; not an implementation report.
+**Project:** ANONYMESH — Private Agentic Identity Infrastructure (PAII)  
+**Network target:** NEAR Testnet for public issuer metadata only  
+**Status date:** 2026-11-16  
+**Canonical status:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
-## 1. Time-boxed objective
+## 1. Project proposition
 
-Prioritize one demonstrable end-to-end privacy and agent-authorization flow over broad protocol completeness. The official event page states the development/submission cutoff is 2026-11-14 23:59 UTC. That is 2026-11-15 06:59 WIB (UTC+7) and 07:59 Singapore time (UTC+8). The official site says one submission per project and requires a public repository plus a public X demo post with video or screenshots. Confirm the live form before sending anything.
+ANONYMESH explores Private Agentic Identity Infrastructure: an agent proves relevant credential claims and bounded authority to another agent while minimizing disclosure of private identity data.
 
-Recommended tracks: **Privacy & Private AI** (privacy-preserving credentials and private AI) and **AI Security & Defense** (agent authentication, delegated capabilities, spending/action limits and policy enforcement). Select both only if the working demo genuinely demonstrates both. Do not claim Agent Economy unless the prototype actually performs agent commerce/payments.
+PAII is the project's proposed category and design taxonomy, not a claim that it is an established industry standard or an official hackathon track.
 
-## 2. NEAR Builders — the three official build paths
+## 2. Architecture
 
-The current [NEAR Builders /build guide](https://nearbuilders.org/build) presents three distinct paths. ANONYMESH should use them selectively rather than treating them as one product:
+```text
+Issuer
+  -> AnonCreds credential issuance (off-chain)
+Holder / Agent A
+  -> local link secret and selective-disclosure presentation
+Verifier / Agent B
+  -> validates original request, proof, challenge and key possession
+NEAR issuer registry
+  -> public issuer key/version/schema/status metadata only
+Authorization gate
+  -> audience + action + resource + expiry + capability + replay + quota
+Decision
+  -> ALLOW or DENY (default deny)
+```
 
-### A. Smart Contracts — NEAR testnet
+NEAR is a public trust/status coordination layer. It is not the credential issuer, holder wallet, AnonCreds verifier, private data store, privacy-preserving revocation proof system or payment rail.
 
-- Use the official [NEAR smart-contract documentation](https://docs.near.org/smart-contracts/what-is), [SDK reference](https://docs.near.org/tools/sdk) and [contract examples](https://docs.near.org/tools/contracts-list).
-- Obtain disposable testnet funds from [NEAR Faucet](https://near-faucet.io/).
-- Build the ANONYMESH issuer/status registry for testnet only. Keep personal claims and credential presentations off-chain.
-- Verify contract behavior locally before any testnet deployment. Deployment is an external action and still requires the user's explicit approval.
+## 3. What the repository demonstrates
 
-### B. Private Cloud — NEAR AI Cloud
+- Three separate local Node.js processes for Issuer, Holder and Verifier.
+- AnonCreds CL credential issuance and selective-disclosure presentation with a hidden predicate.
+- Ed25519 proof-of-possession and signed delegated-capability checks in the local verifier path.
+- Challenge binding, replay denial and SQLite persistence/concurrency evidence on a single host.
+- Rust NEAR issuer registry source and a read-only RPC adapter.
+- Registry-required verifier mode that rejects unknown, malformed or unavailable registry state in deterministic mock-RPC tests.
+- GitHub Actions evidence for the Node proof flow, separate-process integration and an earlier Rust/WASM contract build; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for exact commits and run IDs.
 
-This is the most immediately useful AI integration for ANONYMESH. NEAR Builders documents an OpenAI-compatible API at `https://cloud-api.near.ai/v1`; obtain an API key from the [NEAR AI Cloud dashboard](https://cloud.near.ai/). This is a cloud API, not the NEAR blockchain RPC and not the separate `gateway.near.ai` desktop application.
+## 4. What is not claimed
 
-Recommended integration:
+- No live NEAR Testnet contract deployment or issuer-registration transaction yet.
+- No on-chain AnonCreds/ZK proof verification.
+- No privacy-preserving revocation/non-revocation witness.
+- No complete unlinkability or verifier-collusion resistance.
+- No proof of one-human-one-identity or human credential issuance.
+- No production multi-host replay/quota service, authenticated transport, external tool host or payment execution.
+- No mainnet deployment or private-chain deployment.
 
-1. Keep the API key in a local environment variable such as `NEAR_AI_KEY`; never commit it, paste it into source code, or put it in a public repo.
-2. Use the OpenAI-compatible API only for non-secret agent reasoning, for example generating a presentation request or explaining a verifier result.
-3. Do not send holder secrets, credential witnesses, raw personal claims, private keys or revocation secrets to the model.
-4. Query `/v1/models` and choose an actually available model; do not hardcode a model name copied from an old example.
-5. For the Privacy & Private AI track, request a fresh 32-byte random nonce (64 hex characters), fetch the model attestation report with the API key, verify the NVIDIA and Intel TDX attestation chain and GPU/CPU binding as specified in [NEAR AI Cloud verification docs](https://docs.near.ai/cloud/verification), then verify the chat response signature against the attested signing address.
-6. Show a clear verification panel: what was checked, which model/attestation was used, and any checks that were skipped or failed. Fail closed if a required attestation or signature check fails.
-7. Use fictional sample data in the demo. Do not claim that a normal API response alone proves TEE execution; the attestation and response signature checks are separate requirements.
+## 5. Testnet data and privacy rules
 
-Official quickstart and code examples: [NEAR AI Cloud](https://near.ai/), [Cloud documentation](https://docs.near.ai/cloud/introduction), [verification example](https://github.com/near-examples/nearai-cloud-verification-example), and [near-ai-cloud agent skill](https://github.com/near/agent-skills/tree/main/skills/near-ai-cloud).
+The registry may contain only public issuer metadata: issuer account, Ed25519 public key, key version, schema hash, active flag, status epoch and opaque status root.
 
-### C. Agentic Commerce — Agent Connect
+Never write holder names, emails, phone numbers, raw claims, credential IDs, link secrets, proof witnesses, private keys, recovery phrases or per-presentation activity to public chain state, logs or repository files.
 
-NEAR Builders also points to [Agent Connect](https://github.com/NEAR-Intents-Agent-API/skills), which gives an AI agent an account on NEAR Intents under owner-signed rules. The documented demo API base URL is `https://api.demo.agentsonintents.com`; access requires a separate partner-portal API key.
+A status root is an opaque commitment. It is not proof that a credential is revoked or not revoked.
 
-Keep this as an optional stretch goal, not a critical dependency for the ANONYMESH identity demo. Before integrating, verify the current API docs, partner access, network/environment, asset support, spending limits and whether the demo endpoint can operate without real-value settlement. Do not send mainnet swaps, payments or settlement transactions. ANONYMESH delegated capabilities can be demonstrated locally first without connecting a funds-moving API.
+## 6. Testnet acceptance path
 
-### D. Builder community and project visibility
+1. Re-run contract unit tests and WASM build against the latest source.
+2. Establish a supported signer and contract-account strategy without exporting wallet secrets.
+3. Review WASM SHA-256, initialization arguments, gas and storage costs.
+4. Obtain explicit approval before signing deployment.
+5. Deploy and record contract account ID, transaction hash, explorer URL, source commit and WASM checksum.
+6. Register a disposable test issuer with the required storage deposit.
+7. Read back owner and issuer state from live RPC.
+8. Run valid/invalid issuer and RPC-failure tests against the live registry.
+9. Record a judge-facing demo that contains no private holder material.
 
-NEAR Builders also offers a builder profile, project sharing and builder chat. A public project listing can help collaborators discover ANONYMESH, but it is a separate external publication and requires the user's approval. Do not submit a profile, project, public post or share coding traces automatically.
+See [NEAR_JUDGE_GUIDE.md](NEAR_JUDGE_GUIDE.md) for the exact live acceptance evidence.
 
-NEAR Builders' terms state users must be at least 18, builder profiles and proposals may be reviewed, and API credit claims are limited to one per builder. The terms also state IP addresses may be stored with claims for duplicate/fraud prevention. Review the [Terms of Service](https://nearbuilders.org/terms-of-service) before claiming credits or publishing personal information.
+## 7. Optional NEAR ecosystem integrations
 
-### Gateway naming clarification
+NEAR AI Cloud and Agent Connect are optional future integrations, not current dependencies or completed features. Do not describe a generic model API call as TEE attestation; attestation and response-signature verification are separate requirements. Do not connect a funds-moving API to the identity demo without a separately reviewed spending policy and explicit approval.
 
-`gateway.near.ai` and `cloud-api.near.ai` must not be conflated. The current /build guide points developers to NEAR AI Cloud at `cloud-api.near.ai/v1`. The separate NEAR AI Gateway desktop tooling is not required for the ANONYMESH runtime and is not the blockchain RPC.
+## 8. Submission and publication
 
-## 3. Testnet-first architecture
-
-- NEAR testnet is the only chain target for the hackathon demo.
-- Use a dedicated testnet account and testnet-only configuration. Never put mainnet account IDs, keys or RPC endpoints in the demo configuration.
-- Contract stores only issuer public-key/version records, schema/protocol hashes and versioned status/revocation commitments needed for verification.
-- No human names, emails, phone numbers, raw credential claims, holder secrets, credential identifiers, proof witnesses or per-presentation logs on-chain.
-- Credential issuance and proof generation remain off-chain and local to the holder. Verification can run in the demo service; the contract is a public trust/status anchor, not a private data store.
-- Keep testnet contract calls and deploy steps separate from local tests. No mainnet deployment or mainnet transaction is part of this plan.
-
-## 4. Minimum viable demonstration
-
-1. Issuer publishes its public key/version and schema hash to the testnet registry.
-2. Human or agent holder obtains a test credential using the selected credential library after dependency and advisory review.
-3. Holder stores credential material locally; no private credential data is uploaded.
-4. Agent B requests a challenge containing a fresh nonce, audience, task/action scope and expiry.
-5. Agent A returns a presentation/proof and a delegated capability bound to the challenge and agent key.
-6. Verifier checks issuer trust, credential proof, challenge freshness, audience, task scope, expiry and revocation state.
-7. Demo displays VALID or REJECTED and the public testnet transaction/hash for the registry setup only. Do not expose holder identity.
-
-If full AnonCreds proof generation cannot be made reliable within the timebox, do not fake it or label a signature-only mock as ZK. Show the working testnet registry and a clearly labelled local cryptographic prototype, and list unimplemented proof/revocation pieces honestly.
-
-## 5. Required negative tests
-
-- Replayed nonce is rejected.
-- Wrong audience or task/action is rejected.
-- Modified capability digest is rejected.
-- Expired challenge/capability is rejected.
-- Revoked or unknown issuer/key version is rejected.
-- Credential substitution or holder-binding mismatch is rejected.
-- Child capability cannot widen parent actions, resources, expiry or quota.
-- Testnet RPC unavailable or status root stale causes a fail-closed result for protected actions.
-
-## 6. Hackathon deliverables
-
-- Public repository with reproducible local setup and test instructions.
-- Testnet contract source, deployment configuration and verifiable testnet transaction reference, only after explicit approval to deploy.
-- Demo script/video showing successful and rejected presentations without exposing private identity.
-- README accurately labels implemented, mocked and planned features.
-- Threat model and benchmark notes; no unsupported production/privacy claims.
-
-Official event information: [NEAR Hackathon](https://nearhackathon.com/). Gateway: [NEAR AI Gateway](https://gateway.near.ai/), [download requirements](https://gateway.near.ai/download/), [data handling](https://gateway.near.ai/your-data/).
-
-## 7. Explicit safety boundary
-
-Testnet is not a security guarantee. Use only disposable test credentials and testnet funds. No mainnet transaction, mainnet deployment, wallet import, private-key upload, trace sharing, hackathon submission or X post is authorized by this plan. Obtain explicit user approval for each external action.
-## 8. Current repository implementation status (reconciled against feature commit `f407c9d`)
-
-- **AnonCreds:** Node demo issues and processes a sample AnonCreds CL credential and creates/verifies a presentation. The presentation reveals `agent_role` and proves a hidden `valid_until` predicate. The issuer, holder and verifier run as separate OS processes in an integration test, communicating over unauthenticated loopback HTTP. This is a local demo, not independent production security domains.
-- **Authorization:** separate Node and Rust Ed25519 capability/challenge prototypes validate signed delegation chains, key possession, scope and attenuation. The Node `AgentAuthorizationRuntime` test slice checks challenge/capability/action/resource binding, replay and quota consumption, and guarded callback execution; a SQLite store has a restart-persistence test. This runtime is not integrated into the AnonCreds role-service flow or a production tool host.
-- **Important gap:** the AnonCreds presentation request does not prove `capability_scope`; its `capabilityDigest` is checked only against the verifier's challenge record. The sample `agent_subject` is not bound to the agent public key or a human controller. Do not present the proof as end-to-end agent authorization.
-- **Privacy:** selective disclosure is demonstrated; cross-presentation unlinkability, verifier-collusion resistance and privacy-preserving revocation are not implemented or demonstrated.
-- **NEAR:** issuer/status registry source and unit tests are present. The contract stores public issuer metadata and opaque status commitments; it does not verify AnonCreds/ZK proofs or privacy-preserving non-revocation witnesses. No testnet deployment has been made.
-- **CI evidence:** the feature commit `f407c9d8767addda2c0647a0ab634964bc876eaa` has a passing [AnonCreds workflow](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722), [agent-auth Rust workflow](https://github.com/wadezigh96/anonymesh/actions/runs/43632313304), and [NEAR contract workflow](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085). The local Node suite passed 42/42 tests; the CI evidence includes the native demo and Linux ARM64 benchmark. Documentation changes do not replace fresh test evidence.
-- **Not implemented:** production key custody/recovery, authenticated service transport, distributed replay state, rate limiting, production tool policy enforcement, unlinkability evaluation, privacy-preserving revocation, NEAR verifier integration, NEAR AI Cloud API and Agent Connect integration.
+This document does not assert whether a hackathon form, project listing or X post was accepted. Keep external submission receipts and publication links as separate evidence. A repository commit is not a hackathon submission receipt.

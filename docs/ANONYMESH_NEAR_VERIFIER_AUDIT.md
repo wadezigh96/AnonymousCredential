@@ -1,3 +1,5 @@
+> **Status update (2026-11-16):** The no-live-chain finding below describes the earlier audit point and is superseded for deployment only: the contract is now deployed at `registry.wkams.testnet` and `get_owner()` was verified. The verifier still has no live issuer-registration/acceptance evidence. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+
 # ANONYMESH NEAR Verifier Integration Audit
 
 **Audit date:** 2026-11-15

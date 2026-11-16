@@ -11,7 +11,7 @@
 
 The Node issuer-holder-verifier flow, persistent issuer key lifecycle, credential-bound registry key, read-only NEAR registry adapter, capability/proof-of-possession authorization, replay/quota state, and fail-closed registry gate are implemented and tested. Additional hardening now bounds streamed RPC bodies, cancels oversized responses, and permits stale-cache fallback only for transient availability failures. The baseline implementation workflows passed; the hardening merge requires a fresh CI run before it can be treated as CI-verified.
 
-A live NEAR testnet deployment is **BLOCKED**, not complete: no authorized funded testnet deployer, contract account, signer, approved transaction payload, or live registry configuration was available in this execution context. No deployment or transaction was attempted, and no fabricated account, RPC response, transaction hash, or checksum is reported.
+**Superseded status note (2026-11-16):** this report's earlier deployment-blocked assessment predates the successful Testnet deployment. The registry is now deployed at `registry.wkams.testnet` with owner `wkams.testnet`; `get_owner()` was verified. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Issuer registration and live verifier acceptance remain pending. See [current project status](PROJECT_STATUS.md) and [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 ## Canonical architecture and data flow
 

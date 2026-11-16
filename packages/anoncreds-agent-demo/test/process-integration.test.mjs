@@ -5,7 +5,6 @@ import { connect } from "node:net";
 import { createServer } from "node:http";
 import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { generateIssuerKeyFile } from "../src/issuer-key-store.mjs";
-import { nodeEd25519PublicKeyToNear } from "../src/near-key-format.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
@@ -134,7 +133,8 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(issuer);
     await waitHealthy(issuerUrl, issuer);
     const issuerPublic = await (await fetch(issuerUrl + "/public")).json();
-    registryState.record = { public_key: nodeEd25519PublicKeyToNear(issuerPublic.issuerRegistryPublicKey), key_version: 1, schema_hash: issuerPublic.schemaHash, active: true, status_epoch: 0, status_root: "0".repeat(64) };
+    assert.match(issuerPublic.issuerRegistryPublicKey, /^ed25519:[1-9A-HJ-NP-Za-km-z]+$/);
+    registryState.record = { public_key: issuerPublic.issuerRegistryPublicKey, key_version: 1, schema_hash: issuerPublic.schemaHash, active: true, status_epoch: 0, status_root: "0".repeat(64) };
 
     const holder = start("holder", holderPort, { ISSUER_URL: issuerUrl, ISSUER_API_TOKEN: TEST_TOKENS.issuer, HOLDER_API_TOKEN: TEST_TOKENS.holder });
     children.push(holder);
@@ -146,7 +146,7 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     children.push(holderThree);
     await waitHealthy(holderThreeUrl, holderThree);
 
-    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "0", NEAR_MAX_STALE_AGE_MS: "60000" };
+    const verifierEnvironment = { ISSUER_URL: issuerUrl, STATE_DB: stateDb, VERIFIER_API_TOKEN: TEST_TOKENS.verifier, NEAR_REQUIRED: "true", NEAR_NETWORK: "local", NEAR_REGISTRY_CONTRACT: "registry.testnet", NEAR_RPC_URL: mockRegistry.url, NEAR_ISSUER_ACCOUNT_ID: issuerPublic.issuerAccountId, NEAR_EXPECTED_KEY_VERSION: "1", NEAR_EXPECTED_SCHEMA_HASH: issuerPublic.schemaHash, NEAR_EXPECTED_STATUS_EPOCH: "0", NEAR_CACHE_TTL_MS: "600000", NEAR_MAX_STALE_AGE_MS: "600000" };
     const verifier = start("verifier", verifierPort, verifierEnvironment);
     children.push(verifier);
     await waitHealthy(verifierUrl, verifier);
@@ -439,5 +439,21 @@ test("separate issuer, holder and verifier processes enforce the complete PAII a
     })));
     rmSync(stateDirectory, { recursive: true, force: true });
     await mockRegistry.close();
+  }
+});
+
+test("issuer refuses registry-required mode without a persisted issuer key", async () => {
+  const port = await freePort();
+  const child = start("issuer", port, {
+    NEAR_REQUIRED: "true",
+    ISSUER_KEY_FILE: "",
+    NODE_ENV: "test",
+  });
+  try {
+    const [code] = await once(child, "exit");
+    assert.notEqual(code, 0);
+    assert.match(child.diagnosticOutput(), /ISSUER_KEY_FILE_REQUIRED_WHEN_NEAR_REQUIRED/);
+  } finally {
+    if (child.exitCode === null) child.kill("SIGTERM");
   }
 });

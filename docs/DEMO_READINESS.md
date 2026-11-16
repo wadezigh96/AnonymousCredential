@@ -1,111 +1,64 @@
-# ANONYMESH Demo Readiness
+> **Superseded deployment status (2026-11-16):** The registry is deployed and initialized at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` was verified. Issuer registration and live verifier acceptance remain pending. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md) and [project status](PROJECT_STATUS.md).
 
-**Repository:** `wadezigh96/anonymesh`
-**Branch:** `feat/anonymesh-private-agent-identity`
-**Verified commit:** `f407c9d8767addda2c0647a0ab634964bc876eaa`
+# ANONYMESH — Demo Readiness
 
-## Current readiness result
+**Repository:** `wadezigh96/anonymesh`  
+**Branch:** `fix/anonymesh-testnet-readiness`  
+**Status date:** 2026-11-16  
+**Canonical release gate:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
-The repository is ready for a **local three-role demo and demo-video recording**. The cryptographic prototype is not ready for production deployment, and no NEAR testnet deployment or transaction has been performed.
+## Readiness result
 
-The following evidence is current for the verified commit:
+<ins>Ready for a local prototype demonstration with clearly stated limitations.</ins>
 
-- Local Node suite: **42/42 tests passed**.
-- Local adversarial subset: **21/21 tests passed**.
-- Local PAAI verifier tests: **9/9 tests passed**.
-- Local process integration: **1/1 test passed**.
-- Standalone demo: exited successfully with `valid: true`, `privateSubjectDisclosed: false`, and `nonceBoundToContext: true`.
-- GitHub Actions AnonCreds integration: [run 43632229722](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722), **success**.
-- GitHub Actions Rust agent-auth: [run 43632313304](https://github.com/wadezigh96/anonymesh/actions/runs/43632313304), **success**.
-- GitHub Actions NEAR issuer-registry: [run 43632319085](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085), **success**, including unit tests and WASM build.
-- No secret-like additions were found in the audited diff. No issuer, holder, or verifier child process remained after integration testing.
+**Partial live Testnet integration only.** Contract deployment and owner read-back are verified; there is not yet a live issuer record or live verifier acceptance result.
 
-## What is implemented and tested
+## Evidence
 
-The local Node package implements an issuer, holder, and verifier flow using the official `@hyperledger/anoncreds-nodejs` wrapper. The standalone smoke demo proves a selected role and a hidden subject property without returning the private subject marker. The separate-process integration test starts issuer, holder, and verifier as local operating-system processes.
+- AnonCreds native demo and Linux ARM64 benchmark jobs passed in [CI run 43806163768](https://github.com/wadezigh96/anonymesh/actions/runs/43806163768).
+- Separate-process integration passed in [CI run 43806163795](https://github.com/wadezigh96/anonymesh/actions/runs/43806163795).
+- Required-mode fresh registry-read integration passed in [CI run 43817130740](https://github.com/wadezigh96/anonymesh/actions/runs/43817130740) on the test branch commit `67e528d`.
+- NEAR Rust tests, WASM release build, checksum and artifact upload passed in [CI run 43805451359](https://github.com/wadezigh96/anonymesh/actions/runs/43805451359) for source commit `a5754245fd017eb00440f8799bd793eed64b648d`.
+- The later contract test-harness adjustment at `a55cda5c8c2cc95511cf2b18ad01a4a618c74023` still needs a fresh NEAR workflow run. Do not silently inherit the earlier green result as if it tested that edit.
 
-The verifier stores the presentation request associated with a challenge and checks the presentation against that request. A proof made for another nonce is rejected. A tampered proof is rejected without consuming the challenge. A valid proof is accepted once, and replay is rejected. The verifier health check requires an HTTP success response with a JSON `ready: true` payload before considering a role ready.
+## Local reproduction
 
-The Node HTTP verifier integrates signed capability-chain validation, key-bound Ed25519 proof-of-possession, audience/action/resource binding, expiry, replay, quota, and the AnonCreds presentation path. The guarded action callback remains a separate runtime API and is not a production tool host.
-
-The Rust agent-auth prototype and the NEAR issuer/status registry scaffold are verified by GitHub Actions. The NEAR workflow builds the contract to WASM and runs unit tests. These checks do not deploy the contract or submit a transaction.
-
-## What remains prototype or planned
-
-The following claims must not be made during a demo:
-
-- The HTTP role servers use bearer authentication and endpoint/authentication-failure rate limits for the demo, but use loopback HTTP without TLS or distributed service identity.
-- The HTTP verifier persists challenge and authorization state in local SQLite files; this is same-host evidence, not a distributed database guarantee.
-- The AnonCreds presentation reveals the issuer registry key and agent key, while capability and challenge binding are checked by the verifier path; the capability digest is not itself a selectively disclosed AnonCreds attribute.
-- AnonCreds revocation and privacy-preserving non-revocation witnesses are not implemented.
-- Selective disclosure is not the same as complete anonymity or unlinkability. Public keys, disclosed attributes, timing, network metadata, issuer records, verifier logs, and colluding verifiers can still create correlation.
-- The sample `agent_subject` is not a human identity binding and does not prove that an agent is benign or controlled by one person.
-- The NEAR registry stores public issuer metadata and opaque status commitments. It is not an on-chain AnonCreds verifier or a privacy-preserving revocation system.
-- There is no current ANONYMESH integration with `gateway.near.ai` or the NEAR AI Cloud API. The public Gateway site describes a macOS private-AI trace application; it is not evidence of blockchain or identity integration.
-
-## Local demo checklist
-
-Run from the repository root:
+Run on a supported Linux environment from repository root:
 
 ```sh
 npm install --prefix packages/anoncreds-agent-demo --no-audit --no-fund
 npm test --prefix packages/anoncreds-agent-demo
 npm run demo --prefix packages/anoncreds-agent-demo
+cargo test --locked --manifest-path contracts/near/issuer-registry/Cargo.toml
+cargo build --locked --manifest-path contracts/near/issuer-registry/Cargo.toml --target wasm32-unknown-unknown --release
 ```
 
-Expected standalone output has this shape:
+The Node native AnonCreds wrapper used by this package does not support the Android Termux native runtime. Use the passing Linux CI evidence for the native Node suite; do not describe a Termux native-loader error as a protocol regression.
 
-```json
-{
-  "valid": true,
-  "revealedRole": "weather_reader",
-  "privateSubjectDisclosed": false,
-  "proofBytes": 18400,
-  "nonceBoundToContext": true
-}
-```
+## Demo sequence
 
-For the separate-process flow, use:
+1. Show the three local roles: Issuer, Holder (Agent A), Verifier (Agent B).
+2. Show a valid selective-disclosure presentation and the hidden predicate result.
+3. Show tampered proof, wrong challenge/context and replay rejection.
+4. Show capability scope, Ed25519 proof-of-possession and quota/replay checks as distinct authorization checks.
+5. Show registry-required mode using the deterministic mock RPC and explain that this is not live Testnet.
+6. State limitations: no unlinkability guarantee, no privacy-preserving revocation, no production transport/tool execution and no deployed contract.
 
-```sh
-node --test packages/anoncreds-agent-demo/test/process-integration.test.mjs
-```
+## NEAR Testnet acceptance checklist
 
-The test demonstrates issuer, holder, verifier, invalid proof, valid proof, replay rejection, health readiness, and child-process cleanup. It does not perform a blockchain action.
+- [ ] Re-run Rust contract tests and WASM build against the latest contract source.
+- [ ] Confirm a supported signer for the intended Testnet account without exporting seed/private key.
+- [ ] Decide the contract account/deployer account strategy and estimate storage/gas.
+- [ ] Review the exact WASM checksum and `new({"owner_id":"wkams.testnet"})` initialization payload.
+- [ ] Obtain explicit approval, then deploy to Testnet and capture transaction/explorer evidence.
+- [ ] Register a disposable issuer with the required storage deposit.
+- [ ] Read back `get_owner` and `get_issuer` from live Testnet RPC.
+- [ ] Verify valid issuer acceptance and unknown/inactive/mismatched issuer rejection against the live registry.
+- [ ] Verify RPC outage and malformed records fail closed.
+- [ ] Record the flow without exposing credentials, link secrets, private keys or personal claims.
 
-## Security demo sequence
+No wallet import, key generation, deployment, registry write, payment or mainnet action is included in this checklist. A Testnet transaction must be separately reviewed and explicitly approved.
 
-A recording should show the following order:
+## Judge-facing one-sentence description
 
-1. Run the standalone smoke demo and show `valid: true`.
-2. Run the full Node test suite and show the final pass count.
-3. Run the process integration test and explain the issuer-holder-verifier boundaries.
-4. Point to the tampered-proof test and show that the first invalid attempt does not burn the nonce.
-5. Point to the replay test and show that the authentic proof is accepted once only.
-6. Point to the capability-runtime tests separately and state clearly that they are not wired into the HTTP role demo.
-7. End with the limitations: no production transport, no revocation witness, no unlinkability guarantee, no NEAR deployment, and no transaction.
-
-## NEAR testnet readiness checklist
-
-Before a future testnet run, the operator must provide or create a disposable `.testnet` account and obtain testnet funds through an official faucet. The account and signer must be isolated from mainnet credentials. The operator must choose an RPC endpoint and verify its current limits and availability.
-
-The current repository still needs the following implementation work before a meaningful on-chain demo:
-
-- deployment configuration for the issuer/status registry;
-- an explicit contract account and deployer account policy;
-- RPC configuration and health/fail-closed behavior;
-- a defined public metadata payload and versioning policy;
-- read-path integration from verifier to the registry, if registry state is required for authorization;
-- transaction receipts and contract-state verification;
-- tests for stale or unavailable registry state;
-- a documented rollback or disable plan.
-
-No account creation, key import, contract deployment, registry update, or transaction is part of this readiness work.
-
-## Official references
-
-- [NEAR Networks](https://docs.near.org/protocol/network/networks) — network separation and testnet RPC/status references.
-- [Create an Account](https://docs.near.org/getting-started/create-account) — `.testnet` accounts, faucet funding, and key handling.
-- [NEAR RPC Providers](https://docs.near.org/api/rpc/providers) — testnet RPC provider options and JSON-RPC behavior.
-- [NEAR AI Cloud API](https://cloud-api.near.ai/docs) — separate API authentication and endpoint documentation.
-- [NEAR AI Gateway](https://gateway.near.ai/) — macOS private-AI trace gateway; not an ANONYMESH integration.
+ANONYMESH is a local Issuer–Holder–Verifier prototype using AnonCreds selective disclosure and a separate authorization gate, with a Rust NEAR public issuer registry and a fail-closed read-only verifier adapter tested against deterministic mock RPC; contract deployment is complete; live issuer registration and verifier acceptance remain explicit acceptance gates.

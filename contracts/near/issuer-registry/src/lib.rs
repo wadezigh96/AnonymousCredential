@@ -70,6 +70,7 @@ impl IssuerRegistry {
         }
     }
 
+    #[payable]
     pub fn register_issuer(
         &mut self,
         issuer_id: AccountId,
@@ -107,6 +108,7 @@ impl IssuerRegistry {
         });
     }
 
+    #[payable]
     pub fn set_issuer_active(&mut self, issuer_id: AccountId, active: bool) {
         self.with_storage_deposit(|this| {
             this.assert_owner();
@@ -116,6 +118,7 @@ impl IssuerRegistry {
         });
     }
 
+    #[payable]
     pub fn update_status_root(&mut self, issuer_id: AccountId, epoch: U64, root: String) {
         self.with_storage_deposit(|this| {
             this.assert_owner();
