@@ -1,6 +1,6 @@
 # ANONYMESH — Project Status and Release Gate
 
-**Last reconciled:** 2026-11-16  
+**Last reconciled:** 2026-11-17  
 **Repository:** [wadezigh96/anonymesh](https://github.com/wadezigh96/anonymesh)  
 **Working branch for this reconciliation:** `feat/anonymesh-near-testnet-deployer`
 
@@ -8,7 +8,7 @@ This is the canonical status page. If an older planning or audit document disagr
 
 ## Executive status
 
-ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. Linux CI evidence exists for the Node proof flow, separate-process integration, and the NEAR contract build.
+ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. On current PR head `abaed695535f6da1c465f0e3291a4989175fb7ba`, all seven GitHub Actions workflows succeeded: AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This is CI evidence only; issuer registration and live verifier acceptance remain pending.
 
 **The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`, as expected before issuer registration. No issuer-registration transaction or live verifier acceptance is claimed. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
@@ -16,14 +16,14 @@ ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate 
 
 | Area | Current state | Evidence / boundary |
 |---|---|---|
-| Issuer / Holder / Verifier | Implemented as three local Node.js processes | AnonCreds CI run [43806163768](https://github.com/wadezigh96/anonymesh/actions/runs/43806163768) succeeded; process integration run [43806163795](https://github.com/wadezigh96/anonymesh/actions/runs/43806163795) succeeded |
+| Issuer / Holder / Verifier | Implemented as three local Node.js processes | Current PR-head AnonCreds integration run [43957294481](https://github.com/wadezigh96/anonymesh/actions/runs/43957294481) succeeded; separate-process integration run [43957294275](https://github.com/wadezigh96/anonymesh/actions/runs/43957294275) succeeded |
 | Selective disclosure and hidden predicates | Implemented with AnonCreds CL presentations | Credential proof is not a general-purpose zk-SNARK/STARK and is not verified on-chain |
 | Agent-key binding and Ed25519 PoP | Integrated in the local verifier path | Conventional signature/key-possession check; not itself a ZK proof or anonymity guarantee |
 | Delegated capability checks | Signed capability chain and verifier policy checks in the local prototype | One root capability in the demo; no production multi-domain delegation or external tool execution |
 | Replay and quota state | SQLite persistence and same-host concurrent verifier integration | Same-host/local-file evidence only; not a distributed database guarantee |
-| NEAR issuer registry | Deployed and initialized on Testnet | Contract `registry.wkams.testnet`; owner read-back succeeded; deployment tx [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Source artifact SHA `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; WASM SHA-256 `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9` |
+| NEAR issuer registry | Deployed and initialized on Testnet | Contract `registry.wkams.testnet`; owner read-back succeeded; deployment tx [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Contract CI on current PR head succeeded: [run 43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232). Source artifact SHA `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; WASM SHA-256 `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9` |
 | NEAR read adapter | Read-only `get_issuer` RPC adapter with strict validation and fail-closed required mode | Deterministic local mock-RPC and separate-process CI passed; not live-chain evidence |
-| Android | Single-process native AnonCreds smoke app | Reported physical-device smoke test is not the full three-role protocol or wallet/contract integration |
+| Android | Single-process native AnonCreds smoke app | Current PR-head Android workflow [43957294273](https://github.com/wadezigh96/anonymesh/actions/runs/43957294273) successfully built and verified the standalone release APK; this is not the full three-role protocol or wallet/contract integration |
 | Unlinkability / revocation | Not implemented or demonstrated | Selective disclosure must not be described as full anonymity, unlinkability, or revocation |
 | Production service / payments | Not implemented | No production TLS/service identity, distributed replay store, tool host, or payment rail |
 
@@ -100,7 +100,7 @@ The native AnonCreds Node package does not support running its Linux native bina
 
 ## Remaining release gates — in order
 
-1. **Contract CI for the audited source is complete:** run `43846695123` succeeded at `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; the uploaded WASM source SHA and checksum were verified. Re-run only if contract source or its build workflow changes.
+1. **Current PR-head CI is green:** all seven workflows succeeded on `abaed695535f6da1c465f0e3291a4989175fb7ba`. The NEAR contract unit-test/WASM build run is [43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232); the uploaded artifact evidence remains separately recorded. Re-run contract CI if contract source or its build workflow changes.
 2. **Prepare persistent issuer identity.** Select/create the issuer Ed25519 key and state files securely; keep private material local and owner-only.
 3. **Register the matching public issuer record** from `wkams.testnet` with reviewed key version, schema hash, storage deposit and gas; obtain explicit approval before signing.
 4. **Read back live issuer state** with `get_issuer` on Testnet.
