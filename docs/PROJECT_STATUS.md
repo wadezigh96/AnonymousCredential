@@ -2,7 +2,7 @@
 
 **Last reconciled:** 2026-11-16  
 **Repository:** [wadezigh96/anonymesh](https://github.com/wadezigh96/anonymesh)  
-**Working branch for this reconciliation:** `fix/anonymesh-testnet-readiness`
+**Working branch for this reconciliation:** `feat/anonymesh-near-testnet-deployer`
 
 This is the canonical status page. If an older planning or audit document disagrees with this page, use the newer evidence linked here and update the stale document rather than repeating its claim.
 
@@ -10,7 +10,7 @@ This is the canonical status page. If an older planning or audit document disagr
 
 ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. Linux CI evidence exists for the Node proof flow, separate-process integration, and the NEAR contract build.
 
-**ANONYMESH is not yet a live NEAR Testnet deployment and is not production-ready.** No contract deployment, issuer-registration transaction, payment, or mainnet action is claimed. The remaining Testnet work is operational integration and live-chain acceptance testing, not a reason to rewrite the protocol architecture again.
+**The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`, as expected before issuer registration. No issuer-registration transaction or live verifier acceptance is claimed. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 ## Evidence-backed implementation matrix
 
@@ -21,7 +21,7 @@ ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate 
 | Agent-key binding and Ed25519 PoP | Integrated in the local verifier path | Conventional signature/key-possession check; not itself a ZK proof or anonymity guarantee |
 | Delegated capability checks | Signed capability chain and verifier policy checks in the local prototype | One root capability in the demo; no production multi-domain delegation or external tool execution |
 | Replay and quota state | SQLite persistence and same-host concurrent verifier integration | Same-host/local-file evidence only; not a distributed database guarantee |
-| NEAR issuer registry | Rust contract source with owner-only issuer/status mutation and storage-deposit accounting | Rust/WASM CI run [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123) succeeded for the exact readiness ref `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; tests, WASM build, metadata/checksum and artifact upload passed. Verified WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9` |
+| NEAR issuer registry | Deployed and initialized on Testnet | Contract `registry.wkams.testnet`; owner read-back succeeded; deployment tx [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Source artifact SHA `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; WASM SHA-256 `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9` |
 | NEAR read adapter | Read-only `get_issuer` RPC adapter with strict validation and fail-closed required mode | Deterministic local mock-RPC and separate-process CI passed; not live-chain evidence |
 | Android | Single-process native AnonCreds smoke app | Reported physical-device smoke test is not the full three-role protocol or wallet/contract integration |
 | Unlinkability / revocation | Not implemented or demonstrated | Selective disclosure must not be described as full anonymity, unlinkability, or revocation |
@@ -31,6 +31,10 @@ ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate 
 
 The operator has verified through NEAR Testnet RPC/CLI:
 
+- Contract account: `registry.wkams.testnet`
+- Owner account: `wkams.testnet`
+- Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD)
+- `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null` (no issuer registered yet)
 - Account: `wkams.testnet`
 - Latest read-only `view_account` query in this audit: block height `277937423`, hash `4Qta8z5jfnZdUFa5gN3YS9qx9XbEsQyfmxqEpcz4217H`
 - Observed balance: 18.9 NEAR at that block
@@ -40,7 +44,7 @@ The operator has verified through NEAR Testnet RPC/CLI:
 - The local `accounts.json` file is empty; a usable local signer has not been established
 - Meteor Wallet browser integration has not yet been successfully connected
 
-These facts do not authorize a transaction. A deployer signer and a deliberate contract-account plan must be established before deployment. Never place a seed phrase or private key in GitHub, source code, logs, or chat.
+The contract deployment is complete. The next owner-authorized operation is issuer registration, which still requires a persistent issuer Ed25519 key, matching public metadata, storage deposit/gas review, and explicit approval of the exact transaction. Never place a seed phrase, private key, or private issuer JWK in GitHub, source code, logs, or chat.
 
 ## Intended architecture and data boundaries
 
@@ -97,17 +101,14 @@ The native AnonCreds Node package does not support running its Linux native bina
 ## Remaining release gates — in order
 
 1. **Contract CI for the audited source is complete:** run `43846695123` succeeded at `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; the uploaded WASM source SHA and checksum were verified. Re-run only if contract source or its build workflow changes.
-2. **Choose and verify the Testnet signer path.** Use the existing Meteor Wallet only if a supported signing integration is confirmed. Do not generate or install an unrelated key and do not expose recovery material.
-3. **Finalize contract account strategy.** Decide whether to deploy to `wkams.testnet` or a dedicated subaccount; verify deployer authority, storage, gas and recovery plan.
-4. **Review the exact deployment + initialization payload** for `new({"owner_id":"wkams.testnet"})`, WASM checksum and expected fees. Obtain explicit owner approval before signing.
-5. **Deploy to Testnet**, then record contract account ID, transaction hash, explorer link, source commit and WASM SHA-256.
-6. **Register a disposable public test issuer** with an attached storage deposit; record the transaction and expected public metadata.
-7. **Read back live state** with `get_owner` and `get_issuer` from Testnet RPC.
-8. **Run verifier acceptance tests against the live contract**: valid issuer accepted; unknown/inactive issuer and key/schema mismatch denied; RPC outage/malformed data denied (fail closed).
-9. **Capture a judge-ready demo** that shows the live transaction and state while keeping all holder secrets and private claims off-chain.
+2. **Prepare persistent issuer identity.** Select/create the issuer Ed25519 key and state files securely; keep private material local and owner-only.
+3. **Register the matching public issuer record** from `wkams.testnet` with reviewed key version, schema hash, storage deposit and gas; obtain explicit approval before signing.
+4. **Read back live issuer state** with `get_issuer` on Testnet.
+5. **Run verifier acceptance tests against the live contract**: valid issuer accepted; unknown/inactive issuer and key/schema mismatch denied; RPC outage/malformed data denied (fail closed).
+6. **Capture a judge-ready demo** showing the live deployment and issuer state while keeping holder secrets and private claims off-chain.
 
 ## Definition of done
 
-The Testnet integration is complete only when all applicable live-chain gates above have reproducible evidence. A passing unit test, successful WASM build, mock RPC, account balance, or wallet connection by itself is not a deployment.
+The contract deployment gate is complete. Full Testnet integration remains incomplete until issuer registration and live verifier acceptance have reproducible evidence.
 
 Production readiness is a separate future gate requiring independent cryptographic review, unlinkability evaluation, privacy-preserving revocation, authenticated transport, distributed replay/quota storage, operational key management and real tool-host enforcement.
