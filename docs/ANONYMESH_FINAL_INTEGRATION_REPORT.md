@@ -1,15 +1,15 @@
 # ANONYMESH Final Integration Report
 
 **Repository:** `wadezigh96/anonymesh`
-**Branch:** `feat/anonymesh-private-agent-identity`
-**CI-tested baseline commit:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
-**Remote hardening commit integrated:** `5b880f4` (streaming RPC limits, transient-only stale fallback, regression tests)
-**Current local merge commit:** `fd3873c`
+**Report scope:** historical integration snapshot for the implementation line described below. The current repository default branch is `main`; PR #2 was merged as `e19eb1958cfa17b40f71b2f624a3fb945e3e689d` on 2026-11-17.
+**Historical CI-tested baseline commit:** `87e1f0bf6c96eea5c7c182ec335f395ee9dbf291`
+**Historical hardening commit:** `5b880f4` (streaming RPC limits, transient-only stale fallback, regression tests)
+**Historical local merge reference:** `fd3873c`
 **Network boundary:** NEAR testnet only; no mainnet action.
 
 ## Executive summary
 
-The Node issuer-holder-verifier flow, persistent issuer key lifecycle, credential-bound registry key, read-only NEAR registry adapter, capability/proof-of-possession authorization, replay/quota state, and fail-closed registry gate are implemented and tested. Additional hardening now bounds streamed RPC bodies, cancels oversized responses, and permits stale-cache fallback only for transient availability failures. The baseline implementation workflows passed; the hardening merge requires a fresh CI run before it can be treated as CI-verified.
+The Node issuer-holder-verifier flow, persistent issuer key lifecycle, credential-bound registry key, read-only NEAR registry adapter, capability/proof-of-possession authorization, replay/quota state, and fail-closed registry gate are implemented and tested. Additional hardening now bounds streamed RPC bodies, cancels oversized responses, and permits stale-cache fallback only for transient availability failures. The baseline and subsequent PR #2 code checks have separate evidence. Five workflows passed on PR #2 head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`; the AnonCreds integration and Android workflows did not run on that PR, and the merge commit still requires complete CI coverage. See [current project status](PROJECT_STATUS.md).
 
 **Superseded status note (2026-11-16):** this report's earlier deployment-blocked assessment predates the successful Testnet deployment. The registry is now deployed at `registry.wkams.testnet` with owner `wkams.testnet`; `get_owner()` was verified. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Issuer registration and live verifier acceptance remain pending. See [current project status](PROJECT_STATUS.md) and [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
@@ -40,11 +40,11 @@ When `NEAR_REQUIRED=true`, the verifier reads `get_issuer` through the bounded R
 | Capability, PoP, replay and quota | **PASS** | Integrated verifier path plus restart/concurrency tests. |
 | Rust agent-auth | **PASS** | [Workflow 43790384303](https://github.com/wadezigh96/anonymesh/actions/runs/43790384303). |
 | NEAR contract tests/WASM | **PASS** | [Workflow 43790399539](https://github.com/wadezigh96/anonymesh/actions/runs/43790399539) passed 21 tests and the locked release build; no deployment. |
-| Contract deployment readiness | **BLOCKED** | Source has no explicit attached-deposit/storage-cost accounting or refund policy; WASM artifact/checksum is not retained; deployer signer is unavailable. |
+| Contract deployment readiness | **COMPLETE for the recorded Testnet deployment** | Contract deployed at `registry.wkams.testnet`; `get_owner()` returned `wkams.testnet`. Issuer registration and live verifier acceptance remain pending. |
 | Android release build | **PASS** | [Workflow 43790390847](https://github.com/wadezigh96/anonymesh/actions/runs/43790390847); single-process smoke test only. |
 | Linux ARM64 benchmark | **PASS** | [Workflow 43790376551](https://github.com/wadezigh96/anonymesh/actions/runs/43790376551). |
-| Live NEAR testnet deployment | **BLOCKED** | Requires signer, funded deployer, contract account, approved payload, and live RPC configuration. |
-| Live registry verifier smoke test | **BLOCKED** | Depends on successful approved deployment and registered issuer record. |
+| Live NEAR Testnet deployment | **PASS (deployment only)** | Deployment transaction and owner read-back are recorded in [NEAR_TESTNET_DEPLOYMENT_2026-11-16.md](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md); issuer registration and live verifier acceptance are not established. |
+| Live registry verifier smoke test | **PENDING** | No issuer-registration transaction or live verifier acceptance evidence is recorded. |
 | Privacy-preserving revocation | **NOT IMPLEMENTED** | Status root is an opaque commitment; no witness/accumulator verification. |
 | Production TLS, distributed replay, tool sandbox, durable Android wallet | **NOT IMPLEMENTED** | Explicit production limitations remain. |
 

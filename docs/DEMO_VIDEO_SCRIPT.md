@@ -35,7 +35,7 @@ Agent A / Holder ── presentation + key proof ──► Agent B / Verifier
 
 **Narration:**
 
-> The issuer, holder, and verifier are separate roles. The holder does not return its link secret or private subject. The verifier owns the request and challenge it uses for verification. The authorization-runtime capability prototype is shown separately because it is not yet connected to these HTTP role services.
+> The issuer, holder, and verifier are separate roles. The holder does not return its link secret or private subject. The verifier validates the presentation, issuer-key binding, Ed25519 proof-of-possession, signed capability, challenge, replay state and quota in one local authorization path. This is a prototype decision gate, not a production tool host.
 
 ## 3. Standalone proof smoke demo
 
@@ -69,7 +69,7 @@ Run:
 npm test --prefix packages/anoncreds-agent-demo
 ```
 
-Show the final pass count from the fresh run. For the verified commit, the local result was **42 tests passed, 0 failed**.
+Show the final pass count from the fresh run and include the exact commit SHA in the recording. Do not reuse the historical **42 tests passed** count as current evidence; report only the output produced by the commit being demonstrated. The PR #2 CI evidence is linked in the current [project status](PROJECT_STATUS.md).
 
 **Narration:**
 
@@ -125,19 +125,22 @@ Show the documented limitations, not raw credential JSON.
 
 Show the GitHub Actions run pages:
 
-- [AnonCreds integration](https://github.com/wadezigh96/anonymesh/actions/runs/43632229722)
-- [Rust agent-auth](https://github.com/wadezigh96/anonymesh/actions/runs/43632313304)
-- [NEAR issuer-registry](https://github.com/wadezigh96/anonymesh/actions/runs/43632319085)
+- PR #2 agent authentication: [run 44117993558](https://github.com/wadezigh96/anonymesh/actions/runs/44117993558)
+- PR #2 NEAR wallet bridge: [run 44117993403](https://github.com/wadezigh96/anonymesh/actions/runs/44117993403)
+- PR #2 Linux ARM64 benchmark: [run 44117993371](https://github.com/wadezigh96/anonymesh/actions/runs/44117993371)
+- PR #2 NEAR contract/WASM: [run 44117993350](https://github.com/wadezigh96/anonymesh/actions/runs/44117993350)
+- PR #2 AnonCreds process integration: [run 44117993347](https://github.com/wadezigh96/anonymesh/actions/runs/44117993347)
+- Historical seven-workflow baseline: see [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 **Narration:**
 
-> The AnonCreds workflow passed its native demo and benchmark jobs. The Rust agent-auth workflow passed its locked tests. The NEAR contract workflow passed its locked unit tests and WASM build. These CI runs verify code and build artifacts; they do not mean that a contract was deployed.
+> Five workflows passed on PR #2 head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`. The AnonCreds integration workflow and Android workflow did not run on that pull request. The merge commit must receive complete CI coverage on `main`. Workflow success proves only the jobs and commit shown; it does not prove live issuer registration, verifier acceptance or production readiness.
 
 ## 9. NEAR explanation
 
 **Narration:**
 
-> NEAR is planned as a public metadata and status-commitment layer. The repository contains a preliminary issuer/status registry scaffold and CI verification, but no deployment or transaction has been made. The registry is not an on-chain AnonCreds verifier and must not receive holder secrets, private claims, link secrets, proof witnesses, or per-presentation activity.
+> NEAR is the public issuer-metadata and status-commitment layer. The registry contract is deployed and initialized on Testnet at `registry.wkams.testnet`, with owner `wkams.testnet`; the deployment transaction and `get_owner()` read-back are recorded in `docs/NEAR_TESTNET_DEPLOYMENT_2026-11-16.md`. Issuer registration for `issuer.testnet` and live verifier acceptance remain pending. The registry is not an on-chain AnonCreds verifier and must never receive holder secrets, private claims, link secrets, proof witnesses, or per-presentation activity.
 
 If mentioning `gateway.near.ai`, say:
 
@@ -149,10 +152,10 @@ Read these points on camera:
 
 1. Local loopback HTTP is not production transport security.
 2. Durable distributed replay protection is not deployed.
-3. Capability verification is not joined to the HTTP AnonCreds flow.
+3. The integrated verifier returns an authorization decision; it does not execute a real external tool or payment.
 4. Revocation and privacy-preserving non-revocation are not implemented.
 5. Complete unlinkability and verifier-collusion resistance are not demonstrated.
-6. NEAR testnet deployment and transactions are intentionally out of scope for this recording.
+6. The NEAR Testnet deployment already exists, but issuer registration and live verifier acceptance are pending. Do not submit any further transaction during this recording.
 
 **Closing narration:**
 
@@ -162,7 +165,7 @@ Read these points on camera:
 
 Before recording:
 
-- confirm branch and commit;
+- confirm branch is `main` and record the exact commit SHA;
 - run `git status --short --branch`;
 - run the standalone demo;
 - run the full Node suite;

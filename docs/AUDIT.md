@@ -2,11 +2,11 @@
 
 # ANONYMESH — Repository Audit (Reconciled)
 
-**Date:** 2026-11-16  
-**Branch:** `fix/anonymesh-testnet-readiness`  
+**Audit snapshot date:** 2026-11-16  
+**Historical audit branch:** `fix/anonymesh-testnet-readiness`  
 **Canonical status:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
-This audit replaces the stale 2026-11-15 inventory and its obsolete test counts. It distinguishes source implementation, automated evidence, mock integration and live-chain status.
+This is a historical source/documentation and CI snapshot, not a live audit of the current `main` tree. The current default branch is `main`; PR #2 was merged on 2026-11-17 as `e19eb1958cfa17b40f71b2f624a3fb945e3e689d`. The NEAR Testnet deployment is complete as recorded above; issuer registration and live verifier acceptance remain pending. Use [PROJECT_STATUS.md](PROJECT_STATUS.md) for current repository and CI status.
 
 ## 1. Repository architecture
 
@@ -58,6 +58,6 @@ The earlier Circom/Solidity prototypes were removed after review. Historical fin
 
 ## 6. Audit scope and remaining work
 
-This is a source/documentation and CI-evidence reconciliation, not formal verification, a complete dependency audit or an independent cryptographic review. Immediate remaining work is to re-run the NEAR contract workflow against the latest contract source, resolve a supported Testnet signer, deploy only after transaction review/approval, and execute live registry/verifier acceptance tests.
+This is a source/documentation and CI-evidence reconciliation, not formal verification, a complete dependency audit or an independent cryptographic review. At the time of this historical snapshot, the listed follow-up work remained. Current remaining gates are issuer registration with explicit owner approval, live `get_issuer` read-back for `issuer.testnet`, live verifier acceptance tests, and complete CI coverage on the merge commit; see [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-Do not claim production readiness, complete anonymity, unlinkability, privacy-preserving revocation, live Testnet deployment or on-chain proof verification until each has separate evidence.
+Do not claim production readiness, complete anonymity, unlinkability, privacy-preserving revocation, live issuer registration, live verifier acceptance or on-chain proof verification until each has separate evidence. The Testnet contract deployment itself is recorded and verified; it is distinct from issuer registration and verifier acceptance.

@@ -2,14 +2,16 @@
 
 **Last reconciled:** 2026-11-17  
 **Repository:** [wadezigh96/anonymesh](https://github.com/wadezigh96/anonymesh)  
-**Current default branch:** `feat/anonymesh-private-agent-identity`  
-**Reconciliation source branch:** `feat/anonymesh-near-testnet-deployer` (one commit behind the current default branch).
+**Current default branch:** `main`  
+**Latest main merge:** `e19eb1958cfa17b40f71b2f624a3fb945e3e689d` (PR #2, merged 2026-11-17).
 
 This is the canonical status page. If an older planning or audit document disagrees with this page, use the newer evidence linked here and update the stale document rather than repeating its claim.
 
 ## Executive status
 
 ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. On code commit `abaed695535f6da1c465f0e3291a4989175fb7ba` (before the subsequent documentation-only refresh commits), all seven GitHub Actions workflows succeeded: AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This is CI evidence only; issuer registration and live verifier acceptance remain pending.
+
+**Latest PR #2 CI evidence:** five workflows completed successfully on PR head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`: [agent authentication](https://github.com/wadezigh96/anonymesh/actions/runs/44117993558), [NEAR wallet bridge](https://github.com/wadezigh96/anonymesh/actions/runs/44117993403), [Linux ARM64 benchmark](https://github.com/wadezigh96/anonymesh/actions/runs/44117993371), [NEAR contract/WASM](https://github.com/wadezigh96/anonymesh/actions/runs/44117993350), and [AnonCreds process integration](https://github.com/wadezigh96/anonymesh/actions/runs/44117993347). The AnonCreds integration workflow and Android workflow did not run on PR #2. These checks are attached to the PR head, not the merge commit; all seven workflows have not yet been re-run on `main`.
 
 **The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`. The recorded `get_issuer({"issuer_id":"wkams.testnet"})` query looked up the owner account ID as an issuer ID and returned `null`; it does not verify the bridge's configured issuer ID, `issuer.testnet`. No issuer-registration transaction is recorded, and a live read-back for `issuer.testnet` is still required. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
@@ -103,7 +105,7 @@ The native AnonCreds Node package does not support running its Linux native bina
 
 ## Remaining release gates — in order
 
-1. **Application-code CI is green:** all seven workflows succeeded on code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`; later commits in this PR only refreshed documentation. The NEAR contract unit-test/WASM build run is [43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232); the uploaded artifact evidence remains separately recorded. Re-run contract CI if contract source or its build workflow changes.
+1. **CI evidence:** the seven-workflow baseline passed on `abaed695535f6da1c465f0e3291a4989175fb7ba`; five workflows also passed on PR #2 head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece` (run links above). The two workflows not triggered on PR #2 and the merge commit itself still need complete CI coverage on `main`.
 2. **Prepare persistent issuer identity.** Select/create the issuer Ed25519 key and state files securely; keep private material local and owner-only.
 3. **Register the matching public issuer record** from `wkams.testnet` with reviewed key version, schema hash, storage deposit and gas; obtain explicit approval before signing.
 4. **Read back live issuer state** with `get_issuer` on Testnet.

@@ -2,7 +2,7 @@
 
 **Project:** ANONYMESH — Private Agentic Identity Infrastructure (PAII)  
 **Network target:** NEAR Testnet for public issuer metadata only  
-**Status date:** 2026-11-16  
+**Status date:** 2026-11-17  
 **Canonical status:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ## 1. Project proposition
@@ -38,11 +38,11 @@ NEAR is a public trust/status coordination layer. It is not the credential issue
 - Challenge binding, replay denial and SQLite persistence/concurrency evidence on a single host.
 - Rust NEAR issuer registry source and a read-only RPC adapter.
 - Registry-required verifier mode that rejects unknown, malformed or unavailable registry state in deterministic mock-RPC tests.
-- GitHub Actions evidence for the Node proof flow, separate-process integration and an earlier Rust/WASM contract build; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for exact commits and run IDs.
+- GitHub Actions evidence includes a seven-workflow baseline on commit `abaed695535f6da1c465f0e3291a4989175fb7ba` and five successful workflows on PR #2 head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`. The AnonCreds integration and Android workflows did not run on PR #2; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for exact run IDs and remaining CI coverage.
 
 ## 4. What is not claimed
 
-- No live NEAR Testnet contract deployment or issuer-registration transaction yet.
+- NEAR Testnet contract deployment and owner initialization are complete at `registry.wkams.testnet` (owner `wkams.testnet`); issuer registration and live verifier acceptance are not yet evidenced.
 - No on-chain AnonCreds/ZK proof verification.
 - No privacy-preserving revocation/non-revocation witness.
 - No complete unlinkability or verifier-collusion resistance.
@@ -60,15 +60,14 @@ A status root is an opaque commitment. It is not proof that a credential is revo
 
 ## 6. Testnet acceptance path
 
-1. Re-run contract unit tests and WASM build against the latest source.
-2. Establish a supported signer and contract-account strategy without exporting wallet secrets.
-3. Review WASM SHA-256, initialization arguments, gas and storage costs.
-4. Obtain explicit approval before signing deployment.
-5. Deploy and record contract account ID, transaction hash, explorer URL, source commit and WASM checksum.
-6. Register a disposable test issuer with the required storage deposit.
-7. Read back owner and issuer state from live RPC.
-8. Run valid/invalid issuer and RPC-failure tests against the live registry.
-9. Record a judge-facing demo that contains no private holder material.
+1. Re-run contract unit tests and the locked WASM release build against the intended source; the PR #2 contract workflow succeeded at [run 44117993350](https://github.com/wadezigh96/anonymesh/actions/runs/44117993350).
+2. Preserve the deployed contract account, deployment transaction, source SHA and WASM checksum in the evidence record.
+3. Prepare and review the persistent issuer Ed25519 public metadata; keep private key material local and owner-only.
+4. Review the exact `register_issuer` payload, attached storage deposit, gas and expected state change.
+5. Obtain explicit owner approval before any signing or broadcast.
+6. Read back `get_issuer({"issuer_id":"issuer.testnet"})` from live Testnet RPC and record final block evidence.
+7. Run live verifier acceptance/rejection tests against the deployed registry.
+8. Record a judge-facing demo that contains no private holder material.
 
 See [NEAR_JUDGE_GUIDE.md](NEAR_JUDGE_GUIDE.md) for the exact live acceptance evidence.
 

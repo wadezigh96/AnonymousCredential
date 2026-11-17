@@ -69,7 +69,11 @@ The AnonCreds integration workflow's latest run above is green, but this guide d
 
 These CI results apply to the listed commit and workflows only. A successful build or test does not establish production readiness, issuer registration, live verifier acceptance, or any additional on-chain state. The Testnet deployment and owner read-back are separate live evidence described above; issuer registration and live verifier acceptance remain pending.
 
-## 5. Live Testnet acceptance evidence still required
+## 5. Latest `main` integration and CI status
+
+PR #2 was merged into the default branch `main` as commit `e19eb1958cfa17b40f71b2f624a3fb945e3e689d`. Five workflows passed on PR head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`: agent authentication ([44117993558](https://github.com/wadezigh96/anonymesh/actions/runs/44117993558)), NEAR wallet bridge ([44117993403](https://github.com/wadezigh96/anonymesh/actions/runs/44117993403)), Linux ARM64 benchmark ([44117993371](https://github.com/wadezigh96/anonymesh/actions/runs/44117993371)), NEAR contract/WASM ([44117993350](https://github.com/wadezigh96/anonymesh/actions/runs/44117993350)), and AnonCreds process integration ([44117993347](https://github.com/wadezigh96/anonymesh/actions/runs/44117993347)). The AnonCreds integration and Android workflows did not run on PR #2. These are PR-head checks, not checks on the merge commit; complete CI coverage on `main` remains required.
+
+## 6. Live Testnet acceptance evidence still required
 
 
 Do not mark any item complete until the evidence exists:
@@ -85,7 +89,7 @@ Do not mark any item complete until the evidence exists:
 
 Deployment and registry writes are external blockchain transactions. They are intentionally not performed by this documentation/audit change; they require the owner's explicit approval and a reviewed transaction payload.
 
-## 6. Security and product limitations
+## 7. Security and product limitations
 
 - NEAR Testnet is public. Never put private identity attributes, link secrets, credential contents, proof witnesses, personal identifiers or per-presentation events on-chain.
 - The registry is a trust anchor for public issuer metadata, not a private identity database and not an on-chain ZK/AnonCreds verifier.
@@ -95,6 +99,6 @@ Deployment and registry writes are external blockchain transactions. They are in
 - Full unlinkability, distributed replay protection, production key custody, independent cryptographic review and production deployment are not demonstrated.
 - This NEAR Testnet prototype is not the user's intended final permissioned/private network architecture.
 
-## 7. Accurate judge-facing summary
+## 8. Accurate judge-facing summary
 
 > ANONYMESH demonstrates a local Issuer–Holder–Verifier flow using AnonCreds selective disclosure and a separate authorization gate. Its NEAR component is a Rust issuer/status registry plus a strict read-only RPC adapter. In required mode, the verifier checks the registry record before authorizing and fails closed when the record is invalid or unavailable. The repository includes a deterministic mock-RPC integration test and contract unit tests. The contract is deployed to NEAR Testnet at `registry.wkams.testnet` (owner `wkams.testnet`); the deployment transaction and successful `get_owner()` read-back are recorded in [the deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md). No issuer record has been registered yet, and live verifier acceptance is not claimed. Private claims and holder secrets remain off-chain.

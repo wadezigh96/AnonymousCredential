@@ -2,7 +2,7 @@
 
 # ANONYMESH NEAR Issuer Registry Verifier Integration
 
-**Status:** baseline integration implemented on `feat/anonymesh-private-agent-identity`; not deployed. Follow-up hardening is a separate code revision from the audited SHA below and is not covered by the six CI runs recorded here.
+**Status:** implementation merged into the current default branch `main` through PR #2. The NEAR registry is deployed at `registry.wkams.testnet` and its owner view has been verified. This document's detailed test table remains a historical snapshot; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for current CI evidence. Issuer registration and live verifier acceptance remain pending.
 
 ## Architecture and data flow
 
@@ -30,7 +30,7 @@ The client enforces a timeout and response-size limit, validates account IDs and
 
 The verifier fetches the issuer's `/public` configuration once at startup. That response supplies the verifier schema and credential definition, trusted capability-root issuer, demo policy, and default issuer account/key-version/schema expectations. Environment values `NEAR_ISSUER_ACCOUNT_ID`, `NEAR_EXPECTED_KEY_VERSION`, and `NEAR_EXPECTED_SCHEMA_HASH` can override or pin those registry expectations, but are optional in the current role wiring. The registry-bound issuer key in the credential is compared with the registry record; this does not independently authenticate the `/public` schema, credential definition, capability root, or policy. Deployments must protect and trust the `/public` source and should externally pin expected values rather than assume registry mode establishes all verifier trust inputs.
 
-The client asks the configured RPC endpoint for `finality: final`, but trusts that endpoint's JSON-RPC response; it does not verify a NEAR state proof or block header locally. For `testnet` and `mainnet`, the client restricts the URL to the canonical NEAR RPC hostname; `local` accepts an explicitly configured HTTP(S) endpoint for fixtures. No endpoint, contract, or live-chain state was validated in this integration. A production design requiring trust-minimized reads would need independent state-proof/light-client verification or an explicitly accepted RPC-provider trust model.
+The client asks the configured RPC endpoint for `finality: final`, but trusts that endpoint's JSON-RPC response; it does not verify a NEAR state proof or block header locally. For `testnet` and `mainnet`, the client restricts the URL to the canonical NEAR RPC hostname; `local` accepts an explicitly configured HTTP(S) endpoint for fixtures. This integration report documents the adapter's trust model and mocked-RPC tests; it does not independently validate the deployed contract's issuer record or live verifier acceptance. A production design requiring trust-minimized reads would need independent state-proof/light-client verification or an explicitly accepted RPC-provider trust model.
 
 ## Environment variables
 
@@ -94,6 +94,6 @@ GitHub run metadata confirms all six completed successfully on branch `feat/anon
 
 The registry is a public metadata trust anchor, not an on-chain proof verifier. Governance remains owner-controlled in the contract. TLS, distributed rate limiting/replay storage, production key custody, production transport identity, revocation witnesses, unlinkability analysis, and production tool-policy enforcement remain incomplete. Android remains a single-process proof demonstration and has no registry-backed wallet integration in this change.
 
-No testnet or mainnet contract was deployed. No chain transaction or mutation was sent. No pull request or merge was created. Deployment readiness remains **TESTNET NOT READY**. CI success does not establish production readiness or live-chain correctness; contract/client compatibility review and a separately approved testnet preflight remain outstanding.
+**Historical scope note:** this audited integration snapshot did not itself deploy a contract, send a transaction, or create a pull request. Since that snapshot, the registry has been deployed to NEAR Testnet and PR #2 has been merged into `main`. The deployment does not establish issuer registration or live verifier acceptance; those remain pending. CI success does not establish production readiness or live-chain correctness.
 
 **Audited final SHA:** `8857ba2e91a781efe3792ef17230b4ee4ad6c31c` ([canonical commit](https://github.com/wadezigh96/anonymesh/commit/8857ba2e91a781efe3792ef17230b4ee4ad6c31c)).
