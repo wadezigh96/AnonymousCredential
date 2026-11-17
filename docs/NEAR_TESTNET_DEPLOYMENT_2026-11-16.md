@@ -16,15 +16,16 @@
 ## Post-deployment read checks
 
 - `get_owner()` returned `wkams.testnet`.
-- `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`, as expected before any issuer has been registered.
+- `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`. This query used the owner account ID as the issuer ID.
+- The GitHub read-only bridge is configured to inspect issuer ID `issuer.testnet`; this deployment record does not contain a live read-back for that ID.
 
-These checks establish that the contract was deployed and initialized with the expected owner. They do **not** establish that an issuer has been registered or that the verifier has completed live-chain acceptance testing.
+These checks establish that the contract was deployed and initialized with the expected owner. The `wkams.testnet` issuer lookup must not be presented as a read-back for `issuer.testnet`. No issuer-registration transaction is recorded, and live verifier acceptance remains pending.
 
 ## Remaining integration work
 
 1. Create or select the persistent issuer Ed25519 key and state files securely. Do not commit private key material or place it in chat.
 2. Register the matching issuer public key, key version and schema hash from the owner account, after reviewing the exact call arguments, storage deposit and gas.
-3. Read back the issuer record using Testnet RPC.
+3. Read back `get_issuer({"issuer_id":"issuer.testnet"})` using Testnet RPC and record final block evidence.
 4. Run verifier acceptance tests with `NEAR_REQUIRED=true` against the deployed contract: valid issuer accepted; unknown/inactive issuer and key/schema mismatch denied; RPC outage or malformed registry data denied.
 5. Update this record with issuer-registration transaction and live verifier evidence only after those steps succeed.
 
