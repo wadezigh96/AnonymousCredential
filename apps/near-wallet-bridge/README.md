@@ -17,9 +17,12 @@ This page is a **read-only status inspector** for the already deployed NEAR Test
 4. Calls read-only `get_issuer({ issuer_id: "issuer.testnet" })`.
 5. Displays the result and final block height.
 
+## Owner wallet connection boundary
+
+The page includes `@hot-labs/near-connect` to connect/disconnect a NEAR Testnet wallet and check that the connected account ID matches `wkams.testnet`. This is an account-identity preflight only. It does not request a signature, prove FullAccess/signing capability, or submit a transaction.
+
 ## Explicitly disabled
 
-- No wallet connector.
 - No private-key or seed-phrase input.
 - No transaction signing or broadcast.
 - No `CreateAccount`, `Transfer`, `AddKey`, `DeployContract`, or initialization call.
