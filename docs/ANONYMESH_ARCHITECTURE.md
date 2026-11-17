@@ -2,7 +2,7 @@
 
 > **Implementation status (2026-11-16):** local three-process Node Issuer–Holder–Verifier prototype with AnonCreds CL presentations; local authorization gate with Ed25519 proof-of-possession, capability checks and SQLite replay/quota slices; Rust NEAR issuer registry plus strict read-only RPC adapter tested against deterministic mock RPC. **The NEAR Testnet registry is deployed at `registry.wkams.testnet`; owner read-back is verified. Issuer registration and live verifier acceptance remain pending.** Unlinkability, privacy-preserving revocation and production deployment are not implemented. See [canonical project status](PROJECT_STATUS.md).
 
-Status: **see [canonical project status](PROJECT_STATUS.md).** The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; required registry mode reads and enforces a deterministic mocked NEAR issuer record before authorization. The Android native smoke test is a single-process proof check, not the separate-role protocol demo. Unlinkability and privacy-preserving revocation are not implemented, and no contract is deployed.
+Status: **see [canonical project status](PROJECT_STATUS.md).** The Node demo has separate issuer, holder and verifier processes using AnonCreds CL credentials and presentations; required registry mode reads and enforces a deterministic mocked NEAR issuer record before authorization. The Android native smoke test is a single-process proof check, not the separate-role protocol demo. Unlinkability and privacy-preserving revocation are not implemented. The NEAR Testnet registry is deployed and its owner read-back is verified; issuer registration and live verifier acceptance remain pending.
 
 ## PAII innovation category
 
