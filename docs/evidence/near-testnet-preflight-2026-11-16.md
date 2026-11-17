@@ -17,7 +17,7 @@ The following calls were made with `finality=final` and no transaction was submi
 | `registry.wkams.testnet.get_issuer({"issuer_id":"wkams.testnet"})` | `null` | height `277965959`, hash `B3PJ9HnuhNKYNvUTH2McxSUxjERFtvsVfA1XRCAXXJpY` |
 | `view_account(registry.wkams.testnet)` | deployed code present | height `277965966`, hash `FzzimGaUtWPoFPehnhbLopyFpskvtgY4Q8vJAM4WLmm`, code hash `2829R23heDqiv8HRX6dSqFmPtEE4Cu4sE8BbRLajfxKi` |
 
-The `get_issuer` result is still empty. Therefore no issuer registration transaction hash exists and no live verifier acceptance can be claimed yet.
+The recorded `get_issuer` result is `null` for `issuer_id=wkams.testnet`. This is a lookup for the owner account ID, not the bridge's configured issuer ID `issuer.testnet`; it does not establish the live state of `issuer.testnet`. No issuer-registration transaction hash is recorded, and no live verifier acceptance can be claimed yet.
 
 ## Signer preflight
 
