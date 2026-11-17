@@ -25,4 +25,4 @@ Node integration tests cover issuer, holder, and verifier as separate operating-
 
 ## Explicit non-components
 
-There is no production local-first agent runtime, durable distributed replay store, production tool enforcement, privacy-preserving revocation witness flow, unlinkability evaluation, live deployed-registry verification, or testnet deployment in this repository state. These boundaries are intentional and are described in [SECURITY_LIMITATIONS.md](SECURITY_LIMITATIONS.md).
+There is no production local-first agent runtime, durable distributed replay store, production tool enforcement, privacy-preserving revocation witness flow, unlinkability evaluation, or live verifier acceptance against the deployed registry. The NEAR Testnet contract is deployed at `registry.wkams.testnet` and its owner read-back is verified; issuer registration and live verifier acceptance remain pending. These boundaries are intentional and are described in [SECURITY_LIMITATIONS.md](SECURITY_LIMITATIONS.md).
