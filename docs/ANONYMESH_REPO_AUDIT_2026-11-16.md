@@ -1,8 +1,10 @@
 # Audit Repo Anonymesh — 16 November 2026
 
+> **Status correction (2026-11-17):** This is a historical audit snapshot. The current default branch `feat/anonymesh-private-agent-identity` now contains `#[payable]` on all three registry mutation methods and dynamic storage-deposit accounting. The contract source blob is identical at code commit `abaed695535f6da1c465f0e3291a4989175fb7ba` and current HEAD `c35db7feb5abf506df948c7b1f3319f6b443ffe1`; the NEAR contract workflow succeeded on the code commit ([run 43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232)). The earlier default-branch payable blocker below is resolved. Issuer registration and live verifier acceptance remain pending. The recorded `get_issuer(wkams.testnet)` preflight query checked the owner account ID, not the configured issuer ID `issuer.testnet`.
+
 ## Keputusan
 
-**Branch `fix/anonymesh-testnet-readiness` kini lulus test/build kontrak pada SHA yang diaudit, tetapi deployment Testnet belum dilakukan dan tidak boleh disebut live.** Tes Node lokal lulus 88/88. Workflow kontrak GitHub Actions [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123) sukses untuk source `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; artifact final, SOURCE_SHA dan checksum diverifikasi.
+**Temuan historis pada snapshot audit:** branch `fix/anonymesh-testnet-readiness` lulus test/build kontrak pada SHA yang diaudit, tetapi deployment Testnet belum dilakukan pada saat snapshot tersebut. Status deployment ini kemudian diperbarui di bawah dan pada [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md). Tes Node lokal lulus 88/88. Workflow kontrak GitHub Actions [43846695123](https://github.com/wadezigh96/anonymesh/actions/runs/43846695123) sukses untuk source `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; artifact final, SOURCE_SHA dan checksum diverifikasi.
 
 **Pembaruan status:** kontrak registry kini telah berhasil di-deploy ke Testnet pada `registry.wkams.testnet`; owner read-back berhasil. Transaksi: [NEAR Explorer](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Catatan ini menggantikan temuan pra-deployment di bawah. Issuer registration dan live verifier acceptance masih tertunda.
 
@@ -18,15 +20,13 @@ Audit mencakup empat README dan enam workflow pada `origin/fix/anonymesh-testnet
 
 ## Temuan prioritas
 
-### P1 — Branch default tidak siap untuk deploy
+### Resolved historical finding — Branch default tidak siap untuk deploy
 
-Pada branch default `feat/anonymesh-private-agent-identity` (`a55cda5`), `register_issuer`, `set_issuer_active`, dan `update_status_root` belum diberi `#[payable]`, meskipun fungsi tersebut mengandalkan attached storage deposit. Branch `fix/anonymesh-testnet-readiness` menambahkan atribut itu melalui `ba4868b` dan telah lulus CI.
-
-Runtime NEAR menolak attached deposit pada method yang tidak payable. Unit test yang memanggil fungsi Rust langsung tidak menjalankan pemeriksaan entrypoint payable runtime; jadi hasil tes pada branch default tidak cukup untuk menutup gap tersebut. Deploy hanya dari readiness branch. Jangan ubah default branch, merge, atau buat PR tanpa persetujuan terpisah.
+Pada snapshot audit `a55cda5`, `register_issuer`, `set_issuer_active`, dan `update_status_root` belum diberi `#[payable]`, meskipun fungsi tersebut mengandalkan attached storage deposit. Branch readiness menambahkan atribut itu, dan perubahan tersebut kini sudah ada pada default branch. Source saat ini juga menghitung pertumbuhan storage aktual dan mengembalikan kelebihan deposit. Kode kontrak pada commit `abaed695535f6da1c465f0e3291a4989175fb7ba` identik dengan source pada HEAD `c35db7feb5abf506df948c7b1f3319f6b443ffe1`; workflow kontrak pada commit kode tersebut berhasil. Dengan demikian, blocker payable pada default branch yang dicatat di snapshot ini telah diselesaikan. Instruksi historis untuk hanya deploy dari readiness branch tidak lagi menggambarkan keadaan branch default saat ini.
 
 ### P1 — Issuer registration dan live verifier acceptance masih menjadi gate
 
-Kontrak telah di-deploy dan `get_owner()` sudah diverifikasi. `get_issuer({"issuer_id":"wkams.testnet"})` mengembalikan `null`, sehingga belum ada issuer record yang terdaftar. Siapkan persistent issuer Ed25519 key dan state file secara lokal; public key yang didaftarkan harus berasal dari issuer key tersebut, bukan NEAR account access key.
+Kontrak telah di-deploy dan `get_owner()` sudah diverifikasi. Query `get_issuer({"issuer_id":"wkams.testnet"})` mengembalikan `null`, tetapi query tersebut menggunakan owner account ID sebagai issuer ID. GitHub bridge dikonfigurasi untuk memeriksa `issuer.testnet`; read-back live untuk ID tersebut belum tercatat. Siapkan persistent issuer Ed25519 key dan state file secara lokal; public key yang didaftarkan harus berasal dari issuer key tersebut, bukan NEAR account access key.
 
 Sebelum registrasi, tampilkan dan minta persetujuan eksplisit untuk signer, receiver, method/arguments, storage deposit, gas, estimasi biaya, expected state change dan recovery plan. Setelah transaksi disetujui, baca kembali record dan jalankan verifier acceptance live untuk issuer valid, unknown/inactive, key/schema mismatch, RPC outage dan data malformed. Jangan kirim seed phrase atau private key melalui chat.
 
