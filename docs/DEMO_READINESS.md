@@ -3,7 +3,7 @@
 # ANONYMESH — Demo Readiness
 
 **Repository:** `wadezigh96/anonymesh`  
-**Current default branch:** `feat/anonymesh-private-agent-identity`  
+**Current default branch:** `main` (PR #2 merged as `e19eb1958cfa17b40f71b2f624a3fb945e3e689d`)  
 **Status date:** 2026-11-17  
 **Canonical release gate:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
@@ -16,7 +16,7 @@
 ## Verified evidence
 
 - The Node Issuer–Holder–Verifier prototype and separate-process integration have successful CI evidence.
-- The seven GitHub Actions workflows succeeded on code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`; subsequent commits through current HEAD `c35db7feb5abf506df948c7b1f3319f6b443ffe1` changed documentation only.
+- The seven-workflow baseline succeeded on code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`. On PR #2 head `774bbba1e8ef30ff2e0b0bcc1a3cb66474f22ece`, five workflows passed: [agent authentication](https://github.com/wadezigh96/anonymesh/actions/runs/44117993558), [NEAR wallet bridge](https://github.com/wadezigh96/anonymesh/actions/runs/44117993403), [Linux ARM64 benchmark](https://github.com/wadezigh96/anonymesh/actions/runs/44117993371), [NEAR contract/WASM](https://github.com/wadezigh96/anonymesh/actions/runs/44117993350), and [AnonCreds process integration](https://github.com/wadezigh96/anonymesh/actions/runs/44117993347). The AnonCreds integration and Android workflows did not run on PR #2; the merge commit itself still needs a full CI run.
 - AnonCreds integration: [run 43957294481](https://github.com/wadezigh96/anonymesh/actions/runs/43957294481).
 - Separate-process integration: [run 43957294275](https://github.com/wadezigh96/anonymesh/actions/runs/43957294275).
 - NEAR contract tests and WASM build: [run 43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232).
