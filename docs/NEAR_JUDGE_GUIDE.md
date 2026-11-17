@@ -2,19 +2,20 @@
 
 **Purpose:** a reproducible explanation of the NEAR integration and its exact maturity.
 **Network status:** NEAR Testnet registry deployed and initialized at `registry.wkams.testnet` (owner `wkams.testnet`). Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). Owner read-back succeeded. Issuer registration and live verifier acceptance are still pending.
+**Issuer-ID distinction:** the bridge source is configured to query `issuer.testnet`. The recorded preflight query for `wkams.testnet` queried the owner account as an issuer ID and does not establish the on-chain state of `issuer.testnet`.
 **Canonical project status:** [PROJECT_STATUS.md](PROJECT_STATUS.md).
-**Operator preflight (2026-11-16):** `wkams.testnet` was read successfully with 18.9 NEAR, one Full Access key and no contract code. The Termux Rust CLI works, but its local legacy credentials file is empty and a supported Meteor Wallet signer has not yet been connected. Account balance and on-chain key presence do not mean this device can sign.
+**Operator preflight (2026-11-16):** owner account `wkams.testnet` was read successfully with 18.9 NEAR, one Full Access key and no contract code; this is the owner account, not the registry contract account. The Termux Rust CLI works, but its local legacy credentials file was empty and a supported Meteor Wallet signer had not yet been connected. Account balance and on-chain key presence do not mean this device can sign.
 **Privacy boundary:** the registry is a public metadata anchor. It is not a private chain, private storage, an AnonCreds verifier, or a payment rail.
 
 ## 1. What works today
 
-The contract deployment is complete. The live owner view returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null` because no issuer record has been registered. Deployment artifact source SHA: `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9`. Full transaction and checks are recorded in [NEAR_TESTNET_DEPLOYMENT_2026-11-16.md](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+The contract deployment is complete. The live owner view returned `wkams.testnet`; the recorded `get_issuer({"issuer_id":"wkams.testnet"})` query returned `null`, but it queried the owner account ID rather than the bridge's configured issuer ID `issuer.testnet`. No live read-back for `issuer.testnet` is recorded. Deployment artifact source SHA: `c8c2529d76a04be1bf8ab2ea33662ef661d463b2`; WASM SHA-256: `10a80c1d86687259fd76f1c3a6f28789069d3a37dac88fc590539735db8f43e9`. Full transaction and checks are recorded in [NEAR_TESTNET_DEPLOYMENT_2026-11-16.md](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 
 
 | Layer | Implemented behavior | Evidence boundary |
 |---|---|---|
-| NEAR contract | Owner-controlled issuer registration, active/inactive status, Ed25519 key validation, monotonic key version and status epoch, schema/status hash validation, storage-deposit accounting/refund | Deployed at `registry.wkams.testnet`; `get_owner()` verified. No issuer registered yet; see deployment record. |
+| NEAR contract | Owner-controlled issuer registration, active/inactive status, Ed25519 key validation, monotonic key version and status epoch, schema/status hash validation, storage-deposit accounting/refund | Deployed at `registry.wkams.testnet`; `get_owner()` verified. No registration transaction is recorded; live read-back for configured issuer `issuer.testnet` remains pending. |
 | RPC adapter | Read-only `query/call_function` to `get_issuer`, bounded response, timeout, strict JSON/field/key/hash validation, optional expected version/schema/epoch checks | Node unit tests and deterministic local JSON-RPC mock |
 | Verifier gate | With `NEAR_REQUIRED=true`, verifier reads issuer record before authorization; registry failure returns deny; cache TTL and stale fallback are disabled | Separate-process integration test against deterministic mock |
 | Private proof flow | AnonCreds presentation, key binding, Ed25519 PoP, capability scope, challenge and replay/quota checks | Local three-process prototype; no production external action |
