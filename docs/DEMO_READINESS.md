@@ -1,64 +1,63 @@
-> **Superseded deployment status (2026-11-16):** The registry is deployed and initialized at `registry.wkams.testnet` (owner `wkams.testnet`); `get_owner()` was verified. Issuer registration and live verifier acceptance remain pending. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md) and [project status](PROJECT_STATUS.md).
+> **Current status (2026-11-17):** The NEAR Testnet registry is deployed and its owner view has been verified. Issuer registration and live verifier acceptance remain pending. This document is aligned with [canonical project status](PROJECT_STATUS.md).
 
 # ANONYMESH — Demo Readiness
 
 **Repository:** `wadezigh96/anonymesh`  
-**Branch:** `fix/anonymesh-testnet-readiness`  
-**Status date:** 2026-11-16  
+**Current default branch:** `feat/anonymesh-private-agent-identity`  
+**Status date:** 2026-11-17  
 **Canonical release gate:** [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ## Readiness result
 
 <ins>Ready for a local prototype demonstration with clearly stated limitations.</ins>
 
-**Partial live Testnet integration only.** Contract deployment and owner read-back are verified; there is not yet a live issuer record or live verifier acceptance result.
+**Partial live Testnet integration only.** The registry contract is deployed at `registry.wkams.testnet`, and `get_owner()` returned `wkams.testnet`. No issuer-registration transaction or live verifier acceptance is recorded.
 
-## Evidence
+## Verified evidence
 
-- AnonCreds native demo and Linux ARM64 benchmark jobs passed in [CI run 43806163768](https://github.com/wadezigh96/anonymesh/actions/runs/43806163768).
-- Separate-process integration passed in [CI run 43806163795](https://github.com/wadezigh96/anonymesh/actions/runs/43806163795).
-- Required-mode fresh registry-read integration passed in [CI run 43817130740](https://github.com/wadezigh96/anonymesh/actions/runs/43817130740) on the test branch commit `67e528d`.
-- NEAR Rust tests, WASM release build, checksum and artifact upload passed in [CI run 43805451359](https://github.com/wadezigh96/anonymesh/actions/runs/43805451359) for source commit `a5754245fd017eb00440f8799bd793eed64b648d`.
-- The later contract test-harness adjustment at `a55cda5c8c2cc95511cf2b18ad01a4a618c74023` still needs a fresh NEAR workflow run. Do not silently inherit the earlier green result as if it tested that edit.
+- The Node Issuer–Holder–Verifier prototype and separate-process integration have successful CI evidence.
+- The seven GitHub Actions workflows succeeded on code commit `abaed695535f6da1c465f0e3291a4989175fb7ba`; subsequent commits through current HEAD `c35db7feb5abf506df948c7b1f3319f6b443ffe1` changed documentation only.
+- AnonCreds integration: [run 43957294481](https://github.com/wadezigh96/anonymesh/actions/runs/43957294481).
+- Separate-process integration: [run 43957294275](https://github.com/wadezigh96/anonymesh/actions/runs/43957294275).
+- NEAR contract tests and WASM build: [run 43957294232](https://github.com/wadezigh96/anonymesh/actions/runs/43957294232).
+- NEAR wallet bridge tests/build: [run 43957294524](https://github.com/wadezigh96/anonymesh/actions/runs/43957294524).
+- Agent authentication: [run 43957294270](https://github.com/wadezigh96/anonymesh/actions/runs/43957294270).
+- Linux ARM64 benchmark: [run 43957294284](https://github.com/wadezigh96/anonymesh/actions/runs/43957294284).
+- Android standalone release APK build/verification: [run 43957294273](https://github.com/wadezigh96/anonymesh/actions/runs/43957294273).
+- The GitHub application at `apps/near-wallet-bridge` is a read-only registry inspector. It can connect/disconnect a wallet to check the owner account ID, but it does not sign or broadcast transactions.
 
-## Local reproduction
+## Important issuer-ID distinction
 
-Run on a supported Linux environment from repository root:
+The owner account is `wkams.testnet`; the read-only GitHub bridge is configured to inspect issuer ID `issuer.testnet`. The recorded preflight query `get_issuer({"issuer_id":"wkams.testnet"})` queried the owner account as an issuer ID and returned `null`. That result is not a live read-back for `issuer.testnet`. A separate read-only query for `issuer.testnet` is still required before claiming its on-chain state.
 
-```sh
-npm install --prefix packages/anoncreds-agent-demo --no-audit --no-fund
-npm test --prefix packages/anoncreds-agent-demo
-npm run demo --prefix packages/anoncreds-agent-demo
-cargo test --locked --manifest-path contracts/near/issuer-registry/Cargo.toml
-cargo build --locked --manifest-path contracts/near/issuer-registry/Cargo.toml --target wasm32-unknown-unknown --release
-```
+## Not yet verified
 
-The Node native AnonCreds wrapper used by this package does not support the Android Termux native runtime. Use the passing Linux CI evidence for the native Node suite; do not describe a Termux native-loader error as a protocol regression.
+- Issuer registration on NEAR Testnet.
+- A live `get_issuer({"issuer_id":"issuer.testnet"})` read-back.
+- Live verifier acceptance/rejection against the deployed contract.
+- The newer Android/Meteor Wallet mutation-capable bridge. Its current source remains local and is not part of this GitHub repository.
+- Production security, unlinkability, privacy-preserving revocation, distributed replay protection, or production tool execution.
 
-## Demo sequence
+## Safe demo sequence
 
-1. Show the three local roles: Issuer, Holder (Agent A), Verifier (Agent B).
-2. Show a valid selective-disclosure presentation and the hidden predicate result.
-3. Show tampered proof, wrong challenge/context and replay rejection.
-4. Show capability scope, Ed25519 proof-of-possession and quota/replay checks as distinct authorization checks.
-5. Show registry-required mode using the deterministic mock RPC and explain that this is not live Testnet.
-6. State limitations: no unlinkability guarantee, no privacy-preserving revocation, no production transport/tool execution and no deployed contract.
+1. Show the local Issuer, Holder and Verifier processes and selective-disclosure proof.
+2. Show tampered proof, wrong challenge/context and replay rejection.
+3. Show capability scope, Ed25519 proof-of-possession and quota/replay checks as separate authorization controls.
+4. Show registry-required mode against the deterministic mock RPC and label it clearly as mock evidence.
+5. Show the deployed Testnet contract and the recorded `get_owner()` result; do not imply that issuer registration or live verifier acceptance has occurred.
+6. State the privacy and production limitations listed in [SECURITY_LIMITATIONS.md](SECURITY_LIMITATIONS.md).
 
 ## NEAR Testnet acceptance checklist
 
-- [ ] Re-run Rust contract tests and WASM build against the latest contract source.
-- [ ] Confirm a supported signer for the intended Testnet account without exporting seed/private key.
-- [ ] Decide the contract account/deployer account strategy and estimate storage/gas.
-- [ ] Review the exact WASM checksum and `new({"owner_id":"wkams.testnet"})` initialization payload.
-- [ ] Obtain explicit approval, then deploy to Testnet and capture transaction/explorer evidence.
-- [ ] Register a disposable issuer with the required storage deposit.
-- [ ] Read back `get_owner` and `get_issuer` from live Testnet RPC.
-- [ ] Verify valid issuer acceptance and unknown/inactive/mismatched issuer rejection against the live registry.
-- [ ] Verify RPC outage and malformed records fail closed.
-- [ ] Record the flow without exposing credentials, link secrets, private keys or personal claims.
+- [ ] Confirm the persistent issuer Ed25519 public key and matching metadata; keep private key material local.
+- [ ] Review the exact owner signer, contract, method, arguments, attached storage deposit, gas and expected state change.
+- [ ] Obtain explicit owner approval before signing or broadcasting `register_issuer`.
+- [ ] Read back `get_issuer({"issuer_id":"issuer.testnet"})` from live Testnet RPC and record final block evidence.
+- [ ] Run live verifier acceptance tests: valid issuer accepted; unknown/inactive issuer and key/schema mismatch denied; RPC outage and malformed data denied.
+- [ ] Capture a judge-ready demo without exposing credentials, link secrets, private keys or personal claims.
 
-No wallet import, key generation, deployment, registry write, payment or mainnet action is included in this checklist. A Testnet transaction must be separately reviewed and explicitly approved.
+No wallet import, key generation, deployment, registry write, payment or mainnet action is included in this readiness document. Every Testnet mutation requires separate review and explicit approval.
 
 ## Judge-facing one-sentence description
 
-ANONYMESH is a local Issuer–Holder–Verifier prototype using AnonCreds selective disclosure and a separate authorization gate, with a Rust NEAR public issuer registry and a fail-closed read-only verifier adapter tested against deterministic mock RPC; contract deployment is complete; live issuer registration and verifier acceptance remain explicit acceptance gates.
+ANONYMESH is a local Issuer–Holder–Verifier prototype using AnonCreds selective disclosure and a separate authorization gate, with a Rust NEAR public issuer registry deployed on Testnet and a fail-closed read-only verifier adapter tested against deterministic mock RPC; issuer registration and live verifier acceptance remain pending.
