@@ -2,7 +2,8 @@
 
 **Last reconciled:** 2026-11-17  
 **Repository:** [wadezigh96/anonymesh](https://github.com/wadezigh96/anonymesh)  
-**Working branch for this reconciliation:** `feat/anonymesh-near-testnet-deployer`
+**Current default branch:** `feat/anonymesh-private-agent-identity`  
+**Reconciliation source branch:** `feat/anonymesh-near-testnet-deployer` (one commit behind the current default branch).
 
 This is the canonical status page. If an older planning or audit document disagrees with this page, use the newer evidence linked here and update the stale document rather than repeating its claim.
 
@@ -10,7 +11,7 @@ This is the canonical status page. If an older planning or audit document disagr
 
 ANONYMESH has a runnable local Issuer–Holder–Verifier prototype, a separate authorization gate, a Rust NEAR issuer registry, and a read-only registry adapter tested against a deterministic JSON-RPC mock. On code commit `abaed695535f6da1c465f0e3291a4989175fb7ba` (before the subsequent documentation-only refresh commits), all seven GitHub Actions workflows succeeded: AnonCreds integration (both jobs), separate-process integration, NEAR contract tests/WASM build, NEAR wallet bridge, agent authentication, Linux ARM64 benchmark, and Android standalone release APK build/verification. This is CI evidence only; issuer registration and live verifier acceptance remain pending.
 
-**The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`, as expected before issuer registration. No issuer-registration transaction or live verifier acceptance is claimed. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
+**The NEAR issuer registry is deployed and initialized on NEAR Testnet; ANONYMESH is not production-ready.** Contract account: `registry.wkams.testnet`; owner: `wkams.testnet`. Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD). `get_owner()` returned `wkams.testnet`. The recorded `get_issuer({"issuer_id":"wkams.testnet"})` query looked up the owner account ID as an issuer ID and returned `null`; it does not verify the bridge's configured issuer ID, `issuer.testnet`. No issuer-registration transaction is recorded, and a live read-back for `issuer.testnet` is still required. See [deployment record](NEAR_TESTNET_DEPLOYMENT_2026-11-16.md).
 
 ## Evidence-backed implementation matrix
 
@@ -34,9 +35,11 @@ The operator has verified through NEAR Testnet RPC/CLI:
 - Contract account: `registry.wkams.testnet`
 - Owner account: `wkams.testnet`
 - Deployment transaction: [DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD](https://explorer.testnet.near.org/transactions/DrFYWN8Kx25f3265ydvJNyfUpiPT9GpjMiQJJMBJXJYHD)
-- `get_owner()` returned `wkams.testnet`; `get_issuer({"issuer_id":"wkams.testnet"})` returned `null` (no issuer registered yet)
-- Account: `wkams.testnet`
-- Latest read-only `view_account` query in this audit: block height `277937423`, hash `4Qta8z5jfnZdUFa5gN3YS9qx9XbEsQyfmxqEpcz4217H`
+- `get_owner()` returned `wkams.testnet`.
+- `get_issuer({"issuer_id":"wkams.testnet"})` returned `null`; this queried the owner account ID as an issuer ID, not the configured issuer ID `issuer.testnet`.
+- The read-only GitHub bridge is configured to check `issuer.testnet`; a live read-back for that exact ID is not included in this evidence set.
+- Owner account inspected: `wkams.testnet` (separate from registry contract account `registry.wkams.testnet`).
+- Latest read-only `view_account(wkams.testnet)` query in that audit: block height `277937423`, hash `4Qta8z5jfnZdUFa5gN3YS9qx9XbEsQyfmxqEpcz4217H` (this is the owner account, not the registry contract).
 - Observed balance: 18.9 NEAR at that block
 - Account code hash: `11111111111111111111111111111111` (no contract code at that block)
 - A previous access-key inspection found one on-chain Full Access key; the audit did not expose or reuse its private material
