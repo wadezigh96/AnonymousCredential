@@ -2,7 +2,7 @@ name: ANONYMESH Android native proof smoke test
 
 on:
   push:
-    branches: [feat/anonymesh-private-agent-identity, fix/anonymesh-testnet-readiness]
+    branches: [feat/anonymesh-private-agent-identity, fix/anonymesh-testnet-readiness, fix/anonymesh-github-readiness-2026-11-17]
     paths:
       - "apps/android/**"
       - ".github/workflows/anonymesh-android.yml"
