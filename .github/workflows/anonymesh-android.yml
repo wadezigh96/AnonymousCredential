@@ -1,0 +1,67 @@
+name: ANONYMESH Android native proof smoke test
+
+on:
+  push:
+    branches: [feat/anonymesh-private-agent-identity, fix/anonymesh-testnet-readiness, fix/anonymesh-github-readiness-2026-11-17]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/anonymesh-android.yml"
+  pull_request:
+    branches: [feat/anonymesh-private-agent-identity]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/anonymesh-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-release-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: apps/android/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android dependencies
+        working-directory: apps/android
+        run: npm install --no-audit --no-fund
+      - name: Check Expo dependency compatibility
+        working-directory: apps/android
+        run: npx expo install --check
+      - name: Generate native Android project
+        working-directory: apps/android
+        run: npx expo prebuild --platform android --no-install
+      - name: Build standalone release APK with embedded JavaScript
+        working-directory: apps/android/android
+        run: ./gradlew :app:assembleRelease --no-daemon
+      - name: Verify standalone APK and embedded JavaScript bundle
+        working-directory: apps/android/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          BUNDLE="$(find app/build -type f -name index.android.bundle -size +0c -print -quit)"
+          if [ -z "$BUNDLE" ]; then
+            echo "ERROR: non-empty index.android.bundle was not found in the release build outputs."
+            exit 1
+          fi
+          echo "Standalone APK: $APK"
+          echo "Embedded JavaScript bundle: $BUNDLE"
+          ls -lh "$APK" "$BUNDLE"
+      - name: Upload standalone release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymesh-android-standalone-release
+          path: apps/android/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 7

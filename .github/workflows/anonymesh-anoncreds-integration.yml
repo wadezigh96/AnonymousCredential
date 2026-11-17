@@ -1,0 +1,45 @@
+name: ANONYMESH AnonCreds process integration
+
+on:
+  push:
+    branches:
+      - feat/anonymesh-private-agent-identity
+      - fix/anonymesh-testnet-readiness
+      - fix/anonymesh-github-readiness-2026-11-17
+    paths:
+      - 'packages/anoncreds-agent-demo/**'
+      - '.github/workflows/anonymesh-anoncreds-integration.yml'
+  pull_request:
+    paths:
+      - 'packages/anoncreds-agent-demo/**'
+      - '.github/workflows/anonymesh-anoncreds-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anoncreds-process-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: ''
+
+      - name: Install AnonCreds dependencies
+        working-directory: packages/anoncreds-agent-demo
+        run: npm install --no-audit --no-fund --package-lock=false --ignore-scripts=false
+
+      - name: Run SQLite atomic rollback test
+        working-directory: packages/anoncreds-agent-demo
+        run: node --test test/sqlite-atomic-authorization.test.mjs
+
+      - name: Run multi-process authorization integration test
+        working-directory: packages/anoncreds-agent-demo
+        run: npm test -- --test-name-pattern="separate issuer, holder and verifier processes"

@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "ANONYMESH",
+    "slug": "anonymesh-android",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "android": {
+      "package": "org.anonymesh.mobile",
+      "minSdkVersion": 24
+    }
+  }
+}

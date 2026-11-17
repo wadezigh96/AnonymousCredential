@@ -1,0 +1,37 @@
+name: ANONYMESH NEAR wallet bridge
+
+on:
+  push:
+    branches:
+      - feat/anonymesh-private-agent-identity
+      - fix/anonymesh-testnet-readiness
+      - fix/anonymesh-github-readiness-2026-11-17
+    paths:
+      - 'apps/near-wallet-bridge/**'
+      - '.github/workflows/anonymesh-near-wallet-bridge.yml'
+  pull_request:
+    paths:
+      - 'apps/near-wallet-bridge/**'
+      - '.github/workflows/anonymesh-near-wallet-bridge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wallet-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned wallet connector and build tooling
+        working-directory: apps/near-wallet-bridge
+        run: npm ci --no-audit --no-fund
+      - name: Run account preflight unit tests
+        working-directory: apps/near-wallet-bridge
+        run: npm test
+      - name: Build read-only wallet bridge
+        working-directory: apps/near-wallet-bridge
+        run: npm run build

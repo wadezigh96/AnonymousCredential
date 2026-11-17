@@ -1,0 +1,20 @@
+{
+  "name": "@anonymesh/anoncreds-agent-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node ./src/demo.mjs",
+    "benchmark": "node ./src/benchmark.mjs",
+    "start:issuer": "node ./src/roles/issuer.mjs",
+    "start:holder": "node ./src/roles/holder.mjs",
+    "start:verifier": "node ./src/roles/verifier.mjs"
+  },
+  "dependencies": {
+    "@hyperledger/anoncreds-nodejs": "0.5.0"
+  }
+}

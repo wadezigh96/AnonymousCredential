@@ -1,0 +1,20 @@
+# Local dependencies and build output
+node_modules/
+**/node_modules/
+target/
+**/target/
+
+# Package-manager and tool caches
+.npm/
+
+# Local secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.issuer-key.json
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/
