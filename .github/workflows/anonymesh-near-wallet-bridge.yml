@@ -3,7 +3,9 @@ name: ANONYMESH NEAR wallet bridge
 on:
   push:
     branches:
+      - feat/anonymesh-private-agent-identity
       - fix/anonymesh-testnet-readiness
+      - fix/anonymesh-github-readiness-2026-11-17
     paths:
       - 'apps/near-wallet-bridge/**'
       - '.github/workflows/anonymesh-near-wallet-bridge.yml'
@@ -26,7 +28,7 @@ jobs:
           node-version: 22
       - name: Install pinned wallet connector and build tooling
         working-directory: apps/near-wallet-bridge
-        run: npm install --no-package-lock --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run account preflight unit tests
         working-directory: apps/near-wallet-bridge
         run: npm test
